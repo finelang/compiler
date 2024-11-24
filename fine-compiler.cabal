@@ -1,0 +1,67 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.37.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           fine-compiler
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/egmaleta/fine-compiler#readme>
+homepage:       https://github.com/egmaleta/fine-compiler#readme
+bug-reports:    https://github.com/egmaleta/fine-compiler/issues
+author:         Eduardo García Maleta
+maintainer:     egmaleta@proton.me
+copyright:      2024 Eduardo García Maleta
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/egmaleta/fine-compiler
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_fine_compiler
+  autogen-modules:
+      Paths_fine_compiler
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+  default-language: Haskell2010
+
+executable fine-compiler-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_fine_compiler
+  autogen-modules:
+      Paths_fine_compiler
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , fine-compiler
+  default-language: Haskell2010
+
+test-suite fine-compiler-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_fine_compiler
+  autogen-modules:
+      Paths_fine_compiler
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , fine-compiler
+  default-language: Haskell2010
