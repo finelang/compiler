@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Lib
+import qualified Lexer as L
 
 main :: IO ()
-main = someFunc
+main = getLine >>= print . L.scanTokens
