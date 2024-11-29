@@ -1,9 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-missing-signatures #-}
 {-# LANGUAGE CPP #-}
 {-# LINE 1 "src/Lexer.x" #-}
-module Lexer (Token(..), scanTokens) where
-import Data.Text (Text)
-import qualified Data.Text as Text
+module Lexer (Token(..), scanTokens, posnIndex, posnLine, posnColumn) where
 #if __GLASGOW_HASKELL__ >= 603
 #include "ghcconfig.h"
 #elif defined(__GLASGOW_HASKELL__)
@@ -1502,14 +1500,14 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- match when checking the right context, just
         -- the first match will do.
 #endif
-{-# LINE 15 "src/Lexer.x" #-}
+{-# LINE 13 "src/Lexer.x" #-}
 data TokenClass
   = Identifier
   | Integer
   deriving (Eq, Show)
 
 data Token = Token{
-    tokenLexeme :: Text,
+    tokenLexeme :: Data.Text.Text,
     tokenClass :: TokenClass,
     tokenPosn :: AlexPosn
 } deriving (Eq, Show)
@@ -1517,3 +1515,7 @@ data Token = Token{
 mkt c p l = Token l c p
 
 scanTokens = alexScanTokens
+
+posnIndex (AlexPn i _ _) = i
+posnLine (AlexPn _ l _) = l
+posnColumn (AlexPn _ _ c) = c
