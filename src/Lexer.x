@@ -6,9 +6,9 @@ module Lexer (Token(..), scanTokens, posnIndex, posnLine, posnColumn) where
 
 tokens :-
 
-  $white+         ;
-  [a-z_][a-zA-Z]* { mkt Identifier }
-  [0-9]+          { mkt Integer }
+  $white+             ;
+  [a-z_][a-zA-Z_0-9]* { mkt Identifier }
+  [0-9]+              { mkt Integer }
 
 {
 data TokenClass

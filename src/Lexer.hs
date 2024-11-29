@@ -614,11 +614,11 @@ alex_base = listArray (0 :: Int, 3)
   [ -8
   , -42
   , 7
-  , 50
+  , 67
   ]
 
 alex_table :: Array Int Int
-alex_table = listArray (0 :: Int, 305)
+alex_table = listArray (0 :: Int, 322)
   [ 0
   , 2
   , 2
@@ -744,6 +744,23 @@ alex_table = listArray (0 :: Int, 305)
   , 3
   , 3
   , 3
+  , 0
+  , 0
+  , 0
+  , 0
+  , 0
+  , 0
+  , 0
+  , 3
+  , 3
+  , 3
+  , 3
+  , 3
+  , 3
+  , 3
+  , 3
+  , 3
+  , 3
   , 3
   , 3
   , 3
@@ -764,7 +781,7 @@ alex_table = listArray (0 :: Int, 305)
   , 0
   , 0
   , 0
-  , 0
+  , 3
   , 0
   , 3
   , 3
@@ -928,7 +945,7 @@ alex_table = listArray (0 :: Int, 305)
   ]
 
 alex_check :: Array Int Int
-alex_check = listArray (0 :: Int, 305)
+alex_check = listArray (0 :: Int, 322)
   [ -1
   , 9
   , 10
@@ -1044,6 +1061,23 @@ alex_check = listArray (0 :: Int, 305)
   , 120
   , 121
   , 122
+  , 48
+  , 49
+  , 50
+  , 51
+  , 52
+  , 53
+  , 54
+  , 55
+  , 56
+  , 57
+  , -1
+  , -1
+  , -1
+  , -1
+  , -1
+  , -1
+  , -1
   , 65
   , 66
   , 67
@@ -1074,7 +1108,7 @@ alex_check = listArray (0 :: Int, 305)
   , -1
   , -1
   , -1
-  , -1
+  , 95
   , -1
   , 97
   , 98
