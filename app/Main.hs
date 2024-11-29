@@ -1,6 +1,9 @@
 module Main (main) where
 
-import qualified Lexer as L
+import qualified Lexer
+import qualified Data.Text.IO as TextIO
 
 main :: IO ()
-main = getLine >>= print . L.scanTokens
+main = do
+  text <- TextIO.getLine
+  print $ Lexer.scanTokens text

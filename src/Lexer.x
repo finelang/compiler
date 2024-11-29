@@ -1,30 +1,30 @@
 {
 module Lexer (Token(..), scanTokens) where
+import Data.Text (Text)
+import qualified Data.Text as Text
 }
 
-%wrapper "basic"
-
-$digit = 0-9            -- digits
-$alpha = [a-zA-Z]       -- alphabetic characters
+%wrapper "posn-strict-text"
 
 tokens :-
 
-  $white+                        ;
-  "--".*                         ;
-  let                            { \s -> Let }
-  in                             { \s -> In }
-  $digit+                        { \s -> Int (read s) }
-  [\=\+\-\*\/\(\)]               { \s -> Sym (head s) }
-  $alpha [$alpha $digit \_ \']*  { \s -> Var s }
+  $white+         ;
+  [a-z_][a-zA-Z]* { mkt Identifier }
+  [0-9]+          { mkt Integer }
 
 {
-data Token
-  = Let
-  | In
-  | Sym Char
-  | Var String
-  | Int Int
+data TokenClass
+  = Identifier
+  | Integer
   deriving (Eq, Show)
+
+data Token = Token{
+    tokenLexeme :: Text,
+    tokenClass :: TokenClass,
+    tokenPosn :: AlexPosn
+} deriving (Eq, Show)
+
+mkt c p l = Token l c p
 
 scanTokens = alexScanTokens
 }

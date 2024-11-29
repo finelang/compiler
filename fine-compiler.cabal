@@ -36,6 +36,7 @@ library
   build-depends:
       array
     , base >=4.7 && <5
+    , text
   default-language: Haskell2010
 
 executable fine-compiler-exe
@@ -51,6 +52,7 @@ executable fine-compiler-exe
       array
     , base >=4.7 && <5
     , fine-compiler
+    , text
   default-language: Haskell2010
 
 test-suite fine-compiler-test
@@ -67,4 +69,5 @@ test-suite fine-compiler-test
       array
     , base >=4.7 && <5
     , fine-compiler
+    , text
   default-language: Haskell2010
