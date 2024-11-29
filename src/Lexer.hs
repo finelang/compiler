@@ -2,7 +2,6 @@
 {-# LANGUAGE CPP #-}
 {-# LINE 1 "src/Lexer.x" #-}
 module Lexer (Token(..), scanTokens) where
-
 import Data.Text (Text)
 import qualified Data.Text as Text
 #if __GLASGOW_HASKELL__ >= 603
@@ -1503,7 +1502,7 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- match when checking the right context, just
         -- the first match will do.
 #endif
-{-# LINE 16 "src/Lexer.x" #-}
+{-# LINE 15 "src/Lexer.x" #-}
 data TokenClass
   = Identifier
   | Integer
