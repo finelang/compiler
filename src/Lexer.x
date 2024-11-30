@@ -4,25 +4,47 @@ module Lexer (Token(..), scanTokens, posnIndex, posnLine, posnColumn) where
 
 %wrapper "posn-strict-text"
 
+$digit  = [0-9]
+$alpha  = [a-zA-Z_]
+$sym    = [\+ \- \* \/ \% \^ \| \& \< \> \= \: \\ \? \! \$ \@ \~]
+
 tokens :-
 
-  $white+             ;
-  [a-z_][a-zA-Z_0-9]* { mkt Identifier }
-  [0-9]+              { mkt Integer }
+  $white+                 ;
+  "infix"                 { mkt Infix }
+  "infixl"                { mkt Infixl }
+  "infixr"                { mkt Infixr }
+  [a-z_][$alpha $digit]*  { mkt Identifier }
+  $digit+                 { mkt Integer }
+  "="                     { mkt Equals }
+  ":"                     { mkt Of }
+  "("                     { mkt Opar } 
+  ")"                     { mkt Cpar }
+  $sym{1, 3}              { mkt Operator }
+  ","                     { mkt Comma }
 
 {
-data TokenClass
-  = Identifier
+data TokenType
+  = Infix
+  | Infixl
+  | Infixr
+  | Identifier
   | Integer
+  | Equals
+  | Of
+  | Opar
+  | Cpar
+  | Operator
+  | Comma
   deriving (Eq, Show)
 
 data Token = Token{
     tokenLexeme :: Data.Text.Text,
-    tokenClass :: TokenClass,
+    tokenType :: TokenType,
     tokenPosn :: AlexPosn
 } deriving (Eq, Show)
 
-mkt c p l = Token l c p
+mkt t p l = Token l t p
 
 scanTokens = alexScanTokens
 
