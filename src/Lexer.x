@@ -1,5 +1,7 @@
 {
-module Lexer (Token(..), scanTokens, posnIndex, posnLine, posnColumn) where
+module Lexer (Token(..), scanTokens) where
+
+import Data.Text (Text)
 }
 
 %wrapper "posn-strict-text"
@@ -38,17 +40,23 @@ data TokenType
   | Comma
   deriving (Eq, Show)
 
-data Token = Token{
-    tokenLexeme :: Data.Text.Text,
-    tokenType :: TokenType,
-    tokenPosn :: AlexPosn
+data TokenPosn = TokenPosn{
+  posnIndex :: Int,
+  posnLine :: Int,
+  posnColumn :: Int
 } deriving (Eq, Show)
 
-mkt t p l = Token l t p
+data Token = Token{
+    tokenLexeme :: Text,
+    tokenType :: TokenType,
+    tokenPosn :: TokenPosn
+} deriving (Eq, Show)
+
+tokenIndex (Token _ _ p) = posnIndex p
+tokenLine (Token _ _ p) = posnLine p
+tokenColumn (Token _ _ p) = posnColumn p
+
+mkt t (AlexPn i ln cl) l = Token l t (TokenPosn i ln cl)
 
 scanTokens = alexScanTokens
-
-posnIndex (AlexPn i _ _) = i
-posnLine (AlexPn _ l _) = l
-posnColumn (AlexPn _ _ c) = c
 }
