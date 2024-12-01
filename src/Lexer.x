@@ -1,5 +1,5 @@
 {
-module Lexer (Token(..), scanTokens) where
+module Lexer (Token(..), TokenType(..), scanTokens) where
 
 import Data.Text (Text)
 }

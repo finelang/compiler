@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-missing-signatures #-}
 {-# LANGUAGE CPP #-}
 {-# LINE 1 "src/Lexer.x" #-}
-module Lexer (Token(..), scanTokens) where
+module Lexer (Token(..), TokenType(..), scanTokens) where
 
 import Data.Text (Text)
 #if __GLASGOW_HASKELL__ >= 603

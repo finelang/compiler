@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Lexer
+      Parser
   other-modules:
       Paths_fine_compiler
   autogen-modules:
