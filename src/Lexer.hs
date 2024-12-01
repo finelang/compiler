@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-missing-signatures #-}
 {-# LANGUAGE CPP #-}
 {-# LINE 1 "src/Lexer.x" #-}
-module Lexer (Token(..), TokenType(..), scanTokens) where
+module Lexer (Token(..), lexText) where
 
 import Data.Text (Text)
 #if __GLASGOW_HASKELL__ >= 603
@@ -2821,17 +2821,17 @@ alex_actions = array (0 :: Int, 17)
   , (0,alex_action_7)
   ]
 
-alex_action_1 = mkt Infix
-alex_action_2 = mkt Infixl
-alex_action_3 = mkt Infixr
-alex_action_4 = mkt Identifier
-alex_action_5 = mkt Integer
-alex_action_6 = mkt Equals
-alex_action_7 = mkt Of
-alex_action_8 = mkt Opar
-alex_action_9 = mkt Cpar
-alex_action_10 = mkt Operator
-alex_action_11 = mkt Comma
+alex_action_1 = \_ _ -> InfixTok
+alex_action_2 = \_ _ -> InfixlTok
+alex_action_3 = \_ _ -> InfixrTok
+alex_action_4 = \p t -> IdTok t (mkp p)
+alex_action_5 = \p t -> IntTok t (mkp p)
+alex_action_6 = \_ _ -> EqTok
+alex_action_7 = \_ _ -> OfTok
+alex_action_8 = \p _ -> OparTok (mkp p)
+alex_action_9 = \p _ -> CparTok (mkp p)
+alex_action_10 = \p t -> OpTok t (mkp p)
+alex_action_11 = \_ _ -> CommaTok
 
 #define ALEX_NOPRED 1
 -- -----------------------------------------------------------------------------
@@ -3074,36 +3074,26 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- the first match will do.
 #endif
 {-# LINE 28 "src/Lexer.x" #-}
-data TokenType
-  = Infix
-  | Infixl
-  | Infixr
-  | Identifier
-  | Integer
-  | Equals
-  | Of
-  | Opar
-  | Cpar
-  | Operator
-  | Comma
-  deriving (Eq, Show)
+data Token
+  = InfixTok
+  | InfixlTok
+  | InfixrTok
+  | IdTok Text TokenPosn
+  | IntTok Text TokenPosn
+  | EqTok
+  | OfTok
+  | OparTok TokenPosn
+  | CparTok TokenPosn
+  | OpTok Text TokenPosn
+  | CommaTok
+  deriving Show
 
 data TokenPosn = TokenPosn{
   posnIndex :: Int,
   posnLine :: Int,
   posnColumn :: Int
-} deriving (Eq, Show)
+} deriving Show
 
-data Token = Token{
-    tokenLexeme :: Text,
-    tokenType :: TokenType,
-    tokenPosn :: TokenPosn
-} deriving (Eq, Show)
+mkp (AlexPn i ln cl) = TokenPosn i ln cl
 
-tokenIndex (Token _ _ p) = posnIndex p
-tokenLine (Token _ _ p) = posnLine p
-tokenColumn (Token _ _ p) = posnColumn p
-
-mkt t (AlexPn i ln cl) l = Token l t (TokenPosn i ln cl)
-
-scanTokens = alexScanTokens
+lexText = alexScanTokens

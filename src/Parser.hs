@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -w #-}
 module Parser (parseTokens) where
 
-import Lexer (Token(Token), TokenType(..))
+import Lexer (Token(..))
 import qualified Data.Array as Happy_Data_Array
 import qualified Data.Bits as Bits
 import Control.Applicative(Applicative(..))
@@ -89,17 +89,17 @@ happyNewToken action sts stk [] =
 happyNewToken action sts stk (tk:tks) =
 	let cont i = action i i tk (HappyState action) sts stk tks in
 	case tk of {
-	Token _ Infix _ -> cont 5;
-	Token _ Infixl _ -> cont 6;
-	Token _ Infixr _ -> cont 7;
-	Token _ Identifier _ -> cont 8;
-	Token _ Integer _ -> cont 9;
-	Token _ Equals _ -> cont 10;
-	Token _ Of _ -> cont 11;
-	Token _ Opar _ -> cont 12;
-	Token _ Cpar _ -> cont 13;
-	Token _ Operator _ -> cont 14;
-	Token _ Comma _ -> cont 15;
+	InfixTok -> cont 5;
+	InfixlTok -> cont 6;
+	InfixrTok -> cont 7;
+	IdTok _ _ -> cont 8;
+	IntTok _ _ -> cont 9;
+	EqTok -> cont 10;
+	OfTok -> cont 11;
+	OparTok _ -> cont 12;
+	CparTok _ -> cont 13;
+	OpTok _ _ -> cont 14;
+	CommaTok -> cont 15;
 	_ -> happyError' ((tk:tks), [])
 	}
 

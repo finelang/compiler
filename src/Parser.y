@@ -1,7 +1,7 @@
 {
 module Parser (parseTokens) where
 
-import Lexer (Token(Token), TokenType(..))
+import Lexer (Token(..))
 }
 
 %name parseTokens
@@ -9,17 +9,17 @@ import Lexer (Token(Token), TokenType(..))
 %error { parseError }
 
 %token
-  infix   { Token _ Infix _ }
-  infixl  { Token _ Infixl _ }
-  infixr  { Token _ Infixr _ }
-  id      { Token _ Identifier _ }
-  int     { Token _ Integer _ }
-  '='     { Token _ Equals _ }
-  ':'     { Token _ Of _ }
-  '('     { Token _ Opar _ }
-  ')'     { Token _ Cpar _ }
-  op      { Token _ Operator _ }
-  ','     { Token _ Comma _ }
+  infix   { InfixTok }
+  infixl  { InfixlTok }
+  infixr  { InfixrTok }
+  id      { IdTok _ _ }
+  int     { IntTok _ _ }
+  '='     { EqTok }
+  ':'     { OfTok }
+  '('     { OparTok _ }
+  ')'     { CparTok _ }
+  op      { OpTok _ _ }
+  ','     { CommaTok }
 
 %%
 
