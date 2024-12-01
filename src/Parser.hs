@@ -2,6 +2,7 @@
 module Parser (parseTokens) where
 
 import Lexer (Token(..))
+import AST (Term(..))
 import qualified Data.Array as Happy_Data_Array
 import qualified Data.Bits as Bits
 import Control.Applicative(Applicative(..))
@@ -136,12 +137,6 @@ happySeq = happyDontSeq
 
 
 parseError tokens = error . show . head $ tokens
-
-data Term
-  = BinOp Term Term Term
-  | IdTerm Token
-  | IntTerm Token
-  deriving Show
 {-# LINE 1 "templates/GenericTemplate.hs" #-}
 -- $Id: GenericTemplate.hs,v 1.26 2005/01/14 14:47:22 simonmar Exp $
 

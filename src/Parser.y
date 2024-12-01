@@ -2,6 +2,7 @@
 module Parser (parseTokens) where
 
 import Lexer (Token(..))
+import AST (Term(..))
 }
 
 %name parseTokens
@@ -29,10 +30,4 @@ Term : Term op Term { BinOp $1 (IdTerm $2) $3 }
 
 {
 parseError tokens = error . show . head $ tokens
-
-data Term
-  = BinOp Term Term Term
-  | IdTerm Token
-  | IntTerm Token
-  deriving Show
 }
