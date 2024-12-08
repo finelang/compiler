@@ -2,4 +2,4 @@
 
 alex src/Lexer.x -o src/Lexer.hs
 happy src/Parser.y -o src/Parser.hs
-stack run
+stack run -- $1
