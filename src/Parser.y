@@ -27,7 +27,7 @@ import Lexer (Token (..), TokenType (..))
 
 %%
 
-Expr : fn '(' Params ')' Expr { mkFun $3 $5 $1 }
+Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange ($1, $5)) }
      | Atom                   { $1 }
 
 Params : Params ',' Param { $3 : $1 }
@@ -36,20 +36,10 @@ Params : Params ',' Param { $3 : $1 }
 
 Param : id  { tokenLexeme $1 }
 
-Atom : '(' Expr ')' { mkParens $2 $1 $3 }
+Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
      | id           { Id (tokenLexeme $1) (getRange $1) }
      | int          { Int (tokenLexeme $1) (getRange $1) }
 
 {
-mkFun params body fnTok =
-  let si = startIndex $ getRange fnTok
-      ei = endIndex $ getRange body
-   in Fun (reverse params) body (Range si ei)
-
-mkParens expr oparTok cparTok =
-  let si = startIndex $ getRange oparTok
-      ei = endIndex $ getRange cparTok
-   in Parens expr (Range si ei)
-
 parseError tokens = error . show . head $ tokens
 }

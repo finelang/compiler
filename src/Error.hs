@@ -13,3 +13,7 @@ instance Show Range where
 
 class HasRange t where
   getRange :: t -> Range
+
+instance (HasRange p, HasRange q) => HasRange (p, q) where
+  getRange :: (p, q) -> Range
+  getRange (l, r) = Range (startIndex $ getRange l) (endIndex $ getRange r)

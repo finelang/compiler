@@ -109,7 +109,7 @@ happyReduction_1 ((HappyAbsSyn4  happy_var_5) `HappyStk`
 	(HappyTerminal happy_var_1) `HappyStk`
 	happyRest)
 	 = HappyAbsSyn4
-		 (mkFun happy_var_3 happy_var_5 happy_var_1
+		 (Fun (reverse happy_var_3) happy_var_5 (getRange (happy_var_1, happy_var_5))
 	) `HappyStk` happyRest
 
 happyReduce_2 = happySpecReduce_1  4 happyReduction_2
@@ -152,7 +152,7 @@ happyReduction_7 (HappyTerminal happy_var_3)
 	(HappyAbsSyn4  happy_var_2)
 	(HappyTerminal happy_var_1)
 	 =  HappyAbsSyn7
-		 (mkParens happy_var_2 happy_var_1 happy_var_3
+		 (Parens happy_var_2 (getRange (happy_var_1, happy_var_3))
 	)
 happyReduction_7 _ _ _  = notHappyAtAll 
 
@@ -223,16 +223,6 @@ parseTokens tks = happyRunIdentity happySomeParser where
 
 happySeq = happyDontSeq
 
-
-mkFun params body fnTok =
-  let si = startIndex $ getRange fnTok
-      ei = endIndex $ getRange body
-   in Fun (reverse params) body (Range si ei)
-
-mkParens expr oparTok cparTok =
-  let si = startIndex $ getRange oparTok
-      ei = endIndex $ getRange cparTok
-   in Parens expr (Range si ei)
 
 parseError tokens = error . show . head $ tokens
 {-# LINE 1 "templates/GenericTemplate.hs" #-}
