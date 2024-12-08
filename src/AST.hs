@@ -1,26 +1,19 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE StrictData #-}
 
-module AST (Expr (..), Metadata (..), metadata) where
+module AST (Expr (..)) where
 
 import Data.Text (Text)
-
-data Metadata = Metadata
-  { startIndex :: Int,
-    endIndex :: Int
-  }
-
-instance Show Metadata where
-  show :: Metadata -> String
-  show (Metadata si ei) = "[" ++ show si ++ ", " ++ show ei ++ ")"
+import Error (HasMetadata (metadata), Metadata)
 
 data Expr
   = Int Text Metadata
   | Id Text Metadata
-  | Bin Expr Expr Expr  -- left op right
+  | App Expr [Expr] Metadata
   deriving (Show)
 
-metadata :: Expr -> Metadata
-metadata (Int _ m) = m
-metadata (Id _ m) = m
-metadata (Bin l _ r) = Metadata (startIndex $ metadata l) (endIndex $ metadata r)
+instance HasMetadata Expr where
+  metadata :: Expr -> Metadata
+  metadata (Int _ m) = m
+  metadata (Id _ m) = m
+  metadata (App _ _ m) = m

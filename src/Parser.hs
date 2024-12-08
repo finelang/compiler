@@ -1,9 +1,9 @@
 {-# OPTIONS_GHC -w #-}
 module Parser (parseTokens) where
 
-import AST (Expr(..), Metadata(Metadata))
-import qualified Data.Text as Text (length)
-import Lexer (Token (..), TokenType (..), TokenPosn (..))
+import AST (Expr (..))
+import Error (HasMetadata (metadata), Metadata (..))
+import Lexer (Token (..), TokenType (..))
 import qualified Data.Array as Happy_Data_Array
 import qualified Data.Bits as Bits
 import Control.Applicative(Applicative(..))
@@ -67,7 +67,7 @@ happyReduction_1 (HappyAbsSyn4  happy_var_3)
 	(HappyTerminal happy_var_2)
 	(HappyAbsSyn4  happy_var_1)
 	 =  HappyAbsSyn4
-		 (Bin happy_var_1 (Id (tokenLexeme happy_var_2) (metadata happy_var_2)) happy_var_3
+		 (binop happy_var_1 happy_var_2 happy_var_3
 	)
 happyReduction_1 _ _ _  = notHappyAtAll 
 
@@ -137,10 +137,9 @@ parseTokens tks = happyRunIdentity happySomeParser where
 happySeq = happyDontSeq
 
 
-metadata tok =
-  let si = posnIndex . tokenPosn $ tok
-      ei = si + (Text.length . tokenLexeme $ tok)
-   in Metadata si ei
+binop l op r = App (Id (tokenLexeme op) (metadata op))
+                   [l, r]
+                   (Metadata (startIndex $ metadata l) (endIndex $ metadata r))
 
 parseError tokens = error . show . head $ tokens
 {-# LINE 1 "templates/GenericTemplate.hs" #-}

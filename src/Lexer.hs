@@ -3,9 +3,11 @@
 {-# LINE 1 "src/Lexer.x" #-}
 {-# LANGUAGE StrictData #-}
 
-module Lexer (Token (..), TokenType (..), TokenPosn (..), lexText) where
+module Lexer (Token (..), TokenType (..), lexText) where
 
 import Data.Text (Text)
+import qualified Data.Text as Text (length)
+import Error (HasMetadata (metadata), Metadata (Metadata))
 #if __GLASGOW_HASKELL__ >= 603
 #include "ghcconfig.h"
 #elif defined(__GLASGOW_HASKELL__)
@@ -3075,7 +3077,7 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- match when checking the right context, just
         -- the first match will do.
 #endif
-{-# LINE 30 "src/Lexer.x" #-}
+{-# LINE 32 "src/Lexer.x" #-}
 data TokenType
   = Infix
   | Infixl
@@ -3103,6 +3105,9 @@ data Token = Token
     tokenPosn :: TokenPosn
   }
   deriving (Show)
+
+instance HasMetadata Token where
+  metadata (Token _ l (TokenPosn i _ _)) = Metadata i (i + Text.length l)
 
 mkt ttype (AlexPn i line col) lexm = Token ttype lexm (TokenPosn i line col)
 

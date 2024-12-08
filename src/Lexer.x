@@ -1,9 +1,11 @@
 {
 {-# LANGUAGE StrictData #-}
 
-module Lexer (Token (..), TokenType (..), TokenPosn (..), lexText) where
+module Lexer (Token (..), TokenType (..), lexText) where
 
 import Data.Text (Text)
+import qualified Data.Text as Text (length)
+import Error (HasMetadata (metadata), Metadata (Metadata))
 }
 
 %wrapper "posn-strict-text"
@@ -55,6 +57,9 @@ data Token = Token
     tokenPosn :: TokenPosn
   }
   deriving (Show)
+
+instance HasMetadata Token where
+  metadata (Token _ l (TokenPosn i _ _)) = Metadata i (i + Text.length l)
 
 mkt ttype (AlexPn i line col) lexm = Token ttype lexm (TokenPosn i line col)
 

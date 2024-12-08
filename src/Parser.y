@@ -1,9 +1,9 @@
 {
 module Parser (parseTokens) where
 
-import AST (Expr(..), Metadata(Metadata))
-import qualified Data.Text as Text (length)
-import Lexer (Token (..), TokenType (..), TokenPosn (..))
+import AST (Expr (..))
+import Error (HasMetadata (metadata), Metadata (..))
+import Lexer (Token (..), TokenType (..))
 }
 
 %name parseTokens
@@ -25,15 +25,14 @@ import Lexer (Token (..), TokenType (..), TokenPosn (..))
 
 %%
 
-Term : Term op Term { Bin $1 (Id (tokenLexeme $2) (metadata $2)) $3 }
+Term : Term op Term { binop $1 $2 $3 }
      | id           { Id (tokenLexeme $1) (metadata $1) }
      | int          { Int (tokenLexeme $1) (metadata $1) }
 
 {
-metadata tok =
-  let si = posnIndex . tokenPosn $ tok
-      ei = si + (Text.length . tokenLexeme $ tok)
-   in Metadata si ei
+binop l op r = App (Id (tokenLexeme op) (metadata op))
+                   [l, r]
+                   (Metadata (startIndex $ metadata l) (endIndex $ metadata r))
 
 parseError tokens = error . show . head $ tokens
 }
