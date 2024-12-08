@@ -11,101 +11,188 @@ import Control.Monad (ap)
 
 -- parser produced by Happy Version 1.20.1.1
 
-data HappyAbsSyn t4
+data HappyAbsSyn t4 t5 t6 t7
 	= HappyTerminal (Token)
 	| HappyErrorToken Prelude.Int
 	| HappyAbsSyn4 t4
+	| HappyAbsSyn5 t5
+	| HappyAbsSyn6 t6
+	| HappyAbsSyn7 t7
 
 happyExpList :: Happy_Data_Array.Array Prelude.Int Prelude.Int
-happyExpList = Happy_Data_Array.listArray (0,20) ([384,384,8192,0,0,8192,384,0,0
+happyExpList = Happy_Data_Array.listArray (0,29) ([14336,1,1,1024,0,0,0,0,0,49152,9,512,512,0,40,0,0,0,0,78,128,0,0,0,0
 	])
 
 {-# NOINLINE happyExpListPerState #-}
 happyExpListPerState st =
     token_strs_expected
-  where token_strs = ["error","%dummy","%start_parseTokens","Term","infix","infixl","infixr","id","int","'='","':'","'('","')'","op","','","%eof"]
-        bit_start = st Prelude.* 16
-        bit_end = (st Prelude.+ 1) Prelude.* 16
+  where token_strs = ["error","%dummy","%start_parseTokens","Expr","Params","Param","Atom","infix","infixl","infixr","let","fn","id","int","'='","':'","'('","')'","op","','","%eof"]
+        bit_start = st Prelude.* 21
+        bit_end = (st Prelude.+ 1) Prelude.* 21
         read_bit = readArrayBit happyExpList
         bits = Prelude.map read_bit [bit_start..bit_end Prelude.- 1]
-        bits_indexed = Prelude.zip bits [0..15]
+        bits_indexed = Prelude.zip bits [0..20]
         token_strs_expected = Prelude.concatMap f bits_indexed
         f (Prelude.False, _) = []
         f (Prelude.True, nr) = [token_strs Prelude.!! nr]
 
-action_0 (8) = happyShift action_3
-action_0 (9) = happyShift action_4
-action_0 (4) = happyGoto action_5
+action_0 (12) = happyShift action_2
+action_0 (13) = happyShift action_5
+action_0 (14) = happyShift action_6
+action_0 (17) = happyShift action_7
+action_0 (4) = happyGoto action_3
+action_0 (7) = happyGoto action_4
 action_0 _ = happyFail (happyExpListPerState 0)
 
-action_1 (8) = happyShift action_3
-action_1 (9) = happyShift action_4
-action_1 (4) = happyGoto action_2
+action_1 (12) = happyShift action_2
 action_1 _ = happyFail (happyExpListPerState 1)
 
-action_2 (14) = happyShift action_6
+action_2 (17) = happyShift action_9
 action_2 _ = happyFail (happyExpListPerState 2)
 
-action_3 _ = happyReduce_2
+action_3 (21) = happyAccept
+action_3 _ = happyFail (happyExpListPerState 3)
 
-action_4 _ = happyReduce_3
+action_4 _ = happyReduce_2
 
-action_5 (14) = happyShift action_6
-action_5 (16) = happyAccept
-action_5 _ = happyFail (happyExpListPerState 5)
+action_5 _ = happyReduce_8
 
-action_6 (8) = happyShift action_3
-action_6 (9) = happyShift action_4
-action_6 (4) = happyGoto action_7
-action_6 _ = happyFail (happyExpListPerState 6)
+action_6 _ = happyReduce_9
 
+action_7 (12) = happyShift action_2
+action_7 (13) = happyShift action_5
 action_7 (14) = happyShift action_6
-action_7 _ = happyReduce_1
+action_7 (17) = happyShift action_7
+action_7 (4) = happyGoto action_8
+action_7 (7) = happyGoto action_4
+action_7 _ = happyFail (happyExpListPerState 7)
 
-happyReduce_1 = happySpecReduce_3  4 happyReduction_1
-happyReduction_1 (HappyAbsSyn4  happy_var_3)
-	(HappyTerminal happy_var_2)
-	(HappyAbsSyn4  happy_var_1)
-	 =  HappyAbsSyn4
-		 (binop happy_var_1 happy_var_2 happy_var_3
-	)
-happyReduction_1 _ _ _  = notHappyAtAll 
+action_8 (18) = happyShift action_13
+action_8 _ = happyFail (happyExpListPerState 8)
+
+action_9 (13) = happyShift action_12
+action_9 (5) = happyGoto action_10
+action_9 (6) = happyGoto action_11
+action_9 _ = happyReduce_5
+
+action_10 (18) = happyShift action_14
+action_10 (20) = happyShift action_15
+action_10 _ = happyFail (happyExpListPerState 10)
+
+action_11 _ = happyReduce_4
+
+action_12 _ = happyReduce_6
+
+action_13 _ = happyReduce_7
+
+action_14 (12) = happyShift action_2
+action_14 (13) = happyShift action_5
+action_14 (14) = happyShift action_6
+action_14 (17) = happyShift action_7
+action_14 (4) = happyGoto action_17
+action_14 (7) = happyGoto action_4
+action_14 _ = happyFail (happyExpListPerState 14)
+
+action_15 (13) = happyShift action_12
+action_15 (6) = happyGoto action_16
+action_15 _ = happyFail (happyExpListPerState 15)
+
+action_16 _ = happyReduce_3
+
+action_17 _ = happyReduce_1
+
+happyReduce_1 = happyReduce 5 4 happyReduction_1
+happyReduction_1 ((HappyAbsSyn4  happy_var_5) `HappyStk`
+	_ `HappyStk`
+	(HappyAbsSyn5  happy_var_3) `HappyStk`
+	_ `HappyStk`
+	(HappyTerminal happy_var_1) `HappyStk`
+	happyRest)
+	 = HappyAbsSyn4
+		 (mkFun happy_var_3 happy_var_5 happy_var_1
+	) `HappyStk` happyRest
 
 happyReduce_2 = happySpecReduce_1  4 happyReduction_2
-happyReduction_2 (HappyTerminal happy_var_1)
+happyReduction_2 (HappyAbsSyn7  happy_var_1)
 	 =  HappyAbsSyn4
-		 (Id (tokenLexeme happy_var_1) (metadata happy_var_1)
+		 (happy_var_1
 	)
 happyReduction_2 _  = notHappyAtAll 
 
-happyReduce_3 = happySpecReduce_1  4 happyReduction_3
-happyReduction_3 (HappyTerminal happy_var_1)
-	 =  HappyAbsSyn4
+happyReduce_3 = happySpecReduce_3  5 happyReduction_3
+happyReduction_3 (HappyAbsSyn6  happy_var_3)
+	_
+	(HappyAbsSyn5  happy_var_1)
+	 =  HappyAbsSyn5
+		 (happy_var_3 : happy_var_1
+	)
+happyReduction_3 _ _ _  = notHappyAtAll 
+
+happyReduce_4 = happySpecReduce_1  5 happyReduction_4
+happyReduction_4 (HappyAbsSyn6  happy_var_1)
+	 =  HappyAbsSyn5
+		 ([happy_var_1]
+	)
+happyReduction_4 _  = notHappyAtAll 
+
+happyReduce_5 = happySpecReduce_0  5 happyReduction_5
+happyReduction_5  =  HappyAbsSyn5
+		 ([]
+	)
+
+happyReduce_6 = happySpecReduce_1  6 happyReduction_6
+happyReduction_6 (HappyTerminal happy_var_1)
+	 =  HappyAbsSyn6
+		 (tokenLexeme happy_var_1
+	)
+happyReduction_6 _  = notHappyAtAll 
+
+happyReduce_7 = happySpecReduce_3  7 happyReduction_7
+happyReduction_7 (HappyTerminal happy_var_3)
+	(HappyAbsSyn4  happy_var_2)
+	(HappyTerminal happy_var_1)
+	 =  HappyAbsSyn7
+		 (mkParens happy_var_2 happy_var_1 happy_var_3
+	)
+happyReduction_7 _ _ _  = notHappyAtAll 
+
+happyReduce_8 = happySpecReduce_1  7 happyReduction_8
+happyReduction_8 (HappyTerminal happy_var_1)
+	 =  HappyAbsSyn7
+		 (Id (tokenLexeme happy_var_1) (metadata happy_var_1)
+	)
+happyReduction_8 _  = notHappyAtAll 
+
+happyReduce_9 = happySpecReduce_1  7 happyReduction_9
+happyReduction_9 (HappyTerminal happy_var_1)
+	 =  HappyAbsSyn7
 		 (Int (tokenLexeme happy_var_1) (metadata happy_var_1)
 	)
-happyReduction_3 _  = notHappyAtAll 
+happyReduction_9 _  = notHappyAtAll 
 
 happyNewToken action sts stk [] =
-	action 16 16 notHappyAtAll (HappyState action) sts stk []
+	action 21 21 notHappyAtAll (HappyState action) sts stk []
 
 happyNewToken action sts stk (tk:tks) =
 	let cont i = action i i tk (HappyState action) sts stk tks in
 	case tk of {
-	Token Infix _ _ -> cont 5;
-	Token Infixl _ _ -> cont 6;
-	Token Infixr _ _ -> cont 7;
-	Token IdTok _ _ -> cont 8;
-	Token IntTok _ _ -> cont 9;
-	Token Eq _ _ -> cont 10;
-	Token Of _ _ -> cont 11;
-	Token Opar _ _ -> cont 12;
-	Token Cpar _ _ -> cont 13;
-	Token Op _ _ -> cont 14;
-	Token Comma _ _ -> cont 15;
+	Token Infix _ _ -> cont 8;
+	Token Infixl _ _ -> cont 9;
+	Token Infixr _ _ -> cont 10;
+	Token Let _ _ -> cont 11;
+	Token Fn _ _ -> cont 12;
+	Token IdTok _ _ -> cont 13;
+	Token IntTok _ _ -> cont 14;
+	Token Eq _ _ -> cont 15;
+	Token Of _ _ -> cont 16;
+	Token Opar _ _ -> cont 17;
+	Token Cpar _ _ -> cont 18;
+	Token Op _ _ -> cont 19;
+	Token Comma _ _ -> cont 20;
 	_ -> happyError' ((tk:tks), [])
 	}
 
-happyError_ explist 16 tk tks = happyError' (tks, explist)
+happyError_ explist 21 tk tks = happyError' (tks, explist)
 happyError_ explist _ tk tks = happyError' ((tk:tks), explist)
 
 newtype HappyIdentity a = HappyIdentity a
@@ -137,9 +224,15 @@ parseTokens tks = happyRunIdentity happySomeParser where
 happySeq = happyDontSeq
 
 
-binop l op r = App (Id (tokenLexeme op) (metadata op))
-                   [l, r]
-                   (Metadata (startIndex $ metadata l) (endIndex $ metadata r))
+mkFun params body fnTok =
+  let si = startIndex $ metadata fnTok
+      ei = endIndex $ metadata body
+   in Fun (reverse params) body (Metadata si ei)
+
+mkParens expr oparTok cparTok =
+  let si = startIndex $ metadata oparTok
+      ei = endIndex $ metadata cparTok
+   in Parens expr (Metadata si ei)
 
 parseError tokens = error . show . head $ tokens
 {-# LINE 1 "templates/GenericTemplate.hs" #-}

@@ -20,6 +20,8 @@ tokens :-
   "infix"                 { mkt Infix }
   "infixl"                { mkt Infixl }
   "infixr"                { mkt Infixr }
+  "let"                   { mkt Let }
+  "fn"                    { mkt Fn }
   [a-z_][$alpha $digit]*  { mkt IdTok }
   $digit+                 { mkt IntTok }
   "="                     { mkt Eq }
@@ -34,6 +36,8 @@ data TokenType
   = Infix
   | Infixl
   | Infixr
+  | Let
+  | Fn
   | IdTok
   | IntTok
   | Eq
