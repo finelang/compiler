@@ -1,8 +1,9 @@
 {
 module Parser (parseTokens) where
 
-import Lexer (Token(..))
-import AST (Term(..))
+import AST (Expr(..), Metadata(Metadata))
+import qualified Data.Text as Text (length)
+import Lexer (Token (..), TokenType (..), TokenPosn (..))
 }
 
 %name parseTokens
@@ -10,24 +11,29 @@ import AST (Term(..))
 %error { parseError }
 
 %token
-  infix   { InfixTok }
-  infixl  { InfixlTok }
-  infixr  { InfixrTok }
-  id      { IdTok _ _ }
-  int     { IntTok _ _ }
-  '='     { EqTok }
-  ':'     { OfTok }
-  '('     { OparTok _ }
-  ')'     { CparTok _ }
-  op      { OpTok _ _ }
-  ','     { CommaTok }
+  infix   { Token Infix _ _ }
+  infixl  { Token Infixl _ _ }
+  infixr  { Token Infixr _ _ }
+  id      { Token IdTok _ _ }
+  int     { Token IntTok _ _ }
+  '='     { Token Eq _ _ }
+  ':'     { Token Of _ _ }
+  '('     { Token Opar _ _ }
+  ')'     { Token Cpar _ _ }
+  op      { Token Op _ _ }
+  ','     { Token Comma _ _ }
 
 %%
 
-Term : Term op Term { BinOp $1 (IdTerm $2) $3 }
-     | id           { IdTerm $1 }
-     | int          { IntTerm $1 }
+Term : Term op Term { Bin $1 (tokenLexeme $2) $3 }
+     | id           { Id (tokenLexeme $1) (metadata $1) }
+     | int          { Int (tokenLexeme $1) (metadata $1) }
 
 {
+metadata tok =
+  let si = posnIndex . tokenPosn $ tok
+      ei = si + (Text.length . tokenLexeme $ tok)
+   in Metadata si ei
+
 parseError tokens = error . show . head $ tokens
 }

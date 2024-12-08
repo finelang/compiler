@@ -1,8 +1,9 @@
 {-# OPTIONS_GHC -w #-}
 module Parser (parseTokens) where
 
-import Lexer (Token(..))
-import AST (Term(..))
+import AST (Expr(..), Metadata(Metadata))
+import qualified Data.Text as Text (length)
+import Lexer (Token (..), TokenType (..), TokenPosn (..))
 import qualified Data.Array as Happy_Data_Array
 import qualified Data.Bits as Bits
 import Control.Applicative(Applicative(..))
@@ -66,21 +67,21 @@ happyReduction_1 (HappyAbsSyn4  happy_var_3)
 	(HappyTerminal happy_var_2)
 	(HappyAbsSyn4  happy_var_1)
 	 =  HappyAbsSyn4
-		 (BinOp happy_var_1 (IdTerm happy_var_2) happy_var_3
+		 (Bin happy_var_1 (tokenLexeme happy_var_2) happy_var_3
 	)
 happyReduction_1 _ _ _  = notHappyAtAll 
 
 happyReduce_2 = happySpecReduce_1  4 happyReduction_2
 happyReduction_2 (HappyTerminal happy_var_1)
 	 =  HappyAbsSyn4
-		 (IdTerm happy_var_1
+		 (Id (tokenLexeme happy_var_1) (metadata happy_var_1)
 	)
 happyReduction_2 _  = notHappyAtAll 
 
 happyReduce_3 = happySpecReduce_1  4 happyReduction_3
 happyReduction_3 (HappyTerminal happy_var_1)
 	 =  HappyAbsSyn4
-		 (IntTerm happy_var_1
+		 (Int (tokenLexeme happy_var_1) (metadata happy_var_1)
 	)
 happyReduction_3 _  = notHappyAtAll 
 
@@ -90,17 +91,17 @@ happyNewToken action sts stk [] =
 happyNewToken action sts stk (tk:tks) =
 	let cont i = action i i tk (HappyState action) sts stk tks in
 	case tk of {
-	InfixTok -> cont 5;
-	InfixlTok -> cont 6;
-	InfixrTok -> cont 7;
-	IdTok _ _ -> cont 8;
-	IntTok _ _ -> cont 9;
-	EqTok -> cont 10;
-	OfTok -> cont 11;
-	OparTok _ -> cont 12;
-	CparTok _ -> cont 13;
-	OpTok _ _ -> cont 14;
-	CommaTok -> cont 15;
+	Token Infix _ _ -> cont 5;
+	Token Infixl _ _ -> cont 6;
+	Token Infixr _ _ -> cont 7;
+	Token IdTok _ _ -> cont 8;
+	Token IntTok _ _ -> cont 9;
+	Token Eq _ _ -> cont 10;
+	Token Of _ _ -> cont 11;
+	Token Opar _ _ -> cont 12;
+	Token Cpar _ _ -> cont 13;
+	Token Op _ _ -> cont 14;
+	Token Comma _ _ -> cont 15;
 	_ -> happyError' ((tk:tks), [])
 	}
 
@@ -135,6 +136,11 @@ parseTokens tks = happyRunIdentity happySomeParser where
 
 happySeq = happyDontSeq
 
+
+metadata tok =
+  let si = posnIndex . tokenPosn $ tok
+      ei = si + (Text.length . tokenLexeme $ tok)
+   in Metadata si ei
 
 parseError tokens = error . show . head $ tokens
 {-# LINE 1 "templates/GenericTemplate.hs" #-}

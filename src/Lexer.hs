@@ -1,7 +1,9 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-missing-signatures #-}
 {-# LANGUAGE CPP #-}
 {-# LINE 1 "src/Lexer.x" #-}
-module Lexer (Token(..), lexText) where
+{-# LANGUAGE StrictData #-}
+
+module Lexer (Token (..), TokenType (..), TokenPosn (..), lexText) where
 
 import Data.Text (Text)
 #if __GLASGOW_HASKELL__ >= 603
@@ -2821,17 +2823,17 @@ alex_actions = array (0 :: Int, 17)
   , (0,alex_action_7)
   ]
 
-alex_action_1 = \_ _ -> InfixTok
-alex_action_2 = \_ _ -> InfixlTok
-alex_action_3 = \_ _ -> InfixrTok
-alex_action_4 = \p t -> IdTok t (mkp p)
-alex_action_5 = \p t -> IntTok t (mkp p)
-alex_action_6 = \_ _ -> EqTok
-alex_action_7 = \_ _ -> OfTok
-alex_action_8 = \p _ -> OparTok (mkp p)
-alex_action_9 = \p _ -> CparTok (mkp p)
-alex_action_10 = \p t -> OpTok t (mkp p)
-alex_action_11 = \_ _ -> CommaTok
+alex_action_1 = mkt Infix
+alex_action_2 = mkt Infixl
+alex_action_3 = mkt Infixr
+alex_action_4 = mkt IdTok
+alex_action_5 = mkt IntTok
+alex_action_6 = mkt Eq
+alex_action_7 = mkt Of
+alex_action_8 = mkt Opar
+alex_action_9 = mkt Cpar
+alex_action_10 = mkt Op
+alex_action_11 = mkt Comma
 
 #define ALEX_NOPRED 1
 -- -----------------------------------------------------------------------------
@@ -3073,27 +3075,35 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- match when checking the right context, just
         -- the first match will do.
 #endif
-{-# LINE 28 "src/Lexer.x" #-}
-data Token
-  = InfixTok
-  | InfixlTok
-  | InfixrTok
-  | IdTok Text TokenPosn
-  | IntTok Text TokenPosn
-  | EqTok
-  | OfTok
-  | OparTok TokenPosn
-  | CparTok TokenPosn
-  | OpTok Text TokenPosn
-  | CommaTok
-  deriving Show
+{-# LINE 30 "src/Lexer.x" #-}
+data TokenType
+  = Infix
+  | Infixl
+  | Infixr
+  | IdTok
+  | IntTok
+  | Eq
+  | Of
+  | Opar
+  | Cpar
+  | Op
+  | Comma
+  deriving (Show)
 
-data TokenPosn = TokenPosn{
-  posnIndex :: Int,
-  posnLine :: Int,
-  posnColumn :: Int
-} deriving Show
+data TokenPosn = TokenPosn
+  { posnIndex :: Int,
+    posnLine :: Int,
+    posnColumn :: Int
+  }
+  deriving (Show)
 
-mkp (AlexPn i ln cl) = TokenPosn i ln cl
+data Token = Token
+  { tokenType :: TokenType,
+    tokenLexeme :: Text,
+    tokenPosn :: TokenPosn
+  }
+  deriving (Show)
+
+mkt ttype (AlexPn i line col) lexm = Token ttype lexm (TokenPosn i line col)
 
 lexText = alexScanTokens
