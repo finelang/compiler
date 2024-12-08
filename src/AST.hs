@@ -1,10 +1,20 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE StrictData #-}
 
-module AST (Expr (..)) where
+module AST (Expr (..), OpChain (..)) where
 
 import Data.Text (Text)
 import Error (HasRange (getRange), Range)
+
+data OpChain
+  = Operand Expr
+  | Operation OpChain Expr Expr
+  deriving (Show)
+
+instance HasRange OpChain where
+  getRange :: OpChain -> Range
+  getRange (Operand expr) = getRange expr
+  getRange (Operation chain _ r) = getRange (chain, r)
 
 data Expr
   = Int Text Range
@@ -12,6 +22,7 @@ data Expr
   | App Expr [Expr] Range
   | Fun [Text] Expr Range
   | Parens Expr Range
+  | Chain OpChain         -- meant to be transformed into a tree of App
   deriving (Show)
 
 instance HasRange Expr where
@@ -21,3 +32,4 @@ instance HasRange Expr where
   getRange (App _ _ m) = m
   getRange (Fun _ _ m) = m
   getRange (Parens _ m) = m
+  getRange (Chain chain) = getRange chain

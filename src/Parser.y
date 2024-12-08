@@ -1,7 +1,7 @@
 {
 module Parser (parseTokens) where
 
-import AST (Expr (..))
+import AST (Expr (..), OpChain (..))
 import Error (HasRange (getRange), Range (..))
 import Lexer (Token (..), TokenType (..))
 }
@@ -28,7 +28,7 @@ import Lexer (Token (..), TokenType (..))
 %%
 
 Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange ($1, $5)) }
-     | Atom                   { $1 }
+     | Chain                  { chainToExpr $1 }
 
 Params : Params ',' Param { $3 : $1 }
        | Param            { [$1] }
@@ -36,10 +36,19 @@ Params : Params ',' Param { $3 : $1 }
 
 Param : id  { tokenLexeme $1 }
 
+Chain : Atom             { Operand $1 }
+      | Chain op Atom    { Operation $1 (mkId $2) $3 }
+
 Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
-     | id           { Id (tokenLexeme $1) (getRange $1) }
+     | id           { mkId $1 }
      | int          { Int (tokenLexeme $1) (getRange $1) }
 
 {
+mkId tok = Id (tokenLexeme tok) (getRange tok)
+
+chainToExpr (Operand expr) = expr
+chainToExpr (Operation (Operand l) op r) = App op [l, r] (getRange (l, r))
+chainToExpr other = Chain other
+
 parseError tokens = error . show . head $ tokens
 }
