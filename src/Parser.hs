@@ -67,7 +67,7 @@ happyReduction_1 (HappyAbsSyn4  happy_var_3)
 	(HappyTerminal happy_var_2)
 	(HappyAbsSyn4  happy_var_1)
 	 =  HappyAbsSyn4
-		 (Bin happy_var_1 (tokenLexeme happy_var_2) happy_var_3
+		 (Bin happy_var_1 (Id (tokenLexeme happy_var_2) (metadata happy_var_2)) happy_var_3
 	)
 happyReduction_1 _ _ _  = notHappyAtAll 
 

@@ -25,7 +25,7 @@ import Lexer (Token (..), TokenType (..), TokenPosn (..))
 
 %%
 
-Term : Term op Term { Bin $1 (tokenLexeme $2) $3 }
+Term : Term op Term { Bin $1 (Id (tokenLexeme $2) (metadata $2)) $3 }
      | id           { Id (tokenLexeme $1) (metadata $1) }
      | int          { Int (tokenLexeme $1) (metadata $1) }
 

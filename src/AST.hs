@@ -1,7 +1,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE StrictData #-}
 
-module AST (Expr (..), Metadata (..)) where
+module AST (Expr (..), Metadata (..), metadata) where
 
 import Data.Text (Text)
 
@@ -17,5 +17,10 @@ instance Show Metadata where
 data Expr
   = Int Text Metadata
   | Id Text Metadata
-  | Bin Expr Text Expr
+  | Bin Expr Expr Expr  -- left op right
   deriving (Show)
+
+metadata :: Expr -> Metadata
+metadata (Int _ m) = m
+metadata (Id _ m) = m
+metadata (Bin l _ r) = Metadata (startIndex $ metadata l) (endIndex $ metadata r)
