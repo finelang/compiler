@@ -4,20 +4,20 @@
 module AST (Expr (..)) where
 
 import Data.Text (Text)
-import Error (HasMetadata (metadata), Metadata)
+import Error (HasRange (getRange), Range)
 
 data Expr
-  = Int Text Metadata
-  | Id Text Metadata
-  | App Expr [Expr] Metadata
-  | Fun [Text] Expr Metadata
-  | Parens Expr Metadata
+  = Int Text Range
+  | Id Text Range
+  | App Expr [Expr] Range
+  | Fun [Text] Expr Range
+  | Parens Expr Range
   deriving (Show)
 
-instance HasMetadata Expr where
-  metadata :: Expr -> Metadata
-  metadata (Int _ m) = m
-  metadata (Id _ m) = m
-  metadata (App _ _ m) = m
-  metadata (Fun _ _ m) = m
-  metadata (Parens _ m) = m
+instance HasRange Expr where
+  getRange :: Expr -> Range
+  getRange (Int _ m) = m
+  getRange (Id _ m) = m
+  getRange (App _ _ m) = m
+  getRange (Fun _ _ m) = m
+  getRange (Parens _ m) = m

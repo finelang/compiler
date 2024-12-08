@@ -1,15 +1,15 @@
 {-# LANGUAGE InstanceSigs #-}
 
-module Error (Metadata (..), HasMetadata (..)) where
+module Error (Range (..), HasRange (..)) where
 
-data Metadata = Metadata
+data Range = Range
   { startIndex :: Int,
     endIndex :: Int
   }
 
-instance Show Metadata where
-  show :: Metadata -> String
-  show (Metadata si ei) = "[" ++ show si ++ ", " ++ show ei ++ ")"
+instance Show Range where
+  show :: Range -> String
+  show (Range si ei) = "[" ++ show si ++ ", " ++ show ei ++ ")"
 
-class HasMetadata t where
-  metadata :: t -> Metadata
+class HasRange t where
+  getRange :: t -> Range

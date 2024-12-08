@@ -5,7 +5,7 @@ module Lexer (Token (..), TokenType (..), lexText) where
 
 import Data.Text (Text)
 import qualified Data.Text as Text (length)
-import Error (HasMetadata (metadata), Metadata (Metadata))
+import Error (HasRange (getRange), Range (Range))
 }
 
 %wrapper "posn-strict-text"
@@ -62,8 +62,8 @@ data Token = Token
   }
   deriving (Show)
 
-instance HasMetadata Token where
-  metadata (Token _ l (TokenPosn i _ _)) = Metadata i (i + Text.length l)
+instance HasRange Token where
+  getRange (Token _ l (TokenPosn i _ _)) = Range i (i + Text.length l)
 
 mkt ttype (AlexPn i line col) lexm = Token ttype lexm (TokenPosn i line col)
 

@@ -2,7 +2,7 @@
 module Parser (parseTokens) where
 
 import AST (Expr (..))
-import Error (HasMetadata (metadata), Metadata (..))
+import Error (HasRange (getRange), Range (..))
 import Lexer (Token (..), TokenType (..))
 import qualified Data.Array as Happy_Data_Array
 import qualified Data.Bits as Bits
@@ -159,14 +159,14 @@ happyReduction_7 _ _ _  = notHappyAtAll
 happyReduce_8 = happySpecReduce_1  7 happyReduction_8
 happyReduction_8 (HappyTerminal happy_var_1)
 	 =  HappyAbsSyn7
-		 (Id (tokenLexeme happy_var_1) (metadata happy_var_1)
+		 (Id (tokenLexeme happy_var_1) (getRange happy_var_1)
 	)
 happyReduction_8 _  = notHappyAtAll 
 
 happyReduce_9 = happySpecReduce_1  7 happyReduction_9
 happyReduction_9 (HappyTerminal happy_var_1)
 	 =  HappyAbsSyn7
-		 (Int (tokenLexeme happy_var_1) (metadata happy_var_1)
+		 (Int (tokenLexeme happy_var_1) (getRange happy_var_1)
 	)
 happyReduction_9 _  = notHappyAtAll 
 
@@ -225,14 +225,14 @@ happySeq = happyDontSeq
 
 
 mkFun params body fnTok =
-  let si = startIndex $ metadata fnTok
-      ei = endIndex $ metadata body
-   in Fun (reverse params) body (Metadata si ei)
+  let si = startIndex $ getRange fnTok
+      ei = endIndex $ getRange body
+   in Fun (reverse params) body (Range si ei)
 
 mkParens expr oparTok cparTok =
-  let si = startIndex $ metadata oparTok
-      ei = endIndex $ metadata cparTok
-   in Parens expr (Metadata si ei)
+  let si = startIndex $ getRange oparTok
+      ei = endIndex $ getRange cparTok
+   in Parens expr (Range si ei)
 
 parseError tokens = error . show . head $ tokens
 {-# LINE 1 "templates/GenericTemplate.hs" #-}

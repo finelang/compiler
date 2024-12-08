@@ -2,7 +2,7 @@
 module Parser (parseTokens) where
 
 import AST (Expr (..))
-import Error (HasMetadata (metadata), Metadata (..))
+import Error (HasRange (getRange), Range (..))
 import Lexer (Token (..), TokenType (..))
 }
 
@@ -37,19 +37,19 @@ Params : Params ',' Param { $3 : $1 }
 Param : id  { tokenLexeme $1 }
 
 Atom : '(' Expr ')' { mkParens $2 $1 $3 }
-     | id           { Id (tokenLexeme $1) (metadata $1) }
-     | int          { Int (tokenLexeme $1) (metadata $1) }
+     | id           { Id (tokenLexeme $1) (getRange $1) }
+     | int          { Int (tokenLexeme $1) (getRange $1) }
 
 {
 mkFun params body fnTok =
-  let si = startIndex $ metadata fnTok
-      ei = endIndex $ metadata body
-   in Fun (reverse params) body (Metadata si ei)
+  let si = startIndex $ getRange fnTok
+      ei = endIndex $ getRange body
+   in Fun (reverse params) body (Range si ei)
 
 mkParens expr oparTok cparTok =
-  let si = startIndex $ metadata oparTok
-      ei = endIndex $ metadata cparTok
-   in Parens expr (Metadata si ei)
+  let si = startIndex $ getRange oparTok
+      ei = endIndex $ getRange cparTok
+   in Parens expr (Range si ei)
 
 parseError tokens = error . show . head $ tokens
 }
