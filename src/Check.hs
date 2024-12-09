@@ -3,40 +3,35 @@
 module Check (check) where
 
 import AST (Expr (..), OpChain (..))
-import Control.Monad (forM_)
-import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask, local)
+import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
 
 type Ctx = Set Text
 
-checkChain :: OpChain -> ReaderT Ctx (Either Text) ()
+checkChain :: OpChain -> Reader Ctx [Text]
 checkChain (Operand expr) = check' expr
-checkChain (Operation chain op l) = do
-  checkChain chain
-  check' op
-  check' l
+checkChain (Operation chain op l) =
+  concat <$> sequence [checkChain chain, check' op, check' l]
 
-check' :: Expr -> ReaderT Ctx (Either Text) ()
+check' :: Expr -> Reader Ctx [Text]
+check' (Int _ _) = return []
+check' (Float _ _) = return []
 check' (Id name _) = do
   names <- ask
   if S.member name names
-    then return ()
-    else lift $ Left (name <> " is not defined")
-check' (App f args _) = do
-  check' f
-  forM_ args check'
+    then return []
+    else return [name <> " is not defined"]
+check' (App f args _) =
+  concat <$> mapM check' (f : args)
 check' (Fun params body _) = do
   let params' = S.fromList params
-  if length params == S.size params'
-    then return ()
-    else lift $ Left "duplicate params"
-  local (S.union params') (check' body)
+  let paramErrors = ["duplicate params" | length params /= S.size params']
+  bodyErrors <- local (S.union params') (check' body)
+  return (paramErrors ++ bodyErrors)
 check' (Parens expr _) = check' expr
 check' (Chain chain) = checkChain chain
-check' _ = return ()
 
-check :: Expr -> Either Text ()
-check expr = runReaderT (check' expr) S.empty
+check :: Expr -> [Text]
+check expr = runReader (check' expr) S.empty
