@@ -14,6 +14,10 @@ instance Show Range where
 class HasRange t where
   getRange :: t -> Range
 
+instance HasRange Range where
+  getRange :: Range -> Range
+  getRange = id
+
 instance (HasRange p, HasRange q) => HasRange (p, q) where
   getRange :: (p, q) -> Range
   getRange (l, r) = Range (startIndex $ getRange l) (endIndex $ getRange r)

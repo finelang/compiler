@@ -124,7 +124,7 @@ happyReduction_1 ((HappyAbsSyn4  happy_var_5) `HappyStk`
 	(HappyTerminal happy_var_1) `HappyStk`
 	happyRest)
 	 = HappyAbsSyn4
-		 (Fun (reverse happy_var_3) happy_var_5 (getRange (happy_var_1, happy_var_5))
+		 (Fun (reverse happy_var_3) happy_var_5 (getRange happy_var_1)
 	) `HappyStk` happyRest
 
 happyReduce_2 = happySpecReduce_1  4 happyReduction_2
