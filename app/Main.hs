@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Check (check)
 import Control.Monad (guard)
 import Data.Text.IO as TIO (readFile)
 import Lexer (lexText)
@@ -12,4 +13,7 @@ main = do
   guard (not $ null args)
   let filePath = head args
   code <- TIO.readFile filePath
-  print (parseTokens $ lexText code)
+  let expr = parseTokens $ lexText code
+  case check expr of
+    (Left errorMessage) -> print errorMessage
+    _ -> print expr

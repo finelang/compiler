@@ -23,6 +23,8 @@ dependencies:
 - base >= 4.7 && < 5
 - array
 - text
+- transformers
+- containers
 
 ghc-options:
 - -Wall

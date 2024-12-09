@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       AST
+      Check
       Error
       Lexer
       Parser
@@ -39,7 +40,9 @@ library
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , text
+    , transformers
   default-language: Haskell2010
 
 executable fine-compiler-exe
@@ -54,8 +57,10 @@ executable fine-compiler-exe
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , fine-compiler
     , text
+    , transformers
   default-language: Haskell2010
 
 test-suite fine-compiler-test
@@ -71,6 +76,8 @@ test-suite fine-compiler-test
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , fine-compiler
     , text
+    , transformers
   default-language: Haskell2010
