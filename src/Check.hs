@@ -33,5 +33,7 @@ check' (Fun params body _) = do
 check' (Parens expr _) = check' expr
 check' (Chain chain) = checkChain chain
 
-check :: Expr -> [Text]
-check expr = runReader (check' expr) S.empty
+check :: Expr -> Either [Text] ()
+check expr =
+  let errors = runReader (check' expr) S.empty
+   in if null errors then Right () else Left errors

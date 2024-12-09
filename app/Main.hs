@@ -1,8 +1,9 @@
 module Main (main) where
 
 import Check (check)
-import Control.Monad (guard, forM_, unless)
-import Data.Text.IO as TIO (readFile, putStrLn)
+import Control.Monad (forM_, guard)
+import Data.Either (fromLeft)
+import Data.Text.IO as TIO (putStrLn, readFile)
 import Lexer (lexText)
 import Parser (parseTokens)
 import System.Environment (getArgs)
@@ -14,6 +15,6 @@ main = do
   let filePath = head args
   code <- TIO.readFile filePath
   let expr = parseTokens $ lexText code
-  let errors = check expr
-  unless (null errors) (forM_ errors TIO.putStrLn)
+  let errors = fromLeft [] (check expr)
+  forM_ errors TIO.putStrLn
   print expr
