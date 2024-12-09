@@ -16,20 +16,21 @@ $sym    = [\+ \- \* \/ \% \^ \| \& \< \> \= \: \\ \? \! \$ \@ \~]
 
 tokens :-
 
-  $white+                 ;
-  "infix"                 { mkt Infix }
-  "infixl"                { mkt Infixl }
-  "infixr"                { mkt Infixr }
-  "let"                   { mkt Let }
-  "fn"                    { mkt Fn }
-  [a-z_][$alpha $digit]*  { mkt IdTok }
-  $digit+                 { mkt IntTok }
-  "="                     { mkt Eq }
-  ":"                     { mkt Of }
-  "("                     { mkt Opar } 
-  ")"                     { mkt Cpar }
-  $sym{1, 3}              { mkt Op }
-  ","                     { mkt Comma }
+  $white+                   ;
+  "infix"                   { mkt Infix }
+  "infixl"                  { mkt Infixl }
+  "infixr"                  { mkt Infixr }
+  "let"                     { mkt Let }
+  "fn"                      { mkt Fn }
+  [a-z_][$alpha $digit]*    { mkt IdTok }
+  "-"? $digit+              { mkt IntTok }
+  "-"? $digit+ "." $digit+  { mkt FloatTok }
+  "="                       { mkt Eq }
+  ":"                       { mkt Of }
+  "("                       { mkt Opar } 
+  ")"                       { mkt Cpar }
+  $sym{1, 3}                { mkt Op }
+  ","                       { mkt Comma }
 
 {
 data TokenType
@@ -40,6 +41,7 @@ data TokenType
   | Fn
   | IdTok
   | IntTok
+  | FloatTok
   | Eq
   | Of
   | Opar

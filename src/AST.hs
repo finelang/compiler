@@ -18,6 +18,7 @@ instance HasRange OpChain where
 
 data Expr
   = Int Text Range
+  | Float Text Range
   | Id Text Range
   | App Expr [Expr] Range
   | Fun [Text] Expr Range -- 3rd: range of 'fn' keyword
@@ -28,6 +29,7 @@ data Expr
 instance HasRange Expr where
   getRange :: Expr -> Range
   getRange (Int _ r) = r
+  getRange (Float _ r) = r
   getRange (Id _ r) = r
   getRange (App _ _ r) = r
   getRange (Fun _ body r) = getRange (r, body)

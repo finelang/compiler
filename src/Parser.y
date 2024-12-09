@@ -18,6 +18,7 @@ import Lexer (Token (..), TokenType (..))
   fn      { Token Fn _ _ }
   id      { Token IdTok _ _ }
   int     { Token IntTok _ _ }
+  float   { Token FloatTok _ _ }
   '='     { Token Eq _ _ }
   ':'     { Token Of _ _ }
   '('     { Token Opar _ _ }
@@ -42,6 +43,7 @@ Chain : Atom             { Operand $1 }
 Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
      | id           { mkId $1 }
      | int          { Int (tokenLexeme $1) (getRange $1) }
+     | float        { Float (tokenLexeme $1) (getRange $1) }
 
 {
 mkId tok = Id (tokenLexeme tok) (getRange tok)
