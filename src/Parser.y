@@ -1,7 +1,7 @@
 {
 module Parser (parseTokens) where
 
-import AST (Expr (..), OpChain (..))
+import AST (Expr (..), OpChain (..), Binder(Binder))
 import Error (HasRange (getRange), Range (..))
 import Lexer (Token (..), TokenType (..))
 }
@@ -35,7 +35,7 @@ Params : Params ',' Param { $3 : $1 }
        | Param            { [$1] }
        | {- empty -}      { [] }
 
-Param : id  { tokenLexeme $1 }
+Param : id  { Binder (tokenLexeme $1) (getRange $1) }
 
 Chain : Atom             { Operand $1 }
       | Chain op Atom    { Operation $1 (mkId $2) $3 }

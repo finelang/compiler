@@ -1,10 +1,19 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE StrictData #-}
 
-module AST (Expr (..), OpChain (..)) where
+module AST (Expr (..), OpChain (..), Binder (..)) where
 
 import Data.Text (Text)
 import Error (HasRange (getRange), Range (..))
+
+data Binder = Binder
+  { binderName :: Text,
+    binderRange :: Range
+  }
+
+instance Show Binder where
+  show :: Binder -> String
+  show (Binder name _) = show name
 
 data OpChain
   = Operand Expr
@@ -21,7 +30,7 @@ data Expr
   | Float Text Range
   | Id Text Range
   | App Expr [Expr] Range
-  | Fun [Text] Expr Range -- 3rd: range of 'fn' keyword
+  | Fun [Binder] Expr Range -- 3rd: range of 'fn' keyword
   | Parens Expr Range
   | Chain OpChain -- meant to be transformed into a tree of App
   deriving (Show)

@@ -2,7 +2,7 @@
 
 module Check (check) where
 
-import AST (Expr (..), OpChain (..))
+import AST (Binder (binderName), Expr (..), OpChain (..))
 import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -26,7 +26,7 @@ check' (Id name _) = do
 check' (App f args _) =
   concat <$> mapM check' (f : args)
 check' (Fun params body _) = do
-  let params' = S.fromList params
+  let params' = S.fromList (map binderName params)
   let paramErrors = ["duplicate params" | length params /= S.size params']
   bodyErrors <- local (S.union params') (check' body)
   return (paramErrors ++ bodyErrors)

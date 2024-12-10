@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -w #-}
 module Parser (parseTokens) where
 
-import AST (Expr (..), OpChain (..))
+import AST (Expr (..), OpChain (..), Binder(Binder))
 import Error (HasRange (getRange), Range (..))
 import Lexer (Token (..), TokenType (..))
 import qualified Data.Array as Happy_Data_Array
@@ -164,7 +164,7 @@ happyReduction_5  =  HappyAbsSyn5
 happyReduce_6 = happySpecReduce_1  6 happyReduction_6
 happyReduction_6 (HappyTerminal happy_var_1)
 	 =  HappyAbsSyn6
-		 (tokenLexeme happy_var_1
+		 (Binder (tokenLexeme happy_var_1) (getRange happy_var_1)
 	)
 happyReduction_6 _  = notHappyAtAll 
 
