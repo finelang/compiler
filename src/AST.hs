@@ -1,7 +1,15 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE StrictData #-}
 
-module AST (Expr (..), OpChain (..), Binder (..)) where
+module AST
+  ( Expr (..),
+    OpChain (..),
+    Binder (..),
+    Type (..),
+    Binding (..),
+    Module (..),
+  )
+where
 
 import Data.Text (Text)
 import Error (HasRange (getRange), Range (..))
@@ -44,3 +52,15 @@ instance HasRange Expr where
   getRange (Fun _ body r) = getRange (r, body)
   getRange (Parens _ r) = r
   getRange (Chain chain) = getRange chain
+
+data Type
+  = NoType
+  deriving (Show)
+
+data Binding
+  = Binding Binder Type Expr Range
+  deriving (Show)
+
+data Module
+  = Module [Binding]
+  deriving (Show)
