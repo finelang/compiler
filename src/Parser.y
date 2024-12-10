@@ -28,7 +28,7 @@ import Lexer (Token (..), TokenType (..))
 
 %%
 
-Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange $1) }
+Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange ($1, $5)) }
      | Chain                  { chainToExpr $1 }
 
 Params : Params ',' Param { $3 : $1 }

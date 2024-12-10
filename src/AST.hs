@@ -38,7 +38,7 @@ data Expr
   | Float Text Range
   | Id Text Range
   | App Expr [Expr] Range
-  | Fun [Binder] Expr Range -- 3rd: range of 'fn' keyword
+  | Fun [Binder] Expr Range
   | Parens Expr Range
   | Chain OpChain -- meant to be transformed into a tree of App
   deriving (Show)
@@ -49,7 +49,7 @@ instance HasRange Expr where
   getRange (Float _ r) = r
   getRange (Id _ r) = r
   getRange (App _ _ r) = r
-  getRange (Fun _ body r) = getRange (r, body)
+  getRange (Fun _ _ r) = r
   getRange (Parens _ r) = r
   getRange (Chain chain) = getRange chain
 
