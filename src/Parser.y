@@ -2,6 +2,7 @@
 {-# LANGUAGE NoStrictData #-}
 module Parser (parseTokens) where
 
+import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
 import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..))
 import Syntax.Parsed (Expr (..), OpChain (..))
@@ -43,8 +44,8 @@ Chain : Atom             { Operand $1 }
 
 Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
      | id           { mkId $1 }
-     | int          { Int (tokenLexeme $1) (getRange $1) }
-     | float        { Float (tokenLexeme $1) (getRange $1) }
+     | int          { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
+     | float        { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
 
 {
 mkId tok = Id (tokenLexeme tok) (getRange tok)

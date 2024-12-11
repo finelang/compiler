@@ -14,8 +14,8 @@ instance HasRange OpChain where
   getRange (Operation chain _ r) = getRange (chain, r)
 
 data Expr
-  = Int Text Range
-  | Float Text Range
+  = Int Int Range
+  | Float Float Range
   | Id Text Range
   | App Expr [Expr] Range
   | Fun [Binder] Expr Range

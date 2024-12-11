@@ -2,6 +2,7 @@
 {-# LANGUAGE NoStrictData #-}
 module Parser (parseTokens) where
 
+import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
 import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..))
 import Syntax.Parsed (Expr (..), OpChain (..))
@@ -204,14 +205,14 @@ happyReduction_10 _  = notHappyAtAll
 happyReduce_11 = happySpecReduce_1  8 happyReduction_11
 happyReduction_11 (HappyTerminal happy_var_1)
 	 =  HappyAbsSyn8
-		 (Int (tokenLexeme happy_var_1) (getRange happy_var_1)
+		 (Int (read $ unpack $ tokenLexeme happy_var_1) (getRange happy_var_1)
 	)
 happyReduction_11 _  = notHappyAtAll 
 
 happyReduce_12 = happySpecReduce_1  8 happyReduction_12
 happyReduction_12 (HappyTerminal happy_var_1)
 	 =  HappyAbsSyn8
-		 (Float (tokenLexeme happy_var_1) (getRange happy_var_1)
+		 (Float (read $ unpack $ tokenLexeme happy_var_1) (getRange happy_var_1)
 	)
 happyReduction_12 _  = notHappyAtAll 
 
