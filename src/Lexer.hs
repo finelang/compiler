@@ -1,13 +1,11 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-missing-signatures #-}
 {-# LANGUAGE CPP #-}
 {-# LINE 1 "src/Lexer.x" #-}
-{-# LANGUAGE StrictData #-}
-
 module Lexer (Token (..), TokenType (..), lexText) where
 
 import Data.Text (Text)
 import qualified Data.Text as Text (length)
-import Error (HasRange (getRange), Range (Range))
+import Syntax.Common (HasRange (getRange), Range (Range))
 #if __GLASGOW_HASKELL__ >= 603
 #include "ghcconfig.h"
 #elif defined(__GLASGOW_HASKELL__)
@@ -3931,7 +3929,7 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- match when checking the right context, just
         -- the first match will do.
 #endif
-{-# LINE 35 "src/Lexer.x" #-}
+{-# LINE 33 "src/Lexer.x" #-}
 data TokenType
   = Infix
   | Infixl

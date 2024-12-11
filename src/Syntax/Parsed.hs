@@ -1,27 +1,7 @@
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE StrictData #-}
-
-module AST
-  ( Expr (..),
-    OpChain (..),
-    Binder (..),
-    Type (..),
-    Binding (..),
-    Module (..),
-  )
-where
+module Syntax.Parsed (Expr (..), OpChain (..)) where
 
 import Data.Text (Text)
-import Error (HasRange (getRange), Range (..))
-
-data Binder = Binder
-  { binderName :: Text,
-    binderRange :: Range
-  }
-
-instance Show Binder where
-  show :: Binder -> String
-  show (Binder name _) = show name
+import Syntax.Common (Binder, HasRange (..), Range)
 
 data OpChain
   = Operand Expr
@@ -40,7 +20,7 @@ data Expr
   | App Expr [Expr] Range
   | Fun [Binder] Expr Range
   | Parens Expr Range
-  | Chain OpChain -- meant to be transformed into a tree of App
+  | Chain OpChain
   deriving (Show)
 
 instance HasRange Expr where
@@ -52,15 +32,3 @@ instance HasRange Expr where
   getRange (Fun _ _ r) = r
   getRange (Parens _ r) = r
   getRange (Chain chain) = getRange chain
-
-data Type
-  = NoType
-  deriving (Show)
-
-data Binding
-  = Binding Binder Type Expr Range
-  deriving (Show)
-
-data Module
-  = Module [Binding]
-  deriving (Show)

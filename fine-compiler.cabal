@@ -25,17 +25,22 @@ source-repository head
 
 library
   exposed-modules:
-      AST
       Check
       Error
       Lexer
       Parser
+      Syntax.Common
+      Syntax.Expr
+      Syntax.Parsed
   other-modules:
       Paths_fine_compiler
   autogen-modules:
       Paths_fine_compiler
   hs-source-dirs:
       src
+  default-extensions:
+      InstanceSigs
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       array
@@ -53,6 +58,9 @@ executable fine-compiler-exe
       Paths_fine_compiler
   hs-source-dirs:
       app
+  default-extensions:
+      InstanceSigs
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
@@ -72,6 +80,9 @@ test-suite fine-compiler-test
       Paths_fine_compiler
   hs-source-dirs:
       test
+  default-extensions:
+      InstanceSigs
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array

@@ -37,6 +37,10 @@ ghc-options:
 - -Wpartial-fields
 - -Wredundant-constraints
 
+default-extensions:
+- InstanceSigs
+- StrictData
+
 library:
   source-dirs: src
 
