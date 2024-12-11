@@ -40,6 +40,7 @@ ghc-options:
 default-extensions:
 - InstanceSigs
 - StrictData
+- OverloadedStrings
 
 library:
   source-dirs: src
