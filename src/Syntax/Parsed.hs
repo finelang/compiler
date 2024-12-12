@@ -1,11 +1,15 @@
-module Syntax.Parsed (Expr (..), OpChain (..)) where
+module Syntax.Parsed (Expr (..), OpChain (..), Operator (..)) where
 
 import Data.Text (Text)
 import Syntax.Common (Binder, HasRange (..), Range)
 
+data Operator
+  = Operator Text Range
+  deriving (Show)
+
 data OpChain
   = Operand Expr
-  | Operation OpChain Expr Expr
+  | Operation OpChain Operator Expr
   deriving (Show)
 
 instance HasRange OpChain where

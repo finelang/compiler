@@ -5,7 +5,7 @@ module Parser (parseTokens) where
 import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
 import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..))
-import Syntax.Parsed (Expr (..), OpChain (..))
+import Syntax.Parsed (Expr (..), OpChain (..), Operator (..))
 import qualified Data.Array as Happy_Data_Array
 import qualified Data.Bits as Bits
 import Control.Applicative(Applicative(..))
@@ -182,7 +182,7 @@ happyReduction_8 (HappyAbsSyn8  happy_var_3)
 	(HappyTerminal happy_var_2)
 	(HappyAbsSyn7  happy_var_1)
 	 =  HappyAbsSyn7
-		 (Operation happy_var_1 (mkId happy_var_2) happy_var_3
+		 (Operation happy_var_1 (mkOp happy_var_2) happy_var_3
 	)
 happyReduction_8 _ _ _  = notHappyAtAll 
 
@@ -273,8 +273,10 @@ happySeq = happyDontSeq
 
 mkId tok = Id (tokenLexeme tok) (getRange tok)
 
+mkOp tok = Operator (tokenLexeme tok) (getRange tok)
+
 chainToExpr (Operand expr) = expr
-chainToExpr (Operation (Operand l) op r) = App op [l, r] (getRange (l, r))
+chainToExpr (Operation (Operand l) (Operator ol or) r) = App (Id ol or) [l, r] (getRange (l, r))
 chainToExpr other = Chain other
 
 parseError tokens = error . show . head $ tokens
