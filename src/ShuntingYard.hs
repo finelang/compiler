@@ -7,10 +7,12 @@ import Data.Text (Text)
 import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Operator (..))
 import Syntax.Expr (Expr (..))
 
+type Ctx = M.Map Text Fixity
+
 defaultFixity :: Fixity
 defaultFixity = Fixity NonAssoc 10
 
-findFixity :: Operator -> M.Map Text Fixity -> Fixity
+findFixity :: Operator -> Ctx -> Fixity
 findFixity (Operator name _) = M.findWithDefault defaultFixity name
 
 data State = State [Expr] [Operator]
@@ -31,18 +33,18 @@ mkTopApp _ _ = undefined -- unreachable
 consume :: [Expr] -> [Operator] -> [Expr]
 consume = foldl mkTopApp
 
-continueWithCurr :: Operator -> OpChain Expr -> RWS (M.Map Text Fixity) [Text] State Expr
+continueWithCurr :: Operator -> OpChain Expr -> RWS Ctx [Text] State Expr
 continueWithCurr curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
   modifyOperands (`mkTopApp` top) -- create app
   sy' curr chain
 
-continueWithChain :: Operator -> OpChain Expr -> RWS (M.Map Text Fixity) [Text] State Expr
+continueWithChain :: Operator -> OpChain Expr -> RWS Ctx [Text] State Expr
 continueWithChain curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
-sy' :: Operator -> OpChain Expr -> RWS (M.Map Text Fixity) [Text] State Expr
+sy' :: Operator -> OpChain Expr -> RWS Ctx [Text] State Expr
 sy' curr chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators
@@ -62,13 +64,13 @@ sy' curr chain = do
         LT -> continueWithChain curr chain
 
 -- shunting yard when the next thing to handle is the operand
-sy :: OpChain Expr -> RWS (M.Map Text Fixity) [Text] State Expr
+sy :: OpChain Expr -> RWS Ctx [Text] State Expr
 sy (Operand expr) = do
   State operands operators <- get
   return $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
-runSy :: M.Map Text Fixity -> OpChain Expr -> (Expr, [Text])
+runSy :: Ctx -> OpChain Expr -> (Expr, [Text])
 runSy ctx chain =
   let (expr, _, errors) = runRWS (sy chain) ctx (State [] [])
    in (expr, errors)
