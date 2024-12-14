@@ -36,10 +36,10 @@ data Binding t v
   = Binding Binder t v Range
   deriving (Show)
 
-data Fixity
-  = LeftAssoc Nat
-  | RightAssoc Nat
-  | NonAssoc Nat
+data Assoc = LeftAssoc | RightAssoc | NonAssoc
+  deriving (Eq, Show)
+
+data Fixity = Fixity Assoc Nat
   deriving (Show)
 
 data Operator

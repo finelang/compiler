@@ -53,7 +53,6 @@ mkId tok = Id (tokenLexeme tok) (getRange tok)
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)
 
 chainToExpr (Operand' expr) = expr
-chainToExpr (Operation' (Operand' l) (Operator ol or) r) = App (Id ol or) [l, r] (getRange (l, r))
 chainToExpr chain = Chain (fromLRChain chain)
 
 parseError tokens = error . show . head $ tokens

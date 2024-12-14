@@ -28,6 +28,7 @@ library
       Error
       Lexer
       Parser
+      ShuntingYard
       Syntax.Common
       Syntax.Expr
       Syntax.Parsed

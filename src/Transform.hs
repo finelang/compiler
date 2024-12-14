@@ -7,7 +7,8 @@ import Control.Monad.Trans.Writer (Writer, runWriter, tell)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.Text (Text)
-import Syntax.Common (Binder (binderName), Fixity, OpChain (..))
+import ShuntingYard (runSy)
+import Syntax.Common (Fixity, OpChain (..), Operator (Operator), binderName)
 import Syntax.Expr (Expr (..))
 import qualified Syntax.Parsed as P
 
@@ -22,12 +23,21 @@ emptyCtx = Ctx S.empty M.empty
 addBinders :: S.Set Text -> Ctx -> Ctx
 addBinders bs' (Ctx bs fs) = Ctx (S.union bs bs') fs
 
+shuntingYard :: OpChain Expr -> ReaderT Ctx (Writer [Text]) Expr
+shuntingYard chain = do
+  ctx <- asks fixities
+  let (expr, errors) = runSy ctx chain
+  lift (tell errors)
+  return expr
+
 transformChain :: OpChain P.Expr -> ReaderT Ctx (Writer [Text]) (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr
-transformChain (Operation chain op right) = do
+transformChain (Operation left op@(Operator name _) chain) = do
+  left' <- transform left
+  ctx <- asks binders
+  unless (S.member name ctx) (lift $ tell [name <> " not found"])
   chain' <- transformChain chain
-  right' <- transform right
-  return (Operation chain' op right')
+  return (Operation left' op chain')
 
 transform :: P.Expr -> ReaderT Ctx (Writer [Text]) Expr
 transform (P.Int v r) = return (Int v r)
@@ -46,9 +56,7 @@ transform (P.Fun params body r) = do
   body' <- local (addBinders params') (transform body)
   return (Fun params body' r)
 transform (P.Parens expr _) = transform expr
-transform (P.Chain chain) = do
-  chain' <- transformChain chain
-  return undefined
+transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
 transformParsedExpr :: P.Expr -> Either [Text] Expr
 transformParsedExpr pexpr =
