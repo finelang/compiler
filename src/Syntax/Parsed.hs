@@ -1,21 +1,7 @@
-module Syntax.Parsed (Expr (..), OpChain (..), Operator (..)) where
+module Syntax.Parsed (Expr (..)) where
 
 import Data.Text (Text)
-import Syntax.Common (Binder, HasRange (..), Range)
-
-data Operator
-  = Operator Text Range
-  deriving (Show)
-
-data OpChain
-  = Operand Expr
-  | Operation OpChain Operator Expr
-  deriving (Show)
-
-instance HasRange OpChain where
-  getRange :: OpChain -> Range
-  getRange (Operand expr) = getRange expr
-  getRange (Operation chain _ r) = getRange (chain, r)
+import Syntax.Common (Binder, HasRange (..), OpChain, Range)
 
 data Expr
   = Int Int Range
@@ -24,7 +10,7 @@ data Expr
   | App Expr [Expr] Range
   | Fun [Binder] Expr Range
   | Parens Expr Range
-  | Chain OpChain
+  | Chain (OpChain Expr)
   deriving (Show)
 
 instance HasRange Expr where

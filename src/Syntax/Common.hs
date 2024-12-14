@@ -1,5 +1,6 @@
 module Syntax.Common (module Syntax.Common) where
 
+import Data.Nat (Nat)
 import Data.Text (Text)
 
 data Range = Range
@@ -34,3 +35,23 @@ instance Show Binder where
 data Binding t v
   = Binding Binder t v Range
   deriving (Show)
+
+data Fixity
+  = LeftAssoc Nat Range
+  | RightAssoc Nat Range
+  | NonAssoc Nat Range
+  deriving (Show)
+
+data Operator
+  = Operator Text Range
+  deriving (Show)
+
+data OpChain t
+  = Operand t
+  | Operation (OpChain t) Operator t
+  deriving (Show)
+
+instance (HasRange t) => HasRange (OpChain t) where
+  getRange :: OpChain t -> Range
+  getRange (Operand expr) = getRange expr
+  getRange (Operation chain _ r) = getRange (chain, r)
