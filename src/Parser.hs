@@ -4,7 +4,7 @@ module Parser (parseTokens) where
 
 import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
-import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..), OpChain (..), Operator (..))
+import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..), OpChain' (..), Operator (..), fromLRChain)
 import Syntax.Parsed (Expr (..))
 import qualified Data.Array as Happy_Data_Array
 import qualified Data.Bits as Bits
@@ -173,7 +173,7 @@ happyReduction_6 _  = notHappyAtAll
 happyReduce_7 = happySpecReduce_1  7 happyReduction_7
 happyReduction_7 (HappyAbsSyn8  happy_var_1)
 	 =  HappyAbsSyn7
-		 (Operand happy_var_1
+		 (Operand' happy_var_1
 	)
 happyReduction_7 _  = notHappyAtAll 
 
@@ -182,7 +182,7 @@ happyReduction_8 (HappyAbsSyn8  happy_var_3)
 	(HappyTerminal happy_var_2)
 	(HappyAbsSyn7  happy_var_1)
 	 =  HappyAbsSyn7
-		 (Operation happy_var_1 (mkOp happy_var_2) happy_var_3
+		 (Operation' happy_var_1 (mkOp happy_var_2) happy_var_3
 	)
 happyReduction_8 _ _ _  = notHappyAtAll 
 
@@ -275,9 +275,9 @@ mkId tok = Id (tokenLexeme tok) (getRange tok)
 
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)
 
-chainToExpr (Operand expr) = expr
-chainToExpr (Operation (Operand l) (Operator ol or) r) = App (Id ol or) [l, r] (getRange (l, r))
-chainToExpr other = Chain other
+chainToExpr (Operand' expr) = expr
+chainToExpr (Operation' (Operand' l) (Operator ol or) r) = App (Id ol or) [l, r] (getRange (l, r))
+chainToExpr chain = Chain (fromLRChain chain)
 
 parseError tokens = error . show . head $ tokens
 {-# LINE 1 "templates/GenericTemplate.hs" #-}

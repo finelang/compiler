@@ -4,7 +4,7 @@ module Parser (parseTokens) where
 
 import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
-import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..), OpChain (..), Operator (..))
+import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..), OpChain' (..), Operator (..), fromLRChain)
 import Syntax.Parsed (Expr (..))
 }
 
@@ -39,8 +39,8 @@ Params : Params ',' Param { $3 : $1 }
 
 Param : id  { Binder (tokenLexeme $1) (getRange $1) }
 
-Chain : Atom             { Operand $1 }
-      | Chain op Atom    { Operation $1 (mkOp $2) $3 }
+Chain : Atom             { Operand' $1 }
+      | Chain op Atom    { Operation' $1 (mkOp $2) $3 }
 
 Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
      | id           { mkId $1 }
@@ -52,9 +52,9 @@ mkId tok = Id (tokenLexeme tok) (getRange tok)
 
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)
 
-chainToExpr (Operand expr) = expr
-chainToExpr (Operation (Operand l) (Operator ol or) r) = App (Id ol or) [l, r] (getRange (l, r))
-chainToExpr other = Chain other
+chainToExpr (Operand' expr) = expr
+chainToExpr (Operation' (Operand' l) (Operator ol or) r) = App (Id ol or) [l, r] (getRange (l, r))
+chainToExpr chain = Chain (fromLRChain chain)
 
 parseError tokens = error . show . head $ tokens
 }

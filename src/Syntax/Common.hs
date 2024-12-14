@@ -37,21 +37,36 @@ data Binding t v
   deriving (Show)
 
 data Fixity
-  = LeftAssoc Nat Range
-  | RightAssoc Nat Range
-  | NonAssoc Nat Range
+  = LeftAssoc Nat
+  | RightAssoc Nat
+  | NonAssoc Nat
   deriving (Show)
 
 data Operator
   = Operator Text Range
   deriving (Show)
 
+-- left-recursive operation chain to leverage left-recursive parsing
+data OpChain' t
+  = Operand' t
+  | Operation' (OpChain' t) Operator t
+  deriving (Show)
+
+-- right-recursive operation chain for shunting yard algorithm
 data OpChain t
   = Operand t
-  | Operation (OpChain t) Operator t
+  | Operation t Operator (OpChain t)
   deriving (Show)
+
+extendChain :: OpChain t -> Operator -> t -> OpChain t
+extendChain (Operand left) op right = Operation left op (Operand right)
+extendChain (Operation left firstOp chain) op right = Operation left firstOp (extendChain chain op right)
+
+fromLRChain :: OpChain' t -> OpChain t
+fromLRChain (Operand' expr) = Operand expr
+fromLRChain (Operation' chain op right) = extendChain (fromLRChain chain) op right
 
 instance (HasRange t) => HasRange (OpChain t) where
   getRange :: OpChain t -> Range
   getRange (Operand expr) = getRange expr
-  getRange (Operation chain _ r) = getRange (chain, r)
+  getRange (Operation l _ chain) = getRange (l, chain)
