@@ -4,8 +4,8 @@ module Parser (parseTokens) where
 
 import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
-import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..))
-import Syntax.Parsed (Expr (..), OpChain (..), Operator (..))
+import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..), OpChain (..), Operator (..))
+import Syntax.Parsed (Expr (..))
 }
 
 %name parseTokens
