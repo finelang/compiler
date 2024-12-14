@@ -26,6 +26,7 @@ dependencies:
 - transformers
 - containers
 - fin
+- string-interpolate
 
 ghc-options:
 - -Wall
