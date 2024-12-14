@@ -25,7 +25,6 @@ source-repository head
 
 library
   exposed-modules:
-      Check
       Error
       Lexer
       Parser
