@@ -4,7 +4,6 @@ module Error
   ( ErrorCollection (..),
     SemanticWarning (..),
     SemanticError (..),
-    showText,
     collectError,
     collectWarning,
   )
@@ -45,17 +44,14 @@ data SemanticError
 hl :: Text -> Text
 hl text = [i|'#{text}'|]
 
-class ShowText t where
-  showText :: t -> Text
+instance Show SemanticWarning where
+  show :: SemanticWarning -> String
+  show (MissingFixity name _) = [i|The operator #{hl name} is missing a fixity definition.|]
 
-instance ShowText SemanticWarning where
-  showText :: SemanticWarning -> Text
-  showText (MissingFixity name _) = [i|The operator #{hl name} is missing a fixity definition.|]
-
-instance ShowText SemanticError where
-  showText :: SemanticError -> Text
-  showText (UndefinedVar name _) = [i|Value bound to #{hl name} is not in scope.|]
-  showText (RepeatedParams params _) = [i|#{go params} repeated.|]
+instance Show SemanticError where
+  show :: SemanticError -> String
+  show (UndefinedVar name _) = [i|Value bound to #{hl name} is not in scope.|]
+  show (RepeatedParams params _) = [i|#{go params} repeated.|]
     where
       go :: NonEmpty Text -> String
       go (p :| []) = [i|Parameter #{hl p} is|]
@@ -64,5 +60,5 @@ instance ShowText SemanticError where
             p' = hl (last ps)
          in [i|Parameters #{ps'} and #{p'} are|]
   -- TODO
-  showText (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) =
+  show (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) =
     [i|TODO|]

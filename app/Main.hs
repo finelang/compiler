@@ -1,8 +1,7 @@
 module Main (main) where
 
 import Control.Monad (forM_, guard)
-import Data.Text.IO as TIO (putStrLn, readFile)
-import Error (showText)
+import Data.Text.IO as TIO (readFile)
 import Lexer (lexText)
 import Parser (parseTokens)
 import System.Environment (getArgs)
@@ -16,7 +15,7 @@ main = do
   code <- TIO.readFile filePath
   let pexpr = parseTokens $ lexText code
   let (result, warnings) = transformParsedExpr pexpr
-  forM_ warnings (TIO.putStrLn . showText)
+  forM_ warnings print
   case result of
-    Left errors -> forM_ errors (TIO.putStrLn . showText)
+    Left errors -> forM_ errors print
     Right expr -> print expr
