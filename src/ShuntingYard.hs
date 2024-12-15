@@ -4,7 +4,13 @@ import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, asks, get, gets, modify, runRWS, tell)
 import qualified Data.Map as M
 import Data.Text (Text)
-import Error (ErrorCollection, SemanticError (SameInfixPrecedence), SemanticWarning, collectError)
+import Error
+  ( ErrorCollection,
+    SemanticError (SameInfixPrecedence),
+    SemanticWarning,
+    collectError,
+    errorUNREACHABLE,
+  )
 import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Operator (..))
 import Syntax.Expr (Expr (..))
 
@@ -31,7 +37,7 @@ modifyOperators f = modify (\(SYStack opns ops) -> SYStack opns (f ops))
 
 mkTopApp :: [Expr] -> Operator -> [Expr]
 mkTopApp (right : left : rest) (Operator name r) = App (Var name r) [left, right] (getRange (left, right)) : rest
-mkTopApp _ _ = undefined -- unreachable
+mkTopApp _ _ = errorUNREACHABLE
 
 consume :: [Expr] -> [Operator] -> [Expr]
 consume = foldl mkTopApp

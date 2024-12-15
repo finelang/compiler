@@ -6,13 +6,22 @@ module Error
     SemanticError (..),
     collectError,
     collectWarning,
+    errorTODO,
+    errorUNREACHABLE,
   )
 where
 
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.String.Interpolate (i)
 import Data.Text (Text, intercalate)
+import GHC.Stack (HasCallStack)
 import Syntax.Common (Binder (binderName), Fixity, Operator (Operator), Range)
+
+errorTODO :: (HasCallStack) => a
+errorTODO = error "Not Implemented"
+
+errorUNREACHABLE :: (HasCallStack) => a
+errorUNREACHABLE = error "This section of code should be unreachable"
 
 data ErrorCollection e w = ErrorCollection
   { collectedErrors :: [e],
@@ -59,6 +68,4 @@ instance Show SemanticError where
         let ps' = intercalate ", " $ map (hl . binderName) (p : init ps)
             p' = hl $ binderName (last ps)
          in [i|Parameters #{ps'} and #{p'} are|]
-  -- TODO
-  show (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) =
-    [i|TODO|]
+  show (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) = errorTODO
