@@ -4,18 +4,21 @@ import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, RWST, asks, get, gets, modify, runRWS, tell)
 import qualified Data.Map as M
 import Data.Text (Text)
+import Error (ErrorCollection, SemanticError (NonAssocOperatorError), SemanticWarning, collectError)
 import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Operator (..))
 import Syntax.Expr (Expr (..))
 
+type Errors = ErrorCollection SemanticError SemanticWarning
+
 type Ctx = M.Map Text Fixity
+
+data State = State [Expr] [Operator]
 
 defaultFixity :: Fixity
 defaultFixity = Fixity NonAssoc 10
 
 findFixity :: Operator -> Ctx -> Fixity
 findFixity (Operator name _) = M.findWithDefault defaultFixity name
-
-data State = State [Expr] [Operator]
 
 operatorStack :: State -> [Operator]
 operatorStack (State _ ops) = ops
@@ -33,19 +36,19 @@ mkTopApp _ _ = undefined -- unreachable
 consume :: [Expr] -> [Operator] -> [Expr]
 consume = foldl mkTopApp
 
-continueWithCurr :: Operator -> OpChain Expr -> RWS Ctx [Text] State Expr
+continueWithCurr :: Operator -> OpChain Expr -> RWS Ctx Errors State Expr
 continueWithCurr curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
   modifyOperands (`mkTopApp` top) -- create app
   sy' curr chain
 
-continueWithChain :: Operator -> OpChain Expr -> RWS Ctx [Text] State Expr
+continueWithChain :: Operator -> OpChain Expr -> RWS Ctx Errors State Expr
 continueWithChain curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
-sy' :: Operator -> OpChain Expr -> RWS Ctx [Text] State Expr
-sy' curr chain = do
+sy' :: Operator -> OpChain Expr -> RWS Ctx Errors State Expr
+sy' curr@(Operator name range) chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators
     then do
@@ -59,18 +62,18 @@ sy' curr chain = do
         EQ -> case currAssoc of
           LeftAssoc -> continueWithCurr curr chain
           _ -> do
-            when (currAssoc == NonAssoc) (tell ["non assoc"])
+            when (currAssoc == NonAssoc) (tell $ collectError $ NonAssocOperatorError name range)
             continueWithChain curr chain
         LT -> continueWithChain curr chain
 
 -- shunting yard when the next thing to handle is the operand
-sy :: OpChain Expr -> RWS Ctx [Text] State Expr
+sy :: OpChain Expr -> RWS Ctx Errors State Expr
 sy (Operand expr) = do
   State operands operators <- get
   return $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
-runSy :: Ctx -> OpChain Expr -> (Expr, [Text])
+runSy :: Ctx -> OpChain Expr -> (Expr, Errors)
 runSy ctx chain =
   let (expr, _, errors) = runRWS (sy chain) ctx (State [] [])
    in (expr, errors)
