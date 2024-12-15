@@ -4,7 +4,8 @@ import Control.Monad (unless)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.Reader (ReaderT (runReaderT), asks, local)
 import Control.Monad.Trans.Writer (Writer, runWriter, tell)
-import Data.List.NonEmpty (singleton)
+import Data.List (sort)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -24,8 +25,8 @@ data Ctx = Ctx
 emptyCtx :: Ctx
 emptyCtx = Ctx S.empty M.empty
 
-addBinders :: S.Set Text -> Ctx -> Ctx
-addBinders bs' (Ctx bs fs) = Ctx (S.union bs bs') fs
+addBinders :: [Text] -> Ctx -> Ctx
+addBinders bs' (Ctx bs fs) = Ctx (S.union bs $ S.fromList bs') fs
 
 shuntingYard :: OpChain Expr -> ReaderT Ctx (Writer Errors) Expr
 shuntingYard chain = do
@@ -33,6 +34,14 @@ shuntingYard chain = do
   let (expr, errors) = runSy ctx chain
   lift (tell errors)
   return expr
+
+repeated :: (Ord a) => [a] -> [a]
+repeated xs = go (sort xs)
+  where
+    go [] = []
+    go [_] = []
+    go (x : y : zs) | x == y = x : go (dropWhile (== x) zs)
+    go (_ : y : zs) = go (y : zs)
 
 transformChain :: OpChain P.Expr -> ReaderT Ctx (Writer Errors) (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr
@@ -55,9 +64,12 @@ transform (P.App f args r) = do
   args' <- mapM transform args
   return (App f' args' r)
 transform (P.Fun params body r) = do
-  let params' = S.fromList (map binderName params)
-  unless (S.size params' == length params) (lift $ tell $ collectError $ RepeatedParams (singleton "") r)
-  body' <- local (addBinders params') (transform body)
+  let paramNames = map binderName params
+  let repeatedParams = repeated paramNames
+  unless
+    (null repeatedParams)
+    (lift $ tell $ collectError $ RepeatedParams (head repeatedParams :| tail repeatedParams) r)
+  body' <- local (addBinders paramNames) (transform body)
   return (Fun params body' r)
 transform (P.Parens expr _) = transform expr
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
