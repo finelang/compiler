@@ -43,12 +43,12 @@ Chain : Atom             { Operand' $1 }
       | Chain op Atom    { Operation' $1 (mkOp $2) $3 }
 
 Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
-     | id           { mkId $1 }
+     | id           { mkVar $1 }
      | int          { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
      | float        { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
 
 {
-mkId tok = Id (tokenLexeme tok) (getRange tok)
+mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)
 

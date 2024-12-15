@@ -198,7 +198,7 @@ happyReduction_9 _ _ _  = notHappyAtAll
 happyReduce_10 = happySpecReduce_1  8 happyReduction_10
 happyReduction_10 (HappyTerminal happy_var_1)
 	 =  HappyAbsSyn8
-		 (mkId happy_var_1
+		 (mkVar happy_var_1
 	)
 happyReduction_10 _  = notHappyAtAll 
 
@@ -271,7 +271,7 @@ parseTokens tks = happyRunIdentity happySomeParser where
 happySeq = happyDontSeq
 
 
-mkId tok = Id (tokenLexeme tok) (getRange tok)
+mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)
 

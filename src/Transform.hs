@@ -14,7 +14,7 @@ import Syntax.Expr (Expr (..))
 import qualified Syntax.Parsed as P
 
 data Ctx = Ctx
-  { binders :: S.Set Text,
+  { vars :: S.Set Text,
     fixities :: M.Map Text Fixity
   }
 
@@ -25,8 +25,8 @@ type UnusedBinders = S.Set Binder
 emptyCtx :: Ctx
 emptyCtx = Ctx S.empty M.empty
 
-addBinders :: [Text] -> Ctx -> Ctx
-addBinders bs' (Ctx bs fs) = Ctx (S.union bs $ S.fromList bs') fs
+addVars :: [Text] -> Ctx -> Ctx
+addVars bs' (Ctx bs fs) = Ctx (S.union bs $ S.fromList bs') fs
 
 shuntingYard :: OpChain Expr -> RWS Ctx Errors s Expr
 shuntingYard chain = do
@@ -47,7 +47,7 @@ transformChain :: OpChain P.Expr -> RWS Ctx Errors UnusedBinders (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr
 transformChain (Operation left op@(Operator name range) chain) = do
   left' <- transform left
-  ctx <- asks binders
+  ctx <- asks vars
   unless (S.member name ctx) (tell $ collectError $ UndefinedVar name range)
   chain' <- transformChain chain
   return (Operation left' op chain')
@@ -55,10 +55,10 @@ transformChain (Operation left op@(Operator name range) chain) = do
 transform :: P.Expr -> RWS Ctx Errors UnusedBinders Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
-transform (P.Id name r) = do
-  ctx <- asks binders
+transform (P.Var name r) = do
+  ctx <- asks vars
   unless (S.member name ctx) (tell $ collectError $ UndefinedVar name r)
-  return (Id name r)
+  return (Var name r)
 transform (P.App f args r) = do
   f' <- transform f
   args' <- mapM transform args
@@ -69,7 +69,7 @@ transform (P.Fun params body r) = do
   unless
     (null repeatedParams)
     (tell $ collectError $ RepeatedParams (head repeatedParams :| tail repeatedParams) r)
-  body' <- local (addBinders paramNames) (transform body)
+  body' <- local (addVars paramNames) (transform body)
   return (Fun params body' r)
 transform (P.Parens expr _) = transform expr
 transform (P.Chain chain) = transformChain chain >>= shuntingYard

@@ -50,7 +50,7 @@ instance Show SemanticWarning where
 
 instance Show SemanticError where
   show :: SemanticError -> String
-  show (UndefinedVar name _) = [i|Value bound to #{hl name} is not in scope.|]
+  show (UndefinedVar name _) = [i|Variable #{hl name} is not in scope.|]
   show (RepeatedParams params _) = [i|#{go params} repeated.|]
     where
       go :: NonEmpty Text -> String

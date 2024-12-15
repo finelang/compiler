@@ -30,7 +30,7 @@ modifyOperators :: (Monoid w) => ([Operator] -> [Operator]) -> RWS r w SYStack (
 modifyOperators f = modify (\(SYStack opns ops) -> SYStack opns (f ops))
 
 mkTopApp :: [Expr] -> Operator -> [Expr]
-mkTopApp (right : left : rest) (Operator name r) = App (Id name r) [left, right] (getRange (left, right)) : rest
+mkTopApp (right : left : rest) (Operator name r) = App (Var name r) [left, right] (getRange (left, right)) : rest
 mkTopApp _ _ = undefined -- unreachable
 
 consume :: [Expr] -> [Operator] -> [Expr]
