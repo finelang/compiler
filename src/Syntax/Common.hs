@@ -47,10 +47,19 @@ data Binding t v
   deriving (Show)
 
 data Assoc = LeftAssoc | RightAssoc | NonAssoc
-  deriving (Eq, Show)
+  deriving (Eq)
+
+instance Show Assoc where
+  show :: Assoc -> String
+  show LeftAssoc = "infixl"
+  show RightAssoc = "infixr"
+  show NonAssoc = "infix"
 
 data Fixity = Fixity Assoc Nat
-  deriving (Show)
+
+instance Show Fixity where
+  show :: Fixity -> String
+  show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
 
 data Operator
   = Operator Text Range

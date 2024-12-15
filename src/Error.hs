@@ -13,7 +13,7 @@ where
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.String.Interpolate (i)
 import Data.Text (Text, intercalate)
-import Syntax.Common (Range)
+import Syntax.Common (Fixity, Operator (Operator), Range)
 
 data ErrorCollection e w = ErrorCollection
   { collectedErrors :: [e],
@@ -40,7 +40,7 @@ data SemanticWarning
 data SemanticError
   = UndefinedVar Text Range
   | RepeatedParams (NonEmpty Text) Range
-  | NonAssocOperatorError Text Range
+  | SameInfixPrecedence (Operator, Fixity) (Operator, Fixity)
 
 hl :: Text -> Text
 hl text = [i|'#{text}'|]
@@ -64,4 +64,5 @@ instance ShowText SemanticError where
             p' = hl (last ps)
          in [i|Parameters #{ps'} and #{p'} are|]
   -- TODO
-  showText (NonAssocOperatorError name _) = [i|#{name}|]
+  showText (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) =
+    [i|TODO|]

@@ -4,7 +4,7 @@ import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, RWST, asks, get, gets, modify, runRWS, tell)
 import qualified Data.Map as M
 import Data.Text (Text)
-import Error (ErrorCollection, SemanticError (NonAssocOperatorError), SemanticWarning, collectError)
+import Error (ErrorCollection, SemanticError (SameInfixPrecedence), SemanticWarning, collectError)
 import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Operator (..))
 import Syntax.Expr (Expr (..))
 
@@ -48,21 +48,22 @@ continueWithChain curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
 sy' :: Operator -> OpChain Expr -> RWS Ctx Errors State Expr
-sy' curr@(Operator name range) chain = do
+sy' curr chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators
-    then do
-      modifyOperators (curr :)
-      sy chain
+    then continueWithChain curr chain
     else do
-      (Fixity _ topPrec) <- gets (head . operatorStack) >>= (asks . findFixity)
-      (Fixity currAssoc currPrec) <- asks (findFixity curr)
+      top <- gets (head . operatorStack)
+      topFix@(Fixity _ topPrec) <- asks (findFixity top)
+      currFix@(Fixity currAssoc currPrec) <- asks (findFixity curr)
       case compare topPrec currPrec of
         GT -> continueWithCurr curr chain
         EQ -> case currAssoc of
           LeftAssoc -> continueWithCurr curr chain
           _ -> do
-            when (currAssoc == NonAssoc) (tell $ collectError $ NonAssocOperatorError name range)
+            when
+              (currAssoc == NonAssoc)
+              (tell $ collectError $ SameInfixPrecedence (top, topFix) (curr, currFix))
             continueWithChain curr chain
         LT -> continueWithChain curr chain
 
