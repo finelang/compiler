@@ -1,7 +1,7 @@
 module ShuntingYard (runSy) where
 
 import Control.Monad (when)
-import Control.Monad.Trans.RWS (RWS, RWST, asks, get, gets, modify, runRWS, tell)
+import Control.Monad.Trans.RWS (RWS, asks, get, gets, modify, runRWS, tell)
 import qualified Data.Map as M
 import Data.Text (Text)
 import Error (ErrorCollection, SemanticError (SameInfixPrecedence), SemanticWarning, collectError)
@@ -23,10 +23,10 @@ findFixity (Operator name _) = M.findWithDefault defaultFixity name
 operatorStack :: SYStack -> [Operator]
 operatorStack (SYStack _ ops) = ops
 
-modifyOperands :: (Monoid w, Monad m) => ([Expr] -> [Expr]) -> RWST r w SYStack m ()
+modifyOperands :: (Monoid w) => ([Expr] -> [Expr]) -> RWS r w SYStack ()
 modifyOperands f = modify (\(SYStack opns ops) -> SYStack (f opns) ops)
 
-modifyOperators :: (Monoid w, Monad m) => ([Operator] -> [Operator]) -> RWST r w SYStack m ()
+modifyOperators :: (Monoid w) => ([Operator] -> [Operator]) -> RWS r w SYStack ()
 modifyOperators f = modify (\(SYStack opns ops) -> SYStack opns (f ops))
 
 mkTopApp :: [Expr] -> Operator -> [Expr]
