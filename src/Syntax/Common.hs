@@ -1,16 +1,23 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Syntax.Common (module Syntax.Common) where
 
 import Data.Nat (Nat)
+import Data.String.Interpolate (i)
 import Data.Text (Text)
 
 data Range = Range
   { startIndex :: Int,
-    endIndex :: Int
+    startColumn :: Int,
+    startLine :: Int,
+    endIndex :: Int,
+    endColumn :: Int,
+    endLine :: Int
   }
 
 instance Show Range where
   show :: Range -> String
-  show (Range si ei) = "[" ++ show si ++ ", " ++ show ei ++ ")"
+  show range = [i|[#{startIndex range}, #{endIndex range})|]
 
 class HasRange t where
   getRange :: t -> Range
@@ -21,7 +28,10 @@ instance HasRange Range where
 
 instance (HasRange p, HasRange q) => HasRange (p, q) where
   getRange :: (p, q) -> Range
-  getRange (l, r) = Range (startIndex $ getRange l) (endIndex $ getRange r)
+  getRange (l, r) =
+    let (Range si sc sl _ _ _) = getRange l
+        (Range _ _ _ ei ec el) = getRange r
+     in Range si sc sl ei ec el
 
 data Binder = Binder
   { binderName :: Text,

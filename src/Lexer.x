@@ -63,7 +63,11 @@ data Token = Token
   deriving (Show)
 
 instance HasRange Token where
-  getRange (Token _ l (TokenPosn i _ _)) = Range i (i + Text.length l)
+  getRange (Token _ lexeme (TokenPosn i line col)) =
+    let len = Text.length lexeme
+        ei = i + len
+        ec = col + len
+     in Range i col line ei ec line
 
 mkt ttype (AlexPn i line col) lexm = Token ttype lexm (TokenPosn i line col)
 
