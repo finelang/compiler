@@ -8,11 +8,11 @@ import Error (ErrorCollection, SemanticError (SameInfixPrecedence), SemanticWarn
 import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Operator (..))
 import Syntax.Expr (Expr (..))
 
-type Errors = ErrorCollection SemanticError SemanticWarning
-
 type Ctx = M.Map Text Fixity
 
-data State = State [Expr] [Operator]
+type Errors = ErrorCollection SemanticError SemanticWarning
+
+data SYStack = SYStack [Expr] [Operator]
 
 defaultFixity :: Fixity
 defaultFixity = Fixity NonAssoc 10
@@ -20,14 +20,14 @@ defaultFixity = Fixity NonAssoc 10
 findFixity :: Operator -> Ctx -> Fixity
 findFixity (Operator name _) = M.findWithDefault defaultFixity name
 
-operatorStack :: State -> [Operator]
-operatorStack (State _ ops) = ops
+operatorStack :: SYStack -> [Operator]
+operatorStack (SYStack _ ops) = ops
 
-modifyOperands :: (Monoid w, Monad m) => ([Expr] -> [Expr]) -> RWST r w State m ()
-modifyOperands f = modify (\(State opns ops) -> State (f opns) ops)
+modifyOperands :: (Monoid w, Monad m) => ([Expr] -> [Expr]) -> RWST r w SYStack m ()
+modifyOperands f = modify (\(SYStack opns ops) -> SYStack (f opns) ops)
 
-modifyOperators :: (Monoid w, Monad m) => ([Operator] -> [Operator]) -> RWST r w State m ()
-modifyOperators f = modify (\(State opns ops) -> State opns (f ops))
+modifyOperators :: (Monoid w, Monad m) => ([Operator] -> [Operator]) -> RWST r w SYStack m ()
+modifyOperators f = modify (\(SYStack opns ops) -> SYStack opns (f ops))
 
 mkTopApp :: [Expr] -> Operator -> [Expr]
 mkTopApp (right : left : rest) (Operator name r) = App (Id name r) [left, right] (getRange (left, right)) : rest
@@ -36,18 +36,18 @@ mkTopApp _ _ = undefined -- unreachable
 consume :: [Expr] -> [Operator] -> [Expr]
 consume = foldl mkTopApp
 
-continueWithCurr :: Operator -> OpChain Expr -> RWS Ctx Errors State Expr
+continueWithCurr :: Operator -> OpChain Expr -> RWS Ctx Errors SYStack Expr
 continueWithCurr curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
   modifyOperands (`mkTopApp` top) -- create app
   sy' curr chain
 
-continueWithChain :: Operator -> OpChain Expr -> RWS Ctx Errors State Expr
+continueWithChain :: Operator -> OpChain Expr -> RWS Ctx Errors SYStack Expr
 continueWithChain curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
-sy' :: Operator -> OpChain Expr -> RWS Ctx Errors State Expr
+sy' :: Operator -> OpChain Expr -> RWS Ctx Errors SYStack Expr
 sy' curr chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators
@@ -68,13 +68,13 @@ sy' curr chain = do
         LT -> continueWithChain curr chain
 
 -- shunting yard when the next thing to handle is the operand
-sy :: OpChain Expr -> RWS Ctx Errors State Expr
+sy :: OpChain Expr -> RWS Ctx Errors SYStack Expr
 sy (Operand expr) = do
-  State operands operators <- get
+  SYStack operands operators <- get
   return $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
 runSy :: Ctx -> OpChain Expr -> (Expr, Errors)
 runSy ctx chain =
-  let (expr, _, errors) = runRWS (sy chain) ctx (State [] [])
+  let (expr, _, errors) = runRWS (sy chain) ctx (SYStack [] [])
    in (expr, errors)
