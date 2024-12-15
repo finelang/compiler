@@ -12,7 +12,7 @@ where
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.String.Interpolate (i)
 import Data.Text (Text, intercalate)
-import Syntax.Common (Fixity, Operator (Operator), Range)
+import Syntax.Common (Binder (binderName), Fixity, Operator (Operator), Range)
 
 data ErrorCollection e w = ErrorCollection
   { collectedErrors :: [e],
@@ -38,7 +38,7 @@ data SemanticWarning
 
 data SemanticError
   = UndefinedVar Text Range
-  | RepeatedParams (NonEmpty Text) Range
+  | RepeatedParams (NonEmpty Binder)
   | SameInfixPrecedence (Operator, Fixity) (Operator, Fixity)
 
 hl :: Text -> Text
@@ -51,13 +51,13 @@ instance Show SemanticWarning where
 instance Show SemanticError where
   show :: SemanticError -> String
   show (UndefinedVar name _) = [i|Variable #{hl name} is not in scope.|]
-  show (RepeatedParams params _) = [i|#{go params} repeated.|]
+  show (RepeatedParams params) = [i|#{go params} repeated.|]
     where
-      go :: NonEmpty Text -> String
-      go (p :| []) = [i|Parameter #{hl p} is|]
+      go :: NonEmpty Binder -> String
+      go (p :| []) = [i|Parameter #{hl $ binderName p} is|]
       go (p :| ps) =
-        let ps' = intercalate ", " $ map hl (p : init ps)
-            p' = hl (last ps)
+        let ps' = intercalate ", " $ map (hl . binderName) (p : init ps)
+            p' = hl $ binderName (last ps)
          in [i|Parameters #{ps'} and #{p'} are|]
   -- TODO
   show (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) =

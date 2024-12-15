@@ -64,12 +64,11 @@ transform (P.App f args r) = do
   args' <- mapM transform args
   return (App f' args' r)
 transform (P.Fun params body r) = do
-  let paramNames = map binderName params
-  let repeatedParams = repeated paramNames
+  let repeatedParams = repeated params
   unless
     (null repeatedParams)
-    (tell $ collectError $ RepeatedParams (head repeatedParams :| tail repeatedParams) r)
-  body' <- local (addVars paramNames) (transform body)
+    (tell $ collectError $ RepeatedParams $ head repeatedParams :| tail repeatedParams)
+  body' <- local (addVars $ map binderName params) (transform body)
   return (Fun params body' r)
 transform (P.Parens expr _) = transform expr
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
