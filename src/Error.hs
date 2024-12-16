@@ -11,9 +11,8 @@ module Error
   )
 where
 
-import Data.List.NonEmpty (NonEmpty (..))
 import Data.String.Interpolate (i)
-import Data.Text (Text, intercalate)
+import Data.Text (Text)
 import GHC.Stack (HasCallStack)
 import Syntax.Common (Binder (binderName), Fixity, Operator (Operator), Range)
 
@@ -48,7 +47,7 @@ data SemanticWarning
 
 data SemanticError
   = UndefinedVar Text Range
-  | RepeatedParams (NonEmpty Binder)
+  | RepeatedParam Binder
   | SameInfixPrecedence (Operator, Fixity) (Operator, Fixity)
 
 hl :: Text -> Text
@@ -62,12 +61,5 @@ instance Show SemanticWarning where
 instance Show SemanticError where
   show :: SemanticError -> String
   show (UndefinedVar name _) = [i|Variable #{hl name} is not in scope.|]
-  show (RepeatedParams params) = [i|#{go params} repeated.|]
-    where
-      go :: NonEmpty Binder -> String
-      go (p :| []) = [i|Parameter #{hl $ binderName p} is|]
-      go (p :| ps) =
-        let ps' = intercalate ", " $ map (hl . binderName) (p : init ps)
-            p' = hl $ binderName (last ps)
-         in [i|Parameters #{ps'} and #{p'} are|]
+  show (RepeatedParam b) = [i|Parameter #{hl $ binderName b} is repeated.|]
   show (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) = errorTODO

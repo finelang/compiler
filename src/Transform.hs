@@ -3,7 +3,6 @@ module Transform (transformParsedExpr) where
 import Control.Monad (unless)
 import Control.Monad.Trans.RWS (RWS, ask, get, gets, modify, runRWS, tell)
 import Data.List (sort)
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map as M
 import Data.Text (Text)
 import Error
@@ -68,7 +67,7 @@ transform (P.Fun params body r) = do
   let repeatedParams = repeated sortedParams
   unless
     (null repeatedParams)
-    (tell $ collectErrors [RepeatedParams $ head repeatedParams :| tail repeatedParams])
+    (tell $ collectErrors $ map RepeatedParam repeatedParams)
   let params' = M.fromAscList $ map (\b -> (binderName b, b)) sortedParams
   let paramNames = M.map (const False) params'
   shadowed <- gets (`M.intersection` paramNames)
