@@ -4,8 +4,8 @@ module Error
   ( ErrorCollection (..),
     SemanticWarning (..),
     SemanticError (..),
-    collectError,
-    collectWarning,
+    collectErrors,
+    collectWarnings,
     errorTODO,
     errorUNREACHABLE,
   )
@@ -28,11 +28,11 @@ data ErrorCollection e w = ErrorCollection
     collectedWarnings :: [w]
   }
 
-collectError :: e -> ErrorCollection e w
-collectError err = ErrorCollection [err] []
+collectErrors :: [e] -> ErrorCollection e w
+collectErrors errs = ErrorCollection errs []
 
-collectWarning :: w -> ErrorCollection e w
-collectWarning wrn = ErrorCollection [] [wrn]
+collectWarnings :: [w] -> ErrorCollection e w
+collectWarnings = ErrorCollection []
 
 instance Semigroup (ErrorCollection e w) where
   (<>) :: ErrorCollection e w -> ErrorCollection e w -> ErrorCollection e w
@@ -44,6 +44,7 @@ instance Monoid (ErrorCollection e w) where
 
 data SemanticWarning
   = MissingFixity Text Range
+  | UnusedVar Binder
 
 data SemanticError
   = UndefinedVar Text Range
@@ -56,6 +57,7 @@ hl text = [i|'#{text}'|]
 instance Show SemanticWarning where
   show :: SemanticWarning -> String
   show (MissingFixity name _) = [i|The operator #{hl name} is missing a fixity definition.|]
+  show (UnusedVar b) = [i|Variable #{hl $ binderName b} is not used.|]
 
 instance Show SemanticError where
   show :: SemanticError -> String
