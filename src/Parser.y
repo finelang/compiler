@@ -39,8 +39,15 @@ Params : Params ',' Param { $3 : $1 }
 
 Param : id  { Binder (tokenLexeme $1) (getRange $1) }
 
-Chain : Atom             { Operand' $1 }
-      | Chain op Atom    { Operation' $1 (mkOp $2) $3 }
+Chain : App              { Operand' $1 }
+      | Chain op App     { Operation' $1 (mkOp $2) $3 }
+
+App : App '(' Args ')'   { App $1 (reverse $3) (getRange ($1, $4)) }
+    | Atom               { $1 }
+
+Args : Args ',' Expr     { $3 : $1 }
+     | Expr              { [$1] }
+     | {- empty -}       { [] }
 
 Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
      | id           { mkVar $1 }
