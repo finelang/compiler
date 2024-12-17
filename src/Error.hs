@@ -44,6 +44,7 @@ instance Monoid (ErrorCollection e w) where
 data SemanticWarning
   = MissingFixity Text Range
   | UnusedVar Binder
+  | BindingShadowing Binder
 
 data SemanticError
   = UndefinedVar Text Range
@@ -57,6 +58,7 @@ instance Show SemanticWarning where
   show :: SemanticWarning -> String
   show (MissingFixity name _) = [i|The operator #{hl name} is missing a fixity definition.|]
   show (UnusedVar b) = [i|Variable #{hl $ binderName b} is not used.|]
+  show (BindingShadowing b) = [i|The binding for #{hl $ binderName b} shadows the existing binding.|]
 
 instance Show SemanticError where
   show :: SemanticError -> String

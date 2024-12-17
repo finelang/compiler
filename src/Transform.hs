@@ -1,6 +1,5 @@
 module Transform (transformParsedExpr) where
 
-import Control.Monad (unless)
 import Control.Monad.Trans.RWS (RWS, ask, get, gets, modify, runRWS, tell)
 import Data.List (sort)
 import qualified Data.Map as M
@@ -8,7 +7,7 @@ import Data.Text (Text)
 import Error
   ( ErrorCollection (ErrorCollection),
     SemanticError (..),
-    SemanticWarning (UnusedVar),
+    SemanticWarning (BindingShadowing, UnusedVar),
     collectErrors,
     collectWarnings,
   )
@@ -65,12 +64,11 @@ transform (P.App f args r) = do
 transform (P.Fun params body r) = do
   let sortedParams = sort params
   let repeatedParams = repeated sortedParams
-  unless
-    (null repeatedParams)
-    (tell $ collectErrors $ map RepeatedParam repeatedParams)
+  tell $ collectErrors $ map RepeatedParam repeatedParams
   let params' = M.fromAscList $ map (\b -> (binderName b, b)) sortedParams
   let paramNames = M.map (const False) params'
   shadowed <- gets (`M.intersection` paramNames)
+  tell $ collectWarnings $ map (BindingShadowing . (M.!) params') (M.keys shadowed)
   modify (M.union paramNames) -- override the values of shadowed
   body' <- transform body
   unused <- gets $ M.filter not . (`M.intersection` paramNames)
