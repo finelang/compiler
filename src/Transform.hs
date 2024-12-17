@@ -5,7 +5,7 @@ import Data.List (sort)
 import qualified Data.Map as M
 import Data.Text (Text)
 import Error
-  ( ErrorCollection (ErrorCollection),
+  ( ErrorCollection,
     SemanticError (..),
     SemanticWarning (BindingShadowing, UnusedVar),
     collectErrors,
@@ -80,5 +80,5 @@ transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
 transformParsedExpr :: P.Expr -> (Either [SemanticError] Expr, [SemanticWarning])
 transformParsedExpr pexpr =
-  let (expr, _, ErrorCollection errors warnings) = runRWS (transform pexpr) M.empty M.empty
+  let (expr, _, (errors, warnings)) = runRWS (transform pexpr) M.empty M.empty
    in (if null errors then Right expr else Left errors, warnings)
