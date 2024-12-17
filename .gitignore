@@ -1,3 +1,5 @@
 .stack-work/
 *~
 *input.fn
+src/Lexer.hs
+src/Parser.hs
