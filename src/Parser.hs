@@ -108,7 +108,7 @@ happyReduction_1 ((HappyAbsSyn5  happy_var_5) `HappyStk`
 happyReduce_2 = happySpecReduce_1  0# happyReduction_2
 happyReduction_2 (HappyAbsSyn8  happy_var_1)
          =  HappyAbsSyn5
-                 (chainToExpr happy_var_1
+                 (Chain (fromLRChain happy_var_1)
         )
 happyReduction_2 _  = notHappyAtAll 
 
@@ -272,9 +272,6 @@ happySeq = happyDontSeq
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)
-
-chainToExpr (Operand' expr) = expr
-chainToExpr chain = Chain (fromLRChain chain)
 
 parseError tokens = error . show . head $ tokens
 -- $Id: GenericTemplate.hs,v 1.26 2005/01/14 14:47:22 simonmar Exp $

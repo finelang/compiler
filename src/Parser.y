@@ -31,7 +31,7 @@ import Syntax.Parsed (Expr (..))
 %%
 
 Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange ($1, $5)) }
-     | Chain                  { chainToExpr $1 }
+     | Chain                  { Chain (fromLRChain $1) }
 
 Params : Params ',' Param { $3 : $1 }
        | Param            { [$1] }
@@ -51,9 +51,6 @@ Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)
-
-chainToExpr (Operand' expr) = expr
-chainToExpr chain = Chain (fromLRChain chain)
 
 parseError tokens = error . show . head $ tokens
 }

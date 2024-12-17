@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-x-partial #-}
+
 module ShuntingYard (runSy) where
 
 import Control.Monad (when)
@@ -81,6 +83,7 @@ sy (Operand expr) = do
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
 runSy :: Fixities -> OpChain Expr -> (Expr, Errors)
-runSy ctx chain =
-  let (expr, _, errors) = runRWS (sy chain) ctx (SYStack [] [])
+runSy _ (Operand expr) = (expr, mempty)
+runSy ctx (Operation left op chain) =
+  let (expr, _, errors) = runRWS (sy chain) ctx (SYStack [left] [op])
    in (expr, errors)
