@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Transform (transformParsedExpr) where
 
 import Control.Monad.Trans.RWS (RWS, ask, get, gets, modify, runRWS, tell)
@@ -22,6 +24,9 @@ type Errors = ErrorCollection SemanticError SemanticWarning
 
 type Vars = M.Map Text Bool
 
+class Transformation from to where
+  transform :: from -> RWS Fixities Errors Vars to
+
 shuntingYard :: OpChain Expr -> RWS Fixities Errors s Expr
 shuntingYard chain = do
   ctx <- ask
@@ -37,46 +42,48 @@ repeated xs = go (sort xs)
     go (x : y : zs) | x == y = x : go (dropWhile (== x) zs)
     go (_ : y : zs) = go (y : zs)
 
-transformChain :: OpChain P.Expr -> RWS Fixities Errors Vars (OpChain Expr)
-transformChain (Operand expr) = Operand <$> transform expr
-transformChain (Operation left op@(Operator name r) chain) = do
-  left' <- transform left
-  vars <- get
-  if M.member name vars
-    then modify (M.insert name True)
-    else tell $ collectErrors [UndefinedVar name r]
-  chain' <- transformChain chain
-  return (Operation left' op chain')
+instance (Transformation p q) => Transformation (OpChain p) (OpChain q) where
+  transform :: OpChain p -> RWS Fixities Errors Vars (OpChain q)
+  transform (Operand expr) = Operand <$> transform expr
+  transform (Operation left op@(Operator name r) chain) = do
+    left' <- transform left
+    vars <- get
+    if M.member name vars
+      then modify (M.insert name True)
+      else tell $ collectErrors [UndefinedVar name r]
+    chain' <- transform chain
+    return (Operation left' op chain')
 
-transform :: P.Expr -> RWS Fixities Errors Vars Expr
-transform (P.Int v r) = return (Int v r)
-transform (P.Float v r) = return (Float v r)
-transform (P.Var name r) = do
-  vars <- get
-  if M.member name vars
-    then modify (M.insert name True)
-    else tell $ collectErrors [UndefinedVar name r]
-  return (Var name r)
-transform (P.App f args r) = do
-  f' <- transform f
-  args' <- mapM transform args
-  return (App f' args' r)
-transform (P.Fun params body r) = do
-  let sortedParams = sort params
-  let repeatedParams = repeated sortedParams
-  tell $ collectErrors $ map RepeatedParam repeatedParams
-  let params' = M.fromAscList $ map (\b -> (binderName b, b)) sortedParams
-  let paramNames = M.map (const False) params'
-  shadowed <- gets (`M.intersection` paramNames)
-  tell $ collectWarnings $ map (BindingShadowing . (M.!) params') (M.keys shadowed)
-  modify (M.union paramNames) -- override the values of shadowed
-  body' <- transform body
-  unused <- gets $ M.filter not . (`M.intersection` paramNames)
-  tell $ collectWarnings $ map (UnusedVar . (M.!) params') (M.keys unused)
-  modify $ (`M.union` shadowed) . (`M.difference` paramNames)
-  return (Fun params body' r)
-transform (P.Parens expr _) = transform expr
-transform (P.Chain chain) = transformChain chain >>= shuntingYard
+instance Transformation P.Expr Expr where
+  transform :: P.Expr -> RWS Fixities Errors Vars Expr
+  transform (P.Int v r) = return (Int v r)
+  transform (P.Float v r) = return (Float v r)
+  transform (P.Var name r) = do
+    vars <- get
+    if M.member name vars
+      then modify (M.insert name True)
+      else tell $ collectErrors [UndefinedVar name r]
+    return (Var name r)
+  transform (P.App f args r) = do
+    f' <- transform f
+    args' <- mapM transform args
+    return (App f' args' r)
+  transform (P.Fun params body r) = do
+    let sortedParams = sort params
+    let repeatedParams = repeated sortedParams
+    tell $ collectErrors $ map RepeatedParam repeatedParams
+    let params' = M.fromAscList $ map (\b -> (binderName b, b)) sortedParams
+    let paramNames = M.map (const False) params'
+    shadowed <- gets (`M.intersection` paramNames)
+    tell $ collectWarnings $ map (BindingShadowing . (M.!) params') (M.keys shadowed)
+    modify (M.union paramNames) -- override the values of shadowed
+    body' <- transform body
+    unused <- gets $ M.filter not . (`M.intersection` paramNames)
+    tell $ collectWarnings $ map (UnusedVar . (M.!) params') (M.keys unused)
+    modify $ (`M.union` shadowed) . (`M.difference` paramNames)
+    return (Fun params body' r)
+  transform (P.Parens expr _) = transform expr
+  transform (P.Chain chain) = transform chain >>= shuntingYard
 
 transformParsedExpr :: P.Expr -> (Either [SemanticError] Expr, [SemanticWarning])
 transformParsedExpr pexpr =
