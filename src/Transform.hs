@@ -1,5 +1,6 @@
 module Transform (transform, transformModule, try) where
 
+import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, ask, get, gets, modify, runRWS, tell)
 import Data.List (sort)
 import qualified Data.Map as M
@@ -86,6 +87,8 @@ transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
 transformBinding :: Binding () P.Expr -> RWS Fixities Errors Vars (Binding () Expr)
 transformBinding (Binding b@(Binder name _) ttype value isRec) = do
+  shadowing <- gets (M.member name)
+  when shadowing (tell $ collectWarnings $ [BindingShadowing b])
   value' <-
     if isRec
       then modify (M.insert name False) >> transform value
