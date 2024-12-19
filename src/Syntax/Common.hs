@@ -56,7 +56,7 @@ instance Show Binder where
   show (Binder name _) = show name
 
 data Binding t v
-  = Binding Binder t v Range
+  = Binding Binder t v Bool
   deriving (Show)
 
 data Assoc = LeftAssoc | RightAssoc | NonAssoc

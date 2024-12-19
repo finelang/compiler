@@ -2,10 +2,19 @@
 {-# LANGUAGE NoStrictData #-}
 module Parser (parseTokens) where
 
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
-import Syntax.Common (Binder (Binder), HasRange (getRange), Range (..), OpChain' (..), Operator (..), fromLRChain)
-import Syntax.Parsed (Expr (..))
+import Syntax.Common
+  ( Binding (Binding),
+    Binder (Binder),
+    HasRange (getRange),
+    Range (..),
+    OpChain' (..),
+    Operator (..),
+    fromLRChain
+  )
+import Syntax.Parsed (Expr (..), Module (Module))
 }
 
 %name parseTokens
@@ -18,6 +27,7 @@ import Syntax.Parsed (Expr (..))
   infixr  { Token Infixr _ _ }
   let     { Token Let _ _ }
   fn      { Token Fn _ _ }
+  rec     { Token Rec _ _ }
   id      { Token IdTok _ _ }
   int     { Token IntTok _ _ }
   float   { Token FloatTok _ _ }
@@ -30,6 +40,19 @@ import Syntax.Parsed (Expr (..))
 
 %%
 
+Module : Binding Bindings	{ Module ($1 :| reverse $2) }
+
+Bindings : Bindings Binding	{ $2 : $1 }
+         | {- empty -}			{ [] }
+
+Binding : let IsRec Binder '=' Expr     { Binding $3 () $5 $2 }
+
+IsRec : rec         { True }
+      | {- empty -} { False }
+
+Binder : id         { mkBinder $1 }
+       | '(' op ')' { Binder (tokenLexeme $2) (getRange ($1, $3)) }
+
 Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange ($1, $5)) }
      | Chain                  { Chain (fromLRChain $1) }
 
@@ -37,7 +60,7 @@ Params : Params ',' Param { $3 : $1 }
        | Param            { [$1] }
        | {- empty -}      { [] }
 
-Param : id  { Binder (tokenLexeme $1) (getRange $1) }
+Param : id  { mkBinder $1 }
 
 Chain : App              { Operand' $1 }
       | Chain op App     { Operation' $1 (mkOp $2) $3 }
@@ -55,6 +78,8 @@ Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
      | float        { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
 
 {
+mkBinder tok = Binder (tokenLexeme tok) (getRange tok)
+
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)

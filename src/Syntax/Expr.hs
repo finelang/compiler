@@ -1,7 +1,8 @@
-module Syntax.Expr (Expr (..)) where
+module Syntax.Expr (Expr (..), Module (..)) where
 
+import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
-import Syntax.Common (Binder, HasRange (..), Range)
+import Syntax.Common (Binder, Binding, HasRange (..), Range)
 
 data Expr
   = Int Int Range
@@ -18,3 +19,8 @@ instance HasRange Expr where
   getRange (Var _ r) = r
   getRange (App _ _ r) = r
   getRange (Fun _ _ r) = r
+
+data Module = Module
+  { bindings :: NonEmpty (Binding () Expr)
+  }
+  deriving (Show)

@@ -20,6 +20,7 @@ tokens :-
   "infixr"                  { mkt Infixr }
   "let"                     { mkt Let }
   "fn"                      { mkt Fn }
+  "rec"                     { mkt Rec }
   [a-z_][$alpha $digit]*    { mkt IdTok }
   "-"? $digit+              { mkt IntTok }
   "-"? $digit+ "." $digit+  { mkt FloatTok }
@@ -37,6 +38,7 @@ data TokenType
   | Infixr
   | Let
   | Fn
+  | Rec
   | IdTok
   | IntTok
   | FloatTok
