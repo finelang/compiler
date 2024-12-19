@@ -39,6 +39,10 @@ data Binder = Binder
     binderRange :: Range
   }
 
+instance HasRange Binder where
+  getRange :: Binder -> Range
+  getRange = binderRange
+
 instance Eq Binder where
   (==) :: Binder -> Binder -> Bool
   (==) = (==) `on` binderName
