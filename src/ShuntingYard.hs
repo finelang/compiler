@@ -20,7 +20,7 @@ type Fixities = M.Map Text Fixity
 
 type Errors = ErrorCollection SemanticError SemanticWarning
 
-data SYStack = SYStack [Expr] [Operator]
+type SYStack = ([Expr], [Operator])
 
 defaultFixity :: Fixity
 defaultFixity = Fixity NonAssoc 10
@@ -29,13 +29,13 @@ findFixity :: Operator -> Fixities -> Fixity
 findFixity (Operator name _) = M.findWithDefault defaultFixity name
 
 operatorStack :: SYStack -> [Operator]
-operatorStack (SYStack _ ops) = ops
+operatorStack (_, ops) = ops
 
 modifyOperands :: (Monoid w) => ([Expr] -> [Expr]) -> RWS r w SYStack ()
-modifyOperands f = modify (\(SYStack opns ops) -> SYStack (f opns) ops)
+modifyOperands f = modify $ \(opns, ops) -> (f opns, ops)
 
 modifyOperators :: (Monoid w) => ([Operator] -> [Operator]) -> RWS r w SYStack ()
-modifyOperators f = modify (\(SYStack opns ops) -> SYStack opns (f ops))
+modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
 mkTopApp :: [Expr] -> Operator -> [Expr]
 mkTopApp (right : left : rest) (Operator name r) = App (Var name r) [left, right] (getRange (left, right)) : rest
@@ -78,12 +78,12 @@ sy' curr chain = do
 -- shunting yard when the next thing to handle is the operand
 sy :: OpChain Expr -> RWS Fixities Errors SYStack Expr
 sy (Operand expr) = do
-  SYStack operands operators <- get
+  (operands, operators) <- get
   return $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
 runSy :: Fixities -> OpChain Expr -> (Expr, Errors)
 runSy _ (Operand expr) = (expr, mempty)
 runSy ctx (Operation left op chain) =
-  let (expr, _, errors) = runRWS (sy chain) ctx (SYStack [left] [op])
+  let (expr, _, errors) = runRWS (sy chain) ctx ([left], [op])
    in (expr, errors)
