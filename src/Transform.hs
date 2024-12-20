@@ -2,8 +2,8 @@ module Transform (transform, transformModule, try) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, ask, get, gets, modify, runRWS, tell)
-import Data.List (sort)
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Data.Text (Text)
 import Error
   ( ErrorCollection,
@@ -21,7 +21,7 @@ import Syntax.Common
     OpChain (..),
     Operator (Operator),
   )
-import Syntax.Expr (Expr (..), Module (Module))
+import Syntax.Expr (Expr (..), Module)
 import qualified Syntax.Parsed as P
 
 type Fixities = M.Map Text Fixity
@@ -40,13 +40,13 @@ shuntingYard chain = do
   tell errors
   return expr
 
-repeated :: (Ord a) => [a] -> [a]
-repeated xs = go (sort xs)
+repeatedOn :: (Ord b) => [a] -> (a -> b) -> [a]
+repeatedOn xs f = go xs S.empty
   where
-    go [] = []
-    go [_] = []
-    go (x : y : zs) | x == y = x : go (dropWhile (== x) zs)
-    go (_ : y : zs) = go (y : zs)
+    go [] _ = []
+    go (y : ys) s =
+      let key = f y
+       in if S.member key s then go ys s else y : go ys (S.insert key s)
 
 transformChain :: OpChain P.Expr -> RWS Fixities Errors Vars (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr
@@ -73,10 +73,8 @@ transform (P.App f args r) = do
   args' <- mapM transform args
   return (App f' args' r)
 transform (P.Fun params body r) = do
-  let sortedParams = sort params
-  let repeatedParams = repeated sortedParams
-  tell $ collectErrors $ map RepeatedParam repeatedParams
-  let params' = M.fromAscList $ map (\b -> (binderName b, (b, False))) sortedParams
+  tell $ collectErrors $ map RepeatedParam $ params `repeatedOn` binderName
+  let params' = M.fromList $ map (\b -> (binderName b, (b, False))) params
   shadowed <- gets (`M.intersection` params')
   tell $ collectWarnings $ map (BindingShadowing . fst) (M.elems shadowed)
   modify (M.union params') -- override the values of shadowed

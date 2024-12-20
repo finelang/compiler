@@ -2,7 +2,6 @@
 
 module Syntax.Common (module Syntax.Common) where
 
-import Data.Function (on)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 
@@ -41,14 +40,6 @@ data Binder = Binder
 instance HasRange Binder where
   getRange :: Binder -> Range
   getRange = binderRange
-
-instance Eq Binder where
-  (==) :: Binder -> Binder -> Bool
-  (==) = (==) `on` binderName
-
-instance Ord Binder where
-  compare :: Binder -> Binder -> Ordering
-  compare = compare `on` binderName
 
 instance Show Binder where
   show :: Binder -> String
