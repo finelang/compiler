@@ -23,7 +23,6 @@ dependencies:
 - base >= 4.7 && < 5
 - array
 - containers
-- fin
 - string-interpolate
 - text
 - transformers

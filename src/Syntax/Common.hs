@@ -3,7 +3,6 @@
 module Syntax.Common (module Syntax.Common) where
 
 import Data.Function (on)
-import Data.Nat (Nat)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 
@@ -68,7 +67,7 @@ instance Show Assoc where
   show RightAssoc = "infixr"
   show NonAssoc = "infix"
 
-data Fixity = Fixity Assoc Nat
+data Fixity = Fixity Assoc Int
 
 instance Show Fixity where
   show :: Fixity -> String
