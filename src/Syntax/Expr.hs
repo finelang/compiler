@@ -1,8 +1,8 @@
 module Syntax.Expr (Expr (..), Module (..)) where
 
-import Data.List.NonEmpty (NonEmpty)
+import Data.Map (Map)
 import Data.Text (Text)
-import Syntax.Common (Binder, Binding, HasRange (..), Range)
+import Syntax.Common (Binder, Binding, Fixity, HasRange (..), Range)
 
 data Expr
   = Int Int Range
@@ -21,6 +21,7 @@ instance HasRange Expr where
   getRange (Fun _ _ r) = r
 
 data Module = Module
-  { bindings :: NonEmpty (Binding () Expr)
+  { bindings :: [Binding () Expr],
+    fixities :: Map Text Fixity
   }
   deriving (Show)

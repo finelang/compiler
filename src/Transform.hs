@@ -11,6 +11,7 @@ import Error
     SemanticWarning (BindingShadowing, UnusedVar),
     collectErrors,
     collectWarnings,
+    errorTODO,
   )
 import ShuntingYard (runSy)
 import Syntax.Common
@@ -98,7 +99,7 @@ transformBinding (Binding b@(Binder name _) ttype value isRec) = do
   return (Binding b ttype value' isRec)
 
 transformModule :: P.Module -> RWS Fixities Errors Vars Module
-transformModule (P.Module bindings) = mapM transformBinding bindings >>= return . Module
+transformModule (P.Module _) = errorTODO
 
 try :: (p -> RWS Fixities Errors Vars q) -> p -> (Either [SemanticError] q, [SemanticWarning])
 try f x =

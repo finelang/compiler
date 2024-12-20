@@ -1,8 +1,7 @@
-module Syntax.Parsed (Expr (..), Module (..)) where
+module Syntax.Parsed (Defn (..), Expr (..), Module (..)) where
 
-import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
-import Syntax.Common (Binder, Binding, HasRange (..), OpChain, Range)
+import Syntax.Common (Binder, Binding, Fixity, HasRange (..), OpChain, Range)
 
 data Expr
   = Int Int Range
@@ -24,7 +23,12 @@ instance HasRange Expr where
   getRange (Parens _ r) = r
   getRange (Chain chain) = getRange chain
 
+data Defn
+  = BindDefn (Binding () Expr)
+  | FixDefn Fixity Text Range
+  deriving (Show)
+
 data Module = Module
-  { bindings :: NonEmpty (Binding () Expr)
+  { definitions :: [Defn]
   }
   deriving (Show)

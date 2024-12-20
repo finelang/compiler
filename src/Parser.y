@@ -2,7 +2,6 @@
 {-# LANGUAGE NoStrictData #-}
 module Parser (parseTokens) where
 
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
 import Syntax.Common
@@ -12,9 +11,11 @@ import Syntax.Common
     Range (..),
     OpChain' (..),
     Operator (..),
-    fromLRChain
+    fromLRChain,
+    Fixity(Fixity),
+    Assoc(..)
   )
-import Syntax.Parsed (Expr (..), Module (Module))
+import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 }
 
 %name parseTokens
@@ -40,12 +41,17 @@ import Syntax.Parsed (Expr (..), Module (Module))
 
 %%
 
-Module : Binding Bindings	{ Module ($1 :| reverse $2) }
+Module : Defns    { Module (reverse $1) }
 
-Bindings : Bindings Binding	{ $2 : $1 }
-         | {- empty -}			{ [] }
+Defns : Defns Defn  { $2 : $1 }
+      | {- empty -} { [] }
 
-Binding : let IsRec Binder '=' Expr     { Binding $3 () $5 $2 }
+Defn : let IsRec Binder '=' Expr  { BindDefn (Binding $3 () $5 $2) }
+     | Assoc int op               { FixDefn (Fixity $1 (read $ unpack $ tokenLexeme $2)) (tokenLexeme $3) (getRange $3) }
+
+Assoc : infix   { NonAssoc }
+      | infixl  { LeftAssoc }
+      | infixr  { RightAssoc }
 
 IsRec : rec         { True }
       | {- empty -} { False }
@@ -83,6 +89,8 @@ mkBinder tok = Binder (tokenLexeme tok) (getRange tok)
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 mkOp tok = Operator (tokenLexeme tok) (getRange tok)
+
+mkFix assoc precTok = Fixity assoc (read $ unpack $ tokenLexeme precTok)
 
 parseError tokens = error . show . head $ tokens
 }
