@@ -7,9 +7,8 @@ import Control.Monad.Trans.RWS (RWS, asks, get, gets, modify, runRWS, tell)
 import qualified Data.Map as M
 import Data.Text (Text)
 import Error
-  ( ErrorCollection,
-    SemanticError (SameInfixPrecedence),
-    SemanticWarning,
+  ( Error (SameInfixPrecedence),
+    Errors,
     collectErrors,
     errorUNREACHABLE,
   )
@@ -17,8 +16,6 @@ import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..)
 import Syntax.Expr (Expr (..))
 
 type Fixities = M.Map Text Fixity
-
-type Errors = ErrorCollection SemanticError SemanticWarning
 
 type SYStack = ([Expr], [Operator])
 

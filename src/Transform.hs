@@ -5,9 +5,9 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.Text (Text)
 import Error
-  ( ErrorCollection,
-    SemanticError (..),
-    SemanticWarning (BindShadowing, UnusedVar),
+  ( Error (..),
+    Errors,
+    Warning (BindShadowing, UnusedVar),
     collectErrors,
     collectWarnings,
     errorTODO,
@@ -23,8 +23,6 @@ import Syntax.Expr (Expr (..), Module)
 import qualified Syntax.Parsed as P
 
 type Fixities = M.Map Text Fixity
-
-type Errors = ErrorCollection SemanticError SemanticWarning
 
 type Vars = M.Map Text (Binder, Bool)
 
@@ -96,7 +94,7 @@ transform (P.Chain chain) = transformChain chain >>= shuntingYard
 transformModule :: P.Module -> RWS Fixities Errors Vars Module
 transformModule (P.Module _) = errorTODO
 
-try :: (p -> RWS Fixities Errors Vars q) -> p -> (Either [SemanticError] q, [SemanticWarning])
+try :: (p -> RWS Fixities Errors Vars q) -> p -> (Either [Error] q, [Warning])
 try f x =
   let (y, _, (errors, warnings)) = runRWS (f x) M.empty M.empty
    in (if null errors then Right y else Left errors, warnings)

@@ -1,9 +1,9 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Error
-  ( ErrorCollection,
-    SemanticWarning (..),
-    SemanticError (..),
+  ( Errors,
+    Warning (..),
+    Error (..),
     collectErrors,
     collectWarnings,
     errorTODO,
@@ -22,19 +22,19 @@ errorTODO = error "Not Implemented"
 errorUNREACHABLE :: (HasCallStack) => a
 errorUNREACHABLE = error "This section of code should be unreachable"
 
-type ErrorCollection e w = ([e], [w])
+type Errors = ([Error], [Warning])
 
-collectErrors :: [e] -> ErrorCollection e w
+collectErrors :: [Error] -> Errors
 collectErrors errs = (errs, [])
 
-collectWarnings :: [w] -> ErrorCollection e w
+collectWarnings :: [Warning] -> Errors
 collectWarnings wrns = ([], wrns)
 
-data SemanticWarning
+data Warning
   = UnusedVar Binder
   | BindShadowing Binder
 
-data SemanticError
+data Error
   = UndefinedVar Text Range
   | RepeatedParam Binder
   | InvalidPrecedence Text Range
@@ -43,13 +43,13 @@ data SemanticError
 hl :: Text -> Text
 hl text = [i|'#{text}'|]
 
-instance Show SemanticWarning where
-  show :: SemanticWarning -> String
+instance Show Warning where
+  show :: Warning -> String
   show (UnusedVar (Binder name _)) = [i|Variable #{hl name} is not used.|]
   show (BindShadowing (Binder name _)) = [i|The binding for #{hl name} shadows the existing binding.|]
 
-instance Show SemanticError where
-  show :: SemanticError -> String
+instance Show Error where
+  show :: Error -> String
   show (UndefinedVar name _) = [i|Variable #{hl name} is not in scope.|]
   show (RepeatedParam (Binder name _)) = [i|Parameter #{hl name} is repeated.|]
   show (InvalidPrecedence _ _) = errorTODO
