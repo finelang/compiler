@@ -54,10 +54,6 @@ instance Show Binder where
   show :: Binder -> String
   show (Binder name _) = show name
 
-data Binding t v
-  = Binding Binder t v Bool
-  deriving (Show)
-
 data Assoc = LeftAssoc | RightAssoc | NonAssoc
   deriving (Eq)
 
@@ -72,6 +68,11 @@ data Fixity = Fixity Assoc Int
 instance Show Fixity where
   show :: Fixity -> String
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
+
+data Bind t v
+  = Bind Binder t v Bool
+  | OpBind Binder t v Bool Fixity
+  deriving (Show)
 
 data Operator
   = Operator Text Range

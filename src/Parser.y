@@ -5,7 +5,7 @@ module Parser (parseTokens) where
 import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
 import Syntax.Common
-  ( Binding (Binding),
+  ( Bind (..),
     Binder (Binder),
     HasRange (getRange),
     Range (..),
@@ -46,8 +46,10 @@ Module : Defns    { Module (reverse $1) }
 Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
-Defn : let IsRec Binder '=' Expr  { BindDefn (Binding $3 () $5 $2) }
-     | Assoc int op               { FixDefn (Fixity $1 (read $ unpack $ tokenLexeme $2)) (tokenLexeme $3) (getRange $3) }
+Defn : let IsRec Binder '=' Expr  { BindDefn (Bind $3 () $5 $2) }
+     | Fix IsRec Binder '=' Expr  { BindDefn (OpBind $3 () $5 $2 $1) }
+
+Fix : Assoc int   { Fixity $1 (read $ unpack $ tokenLexeme $2) }
 
 Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }

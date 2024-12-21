@@ -31,13 +31,13 @@ collectWarnings :: [w] -> ErrorCollection e w
 collectWarnings wrns = ([], wrns)
 
 data SemanticWarning
-  = MissingFixity Text Range
-  | UnusedVar Binder
-  | BindingShadowing Binder
+  = UnusedVar Binder
+  | BindShadowing Binder
 
 data SemanticError
   = UndefinedVar Text Range
   | RepeatedParam Binder
+  | InvalidPrecedence Text Range
   | SameInfixPrecedence (Operator, Fixity) (Operator, Fixity)
 
 hl :: Text -> Text
@@ -45,12 +45,12 @@ hl text = [i|'#{text}'|]
 
 instance Show SemanticWarning where
   show :: SemanticWarning -> String
-  show (MissingFixity name _) = [i|The operator #{hl name} is missing a fixity definition.|]
   show (UnusedVar (Binder name _)) = [i|Variable #{hl name} is not used.|]
-  show (BindingShadowing (Binder name _)) = [i|The binding for #{hl name} shadows the existing binding.|]
+  show (BindShadowing (Binder name _)) = [i|The binding for #{hl name} shadows the existing binding.|]
 
 instance Show SemanticError where
   show :: SemanticError -> String
   show (UndefinedVar name _) = [i|Variable #{hl name} is not in scope.|]
   show (RepeatedParam (Binder name _)) = [i|Parameter #{hl name} is repeated.|]
+  show (InvalidPrecedence _ _) = errorTODO
   show (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) = errorTODO

@@ -1,23 +1,20 @@
 module Transform (transform, transformModule, try) where
 
-import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, ask, get, gets, modify, runRWS, tell)
-import Data.List (sort)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.Text (Text)
 import Error
   ( ErrorCollection,
     SemanticError (..),
-    SemanticWarning (BindingShadowing, UnusedVar),
+    SemanticWarning (BindShadowing, UnusedVar),
     collectErrors,
     collectWarnings,
     errorTODO,
   )
 import ShuntingYard (runSy)
 import Syntax.Common
-  ( Binder (Binder, binderName),
-    Binding (Binding),
+  ( Binder (binderName),
     Fixity,
     OpChain (..),
     Operator (Operator),
@@ -76,7 +73,7 @@ transform (P.Fun params body r) = do
   tell $ collectErrors $ map RepeatedParam $ repeated params
   let params' = M.fromList $ map (\b -> (binderName b, (b, False))) params
   shadowed <- gets (`M.intersection` params')
-  tell $ collectWarnings $ map (BindingShadowing . fst) (M.elems shadowed)
+  tell $ collectWarnings $ map (BindShadowing . fst) (M.elems shadowed)
   modify (M.union params') -- override the values of shadowed
   body' <- transform body
   unused <- gets $ M.filter (not . snd) . (`M.intersection` params')
@@ -86,15 +83,15 @@ transform (P.Fun params body r) = do
 transform (P.Parens expr _) = transform expr
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
-transformBinding :: Binding () P.Expr -> RWS Fixities Errors Vars (Binding () Expr)
-transformBinding (Binding b@(Binder name _) ttype value isRec) = do
-  shadowing <- gets (M.member name)
-  when shadowing (tell $ collectWarnings $ [BindingShadowing b])
-  value' <-
-    if isRec
-      then modify (M.insert name (b, False)) >> transform value
-      else transform value >>= \v -> modify (M.insert name (b, False)) >> return v
-  return (Binding b ttype value' isRec)
+-- transformBind :: Bind () P.Expr -> RWS Fixities Errors Vars (Bind () Expr)
+-- transformBind (Bind b@(Binder name _) ttype value isRec) = do
+--   shadowing <- gets (M.member name)
+--   when shadowing (tell $ collectWarnings $ [BindShadowing b])
+--   value' <-
+--     if isRec
+--       then modify (M.insert name (b, False)) >> transform value
+--       else transform value >>= \v -> modify (M.insert name (b, False)) >> return v
+--   return (Bind b ttype value' isRec)
 
 transformModule :: P.Module -> RWS Fixities Errors Vars Module
 transformModule (P.Module _) = errorTODO
