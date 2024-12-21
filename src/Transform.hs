@@ -2,6 +2,7 @@ module Transform (transform, transformModule, try) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, ask, get, gets, modify, runRWS, tell)
+import Data.List (sort)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -40,13 +41,12 @@ shuntingYard chain = do
   tell errors
   return expr
 
-repeatedOn :: (Ord b) => [a] -> (a -> b) -> [a]
-repeatedOn xs f = go xs S.empty
+repeated :: (Ord a) => [a] -> [a]
+repeated xs = reverse (go xs S.empty)
   where
     go [] _ = []
-    go (y : ys) s =
-      let key = f y
-       in if S.member key s then go ys s else y : go ys (S.insert key s)
+    go (y : ys) s | S.member y s = y : go ys s
+    go (y : ys) s = go ys (S.insert y s)
 
 transformChain :: OpChain P.Expr -> RWS Fixities Errors Vars (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr
@@ -73,7 +73,7 @@ transform (P.App f args r) = do
   args' <- mapM transform args
   return (App f' args' r)
 transform (P.Fun params body r) = do
-  tell $ collectErrors $ map RepeatedParam $ params `repeatedOn` binderName
+  tell $ collectErrors $ map RepeatedParam $ repeated params
   let params' = M.fromList $ map (\b -> (binderName b, (b, False))) params
   shadowed <- gets (`M.intersection` params')
   tell $ collectWarnings $ map (BindingShadowing . fst) (M.elems shadowed)
