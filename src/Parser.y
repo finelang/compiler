@@ -44,8 +44,8 @@ Module : Defns    { Module (reverse $1) }
 Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
-Defn : let Binder '=' Expr    { BindDefn (Bind $2 () $4) }
-     | Fix Binder '=' Expr    { BindDefn (OpBind $2 () $4 $1) }
+Defn : let id '=' Expr   { BindDefn (Bind (mkVar $2) () $4) }
+     | Fix Op '=' Expr   { BindDefn (OpBind $2 () $4 $1) }
 
 Fix : Assoc int   { Fixity $1 (read $ unpack $ tokenLexeme $2) }
 
@@ -53,8 +53,7 @@ Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
       | infixr  { RightAssoc }
 
-Binder : id         { mkVar $1 }
-       | '(' op ')' { Var (tokenLexeme $2) (getRange ($1, $3)) }
+Op : '(' op ')'     { Var (tokenLexeme $2) (getRange ($1, $3)) }
 
 Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange ($1, $5)) }
      | Chain                  { Chain (fromLRChain $1) }
