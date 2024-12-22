@@ -24,7 +24,6 @@ tokens :-
   "-"? $digit+              { mkt IntTok }
   "-"? $digit+ "." $digit+  { mkt FloatTok }
   "="                       { mkt Eq }
-  ":"                       { mkt Of }
   "("                       { mkt Opar } 
   ")"                       { mkt Cpar }
   $sym{1, 3}                { mkt Op }

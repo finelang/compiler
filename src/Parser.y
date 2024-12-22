@@ -31,7 +31,6 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   int     { Token IntTok _ _ }
   float   { Token FloatTok _ _ }
   '='     { Token Eq _ _ }
-  ':'     { Token Of _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
   op      { Token Op _ _ }
