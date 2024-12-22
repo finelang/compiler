@@ -83,7 +83,7 @@ transform (P.Float v r) = return (Float v r)
 transform (P.Id var) = return (Id var)
 transform (P.App f args r) = do
   f' <- transform f
-  args' <- mapM transform args
+  args' <- mapM (transform . stripParens) args
   return (App f' args' r)
 transform (P.Fun params body r) = do
   body' <- transform body
