@@ -56,7 +56,7 @@ freeVars (P.Fun params body _) = do
   bodyVars <- freeVars body
   tell (collectWarnings $ map UnusedVar $ M.elems $ M.difference params' bodyVars)
   return (M.difference bodyVars params')
-freeVars (P.Parens expr _) = freeVars expr
+freeVars (P.Parens expr) = freeVars expr
 freeVars (P.Chain chain) = chainFreeVars chain
 
 shuntingYard :: OpChain Expr -> ReaderT Fixities (Writer Errors) Expr
@@ -73,6 +73,10 @@ transformChain (Operation left op chain) = do
   chain' <- transformChain chain
   return (Operation left' op chain')
 
+stripParens :: P.Expr -> P.Expr
+stripParens (P.Parens expr) = stripParens expr
+stripParens expr = expr
+
 transform :: P.Expr -> ReaderT Fixities (Writer Errors) Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
@@ -84,7 +88,7 @@ transform (P.App f args r) = do
 transform (P.Fun params body r) = do
   body' <- transform body
   return (Fun params body' r)
-transform (P.Parens expr _) = transform expr
+transform (P.Parens expr) = Parens <$> transform (stripParens expr)
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
 transformBind :: Bind () P.Expr -> ReaderT Fixities (Writer Errors) (Bind () Expr)

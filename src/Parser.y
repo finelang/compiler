@@ -56,7 +56,7 @@ Assoc : infix   { NonAssoc }
 Op : '(' op ')'     { Var (tokenLexeme $2) (getRange ($1, $3)) }
 
 Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange ($1, $5)) }
-     | Chain                  { Chain (fromLRChain $1) }
+     | Chain                  { chainToExpr $1 }
 
 Params : Params ',' Param { $3 : $1 }
        | Param            { [$1] }
@@ -74,7 +74,7 @@ Args : Args ',' Expr     { $3 : $1 }
      | Expr              { [$1] }
      | {- empty -}       { [] }
 
-Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
+Atom : '(' Expr ')' { Parens $2 }
      | id           { Id $ mkVar $1 }
      | int          { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
      | float        { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
@@ -83,6 +83,9 @@ Atom : '(' Expr ')' { Parens $2 (getRange ($1, $3)) }
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 mkFix assoc precTok = Fixity assoc (read $ unpack $ tokenLexeme precTok)
+
+chainToExpr (Operand' expr) = expr
+chainToExpr chain = Chain (fromLRChain chain)
 
 parseError tokens = error . show . head $ tokens
 }
