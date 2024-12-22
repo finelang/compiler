@@ -28,6 +28,17 @@ newtype Ctx = Ctx {indentation :: Text}
 withIndentation :: Text -> Ctx -> Ctx
 withIndentation ind ctx = ctx {indentation = ind}
 
+instance CodeGens (NonEmpty Expr) Ctx where
+  genCode :: NonEmpty Expr -> Reader Ctx Text
+  genCode exprs = do
+    oldIndent <- asks indentation
+    let indent = oldIndent <> "  "
+    exprs' <- local (withIndentation indent) (mapM genCode exprs)
+    let (stmts, expr) = unsnoc' exprs'
+    let stmts' = concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
+    let expr' = [i|#{indent}return #{expr};|] :: Text
+    return [i|{\n#{stmts'}#{expr'}\n#{oldIndent}}|]
+
 instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
   genCode (Int v _) = return (pack $ show v)
@@ -39,16 +50,13 @@ instance CodeGens Expr Ctx where
     return [i|#{f'}(#{args'})|]
   genCode (Fun params body _) = do
     let params' = intercalate ", " (map varName params)
-    body' <- genCode body
+    body' <- case body of
+      Block exprs _ -> genCode exprs
+      _ -> genCode body
     return [i|(#{params'}) => #{body'}|]
   genCode (Block exprs _) = do
-    oldIndent <- asks indentation
-    let indent = oldIndent <> "  "
-    exprs' <- local (withIndentation indent) (mapM genCode exprs)
-    let (stmts, expr) = unsnoc' exprs'
-    let stmts' = concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
-    let expr' = [i|#{indent}return #{expr};|] :: Text
-    return [i|(() => {\n#{stmts'}#{expr'}\n#{oldIndent}})()|]
+    content <- genCode exprs
+    return [i|(() => #{content})()|]
   genCode (Parens expr) = do
     expr' <- genCode expr
     return [i|(#{expr'})|]
