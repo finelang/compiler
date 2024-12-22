@@ -2,6 +2,7 @@
 {-# LANGUAGE NoStrictData #-}
 module Parser (parseTokens) where
 
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Text (unpack)
 import Lexer (Token (..), TokenType (..))
 import Syntax.Common
@@ -33,8 +34,11 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   '='     { Token Eq _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
+  '{'     { Token Obrace _ _ }
+  '}'     { Token Cbrace _ _ }
   op      { Token Op _ _ }
   ','     { Token Comma _ _ }
+  ';'     { Token Semi _ _ }
 
 %%
 
@@ -73,10 +77,14 @@ Args : Args ',' Expr     { $3 : $1 }
      | Expr              { [$1] }
      | {- empty -}       { [] }
 
-Atom : '(' Expr ')' { Parens $2 }
-     | id           { Id $ mkVar $1 }
-     | int          { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
-     | float        { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
+Atom : '(' Expr ')'      { Parens $2 }
+     | '{' Block '}'     { mkBlock (reverse $2) (getRange ($1, $3)) }
+     | id                { Id $ mkVar $1 }
+     | int               { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
+     | float             { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
+
+Block : Block ';' Expr   { $3 : $1 }
+      | Expr             { [$1] }
 
 {
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
@@ -85,6 +93,9 @@ mkFix assoc precTok = Fixity assoc (read $ unpack $ tokenLexeme precTok)
 
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)
+
+mkBlock [e] _ = e
+mkBlock (e : es) r = Block (e :| es) r
 
 parseError tokens = error . show . head $ tokens
 }

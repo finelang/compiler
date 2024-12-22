@@ -26,8 +26,11 @@ tokens :-
   "="                       { mkt Eq }
   "("                       { mkt Opar } 
   ")"                       { mkt Cpar }
+  "{"                       { mkt Obrace }
+  "}"                       { mkt Cbrace }
   $sym{1, 3}                { mkt Op }
   ","                       { mkt Comma }
+  ";"                       { mkt Semi }
 
 {
 data TokenType
@@ -43,8 +46,11 @@ data TokenType
   | Of
   | Opar
   | Cpar
+  | Obrace
+  | Cbrace
   | Op
   | Comma
+  | Semi
   deriving (Show)
 
 data TokenPosn = TokenPosn

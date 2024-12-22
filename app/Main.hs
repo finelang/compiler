@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Codegen.Js (genCode)
+import Codegen.Js (runGenCode)
 import Control.Monad (forM_)
 import qualified Data.Text.IO as TIO (readFile, writeFile)
 import Error (wrapError, wrapWarning)
@@ -25,4 +25,4 @@ main = do
   forM_ warnings (putStrLn . wrapWarning)
   case result of
     Left errors -> forM_ errors (putStrLn . wrapError)
-    Right mdule -> TIO.writeFile outFilePath (genCode mdule)
+    Right mdule -> print mdule >> TIO.writeFile outFilePath (runGenCode mdule)

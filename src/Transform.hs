@@ -3,6 +3,7 @@ module Transform (try, transformModule) where
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask, withReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter, tell)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
@@ -57,6 +58,7 @@ freeVars (P.Fun params body _) = do
   tell (collectWarnings $ map UnusedVar $ M.elems $ M.difference params' bodyVars)
   return (M.difference bodyVars params')
 freeVars (P.Parens expr) = freeVars expr
+freeVars (P.Block exprs _) = unions' <$> (mapM freeVars exprs)
 freeVars (P.Chain chain) = chainFreeVars chain
 
 shuntingYard :: OpChain Expr -> ReaderT Fixities (Writer Errors) Expr
@@ -77,6 +79,10 @@ stripParens :: P.Expr -> P.Expr
 stripParens (P.Parens expr) = stripParens expr
 stripParens expr = expr
 
+stripBlock :: NonEmpty P.Expr -> NonEmpty P.Expr
+stripBlock ((P.Block exprs _) :| []) = stripBlock exprs
+stripBlock exprs = exprs
+
 transform :: P.Expr -> ReaderT Fixities (Writer Errors) Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
@@ -89,6 +95,9 @@ transform (P.Fun params body r) = do
   body' <- transform body
   return (Fun params body' r)
 transform (P.Parens expr) = Parens <$> transform (stripParens expr)
+transform (P.Block exprs r) = do
+  exprs' <- mapM transform (stripBlock exprs)
+  return (Block exprs' r)
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
 transformBind :: Bind () P.Expr -> ReaderT Fixities (Writer Errors) (Bind () Expr)
