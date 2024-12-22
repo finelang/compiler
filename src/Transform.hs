@@ -12,7 +12,7 @@ import Data.Tuple (swap)
 import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
 import ShuntingYard (runSy)
 import Syntax.Common (Bind (..), Fixity (Fixity), OpChain (..), Var (varName))
-import Syntax.Expr (Expr (..), Module (Module))
+import Syntax.Expr (Closure (Closure), Expr (..), Fixities, Module (Module))
 import qualified Syntax.Parsed as P
 
 repeated :: (Ord a) => [a] -> [a]
@@ -22,6 +22,8 @@ repeated xs = reverse (go xs S.empty)
     go (y : ys) s | S.member y s = y : go ys s
     go (y : ys) s = go ys (S.insert y s)
 
+-- key: name of a binder (Var)
+-- value: all Var values inside Expr.Id or OpChain.Operation
 type Vars = Map Text [Var]
 
 singleton' :: Text -> Var -> Vars
@@ -56,8 +58,6 @@ freeVars (P.Fun params body _) = do
   return (M.difference bodyVars params')
 freeVars (P.Parens expr _) = freeVars expr
 freeVars (P.Chain chain) = chainFreeVars chain
-
-type Fixities = Map Text Fixity
 
 shuntingYard :: OpChain Expr -> ReaderT Fixities (Writer Errors) Expr
 shuntingYard chain = do
@@ -114,9 +114,9 @@ transformModule (P.Module defns) = do
   let (errors, fvs) = traverse (swap . runWriter . freeVars . value) bindings
   lift (tell errors)
 
+  let binders' = M.fromList $ map (\v -> (varName v, v)) binders
   -- error about undefined top binders and warn about unused ones
   lift $ do
-    let binders' = M.fromList $ map (\v -> (varName v, v)) binders
     let allFreeVars = unions' fvs
     let unusedVars = M.elems $ M.difference binders' allFreeVars
     let undefinedVars = concat $ M.elems $ M.difference allFreeVars binders'
@@ -129,16 +129,16 @@ transformModule (P.Module defns) = do
     let (lb, ub) = (0, 10) -- TODO: get from some config
     let invalid = not . validFixity lb ub
     tell (collectErrors $ map (InvalidPrecedence lb ub . fst) $ filter (invalid . snd) pairedFixities)
-  let fixities = M.fromList $ map (\(var, fix) -> (varName var, fix)) pairedFixities
+  let fixities = M.fromList pairedFixities
 
   bindings' <- withReaderT (const fixities) (mapM transformBind bindings)
-
-  -- binder : its free vars
-  -- let binderFreeVars = M.fromList $ zip (map varName binders) fvs
+  let binderFreeVars = map (mapMaybe (binders' M.!?) . M.keys) fvs
+  let closureBinds = zipWith (\vs b -> b {value = Closure vs (value b)}) binderFreeVars bindings'
 
   -- TODO: handle possible recursive values (not functions)
+  -- TODO: refactor in the future
 
-  return (Module bindings' fixities)
+  return (Module closureBinds fixities)
 
 try :: a -> (p -> ReaderT a (Writer Errors) q) -> p -> (Either [Error] q, [Warning])
 try ctx f x =

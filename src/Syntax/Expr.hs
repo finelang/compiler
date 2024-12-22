@@ -1,7 +1,6 @@
-module Syntax.Expr (Expr (..), Module (..)) where
+module Syntax.Expr (Expr (..), Closure (..), Module (..), Fixities) where
 
 import Data.Map (Map)
-import Data.Text (Text)
 import Syntax.Common (Bind, Fixity, HasRange (..), Range, Var (Var))
 
 data Expr
@@ -20,8 +19,16 @@ instance HasRange Expr where
   getRange (App _ _ r) = r
   getRange (Fun _ _ r) = r
 
+data Closure ctx v = Closure
+  { closureVars :: ctx,
+    closureValue :: v
+  }
+  deriving (Show)
+
+type Fixities = Map Var Fixity
+
 data Module = Module
-  { bindings :: [Bind () Expr],
-    fixities :: Map Text Fixity
+  { bindings :: [Bind () (Closure [Var] Expr)],
+    fixities :: Fixities
   }
   deriving (Show)

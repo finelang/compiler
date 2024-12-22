@@ -5,22 +5,19 @@ module ShuntingYard (runSy) where
 import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, asks, get, gets, modify, runRWS, tell)
 import qualified Data.Map as M
-import Data.Text (Text)
 import Error
   ( Error (SameInfixPrecedence),
     Errors,
     collectErrors,
     errorUNREACHABLE,
   )
-import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Var (Var))
-import Syntax.Expr (Expr (..))
-
-type Fixities = M.Map Text Fixity
+import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Var)
+import Syntax.Expr (Expr (..), Fixities)
 
 type SYStack = ([Expr], [Var])
 
 findFixity :: Var -> Fixities -> Fixity
-findFixity (Var name _) fxs = case fxs M.!? name of
+findFixity var fxs = case fxs M.!? var of
   Just fx -> fx
   Nothing -> errorUNREACHABLE
 
