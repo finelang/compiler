@@ -1,5 +1,6 @@
 .stack-work/
 *~
 *input.fn
+*output.js
 src/Lexer.hs
 src/Parser.hs
