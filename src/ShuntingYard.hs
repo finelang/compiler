@@ -12,46 +12,46 @@ import Error
     collectErrors,
     errorUNREACHABLE,
   )
-import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Operator (..))
+import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Var (Var))
 import Syntax.Expr (Expr (..))
 
 type Fixities = M.Map Text Fixity
 
-type SYStack = ([Expr], [Operator])
+type SYStack = ([Expr], [Var])
 
-findFixity :: Operator -> Fixities -> Fixity
-findFixity (Operator name _) fxs = case fxs M.!? name of
+findFixity :: Var -> Fixities -> Fixity
+findFixity (Var name _) fxs = case fxs M.!? name of
   Just fx -> fx
   Nothing -> errorUNREACHABLE
 
-operatorStack :: SYStack -> [Operator]
+operatorStack :: SYStack -> [Var]
 operatorStack (_, ops) = ops
 
 modifyOperands :: (Monoid w) => ([Expr] -> [Expr]) -> RWS r w SYStack ()
 modifyOperands f = modify $ \(opns, ops) -> (f opns, ops)
 
-modifyOperators :: (Monoid w) => ([Operator] -> [Operator]) -> RWS r w SYStack ()
+modifyOperators :: (Monoid w) => ([Var] -> [Var]) -> RWS r w SYStack ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
-mkTopApp :: [Expr] -> Operator -> [Expr]
-mkTopApp (right : left : rest) (Operator name r) = App (Var name r) [left, right] (getRange (left, right)) : rest
+mkTopApp :: [Expr] -> Var -> [Expr]
+mkTopApp (right : left : rest) var = App (Id var) [left, right] (getRange (left, right)) : rest
 mkTopApp _ _ = errorUNREACHABLE
 
-consume :: [Expr] -> [Operator] -> [Expr]
+consume :: [Expr] -> [Var] -> [Expr]
 consume = foldl mkTopApp
 
-continueWithCurr :: Operator -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+continueWithCurr :: Var -> OpChain Expr -> RWS Fixities Errors SYStack Expr
 continueWithCurr curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
   modifyOperands (`mkTopApp` top) -- create app
   sy' curr chain
 
-continueWithChain :: Operator -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+continueWithChain :: Var -> OpChain Expr -> RWS Fixities Errors SYStack Expr
 continueWithChain curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
-sy' :: Operator -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+sy' :: Var -> OpChain Expr -> RWS Fixities Errors SYStack Expr
 sy' curr chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators

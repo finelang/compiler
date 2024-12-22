@@ -14,7 +14,7 @@ where
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import GHC.Stack (HasCallStack)
-import Syntax.Common (Binder (Binder), Fixity, Operator (Operator), Range)
+import Syntax.Common (Fixity, Var (Var))
 
 errorTODO :: (HasCallStack) => a
 errorTODO = error "Not Implemented"
@@ -31,26 +31,26 @@ collectWarnings :: [Warning] -> Errors
 collectWarnings wrns = ([], wrns)
 
 data Warning
-  = UnusedVar Binder
-  | BindShadowing Binder
+  = UnusedVar Var
+  | BindShadowing Var
 
 data Error
-  = UndefinedVar Text Range
-  | RepeatedVar Binder
-  | InvalidPrecedence Binder
-  | SameInfixPrecedence (Operator, Fixity) (Operator, Fixity)
+  = UndefinedVar Var
+  | RepeatedVar Var
+  | InvalidPrecedence Int Int Var
+  | SameInfixPrecedence (Var, Fixity) (Var, Fixity)
 
 hl :: Text -> Text
 hl text = [i|'#{text}'|]
 
 instance Show Warning where
   show :: Warning -> String
-  show (UnusedVar (Binder name _)) = [i|Variable #{hl name} is not used.|]
-  show (BindShadowing (Binder name _)) = [i|The binding for #{hl name} shadows the existing binding.|]
+  show (UnusedVar (Var name _)) = [i|Variable #{hl name} is not used.|]
+  show (BindShadowing (Var name _)) = [i|The binding for #{hl name} shadows the existing binding.|]
 
 instance Show Error where
   show :: Error -> String
-  show (UndefinedVar name _) = [i|Variable #{hl name} is not in scope.|]
-  show (RepeatedVar (Binder name _)) = [i|Parameter #{hl name} is repeated.|]
-  show (InvalidPrecedence _) = errorTODO
-  show (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) = errorTODO
+  show (UndefinedVar (Var name _)) = [i|Variable #{hl name} is not defined.|]
+  show (RepeatedVar (Var name _)) = [i|Variable #{hl name} is repeated.|]
+  show (InvalidPrecedence _ _ _) = errorTODO
+  show (SameInfixPrecedence (Var _ _, _) (Var _ _, _)) = errorTODO

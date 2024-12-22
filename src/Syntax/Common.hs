@@ -33,26 +33,23 @@ instance (HasRange p, HasRange q) => HasRange (p, q) where
         (Range _ _ _ ei ec el) = getRange r
      in Range si sc sl ei ec el
 
-data Binder = Binder
-  { binderName :: Text,
-    binderRange :: Range
-  }
+data Var = Var {varName :: Text, varRange :: Range}
 
-instance Eq Binder where
-  (==) :: Binder -> Binder -> Bool
-  (==) = (==) `on` binderName
+instance Eq Var where
+  (==) :: Var -> Var -> Bool
+  (==) = (==) `on` varName
 
-instance Ord Binder where
-  compare :: Binder -> Binder -> Ordering
-  compare = compare `on` binderName
+instance Ord Var where
+  compare :: Var -> Var -> Ordering
+  compare = compare `on` varName
 
-instance HasRange Binder where
-  getRange :: Binder -> Range
-  getRange = binderRange
+instance HasRange Var where
+  getRange :: Var -> Range
+  getRange = varRange
 
-instance Show Binder where
-  show :: Binder -> String
-  show (Binder name _) = show name
+instance Show Var where
+  show :: Var -> String
+  show (Var name _) = show name
 
 data Assoc = LeftAssoc | RightAssoc | NonAssoc
   deriving (Eq)
@@ -70,27 +67,23 @@ instance Show Fixity where
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
 
 data Bind t v
-  = Bind {binder :: Binder, ttype :: t, value :: v, isRec :: Bool}
-  | OpBind {binder :: Binder, ttype :: t, value :: v, isRec :: Bool, _fixity :: Fixity}
-  deriving (Show)
-
-data Operator
-  = Operator Text Range
+  = Bind {binder :: Var, ttype :: t, value :: v}
+  | OpBind {binder :: Var, ttype :: t, value :: v, _fixity :: Fixity}
   deriving (Show)
 
 -- left-recursive operation chain to leverage left-recursive parsing
 data OpChain' t
   = Operand' t
-  | Operation' (OpChain' t) Operator t
+  | Operation' (OpChain' t) Var t
   deriving (Show)
 
 -- right-recursive operation chain for shunting yard algorithm
 data OpChain t
   = Operand t
-  | Operation t Operator (OpChain t)
+  | Operation t Var (OpChain t)
   deriving (Show)
 
-extendChain :: OpChain t -> Operator -> t -> OpChain t
+extendChain :: OpChain t -> Var -> t -> OpChain t
 extendChain (Operand left) op right = Operation left op (Operand right)
 extendChain (Operation left firstOp chain) op right = Operation left firstOp (extendChain chain op right)
 

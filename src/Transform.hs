@@ -1,40 +1,19 @@
-module Transform (transform, transformModule, try) where
+module Transform (try, transformModule) where
 
-import Control.Monad.Trans.RWS (RWS, ask, get, gets, modify, runRWS, tell)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask, withReaderT)
+import Control.Monad.Trans.Writer (Writer, runWriter, tell)
+import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Data.Text (Text)
-import Error
-  ( Error (..),
-    Errors,
-    Warning (BindShadowing, UnusedVar),
-    collectErrors,
-    collectWarnings,
-    errorTODO,
-  )
+import Data.Tuple (swap)
+import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
 import ShuntingYard (runSy)
-import Syntax.Common
-  ( Binder (binderName),
-    Fixity,
-    OpChain (..),
-    Operator (Operator),
-  )
-import Syntax.Expr (Expr (..), Module)
+import Syntax.Common (Bind (..), Fixity (Fixity), OpChain (..), Var (varName))
+import Syntax.Expr (Expr (..), Module (Module))
 import qualified Syntax.Parsed as P
-
-type Fixities = M.Map Text Fixity
-
-type Vars = M.Map Text (Binder, Bool)
-
-useVar :: Text -> Vars -> Vars
-useVar = M.adjust $ \(b, _) -> (b, True)
-
-shuntingYard :: OpChain Expr -> RWS Fixities Errors s Expr
-shuntingYard chain = do
-  ctx <- ask
-  let (expr, errors) = runSy ctx chain
-  tell errors
-  return expr
 
 repeated :: (Ord a) => [a] -> [a]
 repeated xs = reverse (go xs S.empty)
@@ -43,58 +22,125 @@ repeated xs = reverse (go xs S.empty)
     go (y : ys) s | S.member y s = y : go ys s
     go (y : ys) s = go ys (S.insert y s)
 
-transformChain :: OpChain P.Expr -> RWS Fixities Errors Vars (OpChain Expr)
+type Vars = Map Text [Var]
+
+singleton' :: Text -> Var -> Vars
+singleton' k v = M.singleton k [v]
+
+union' :: Vars -> Vars -> Vars
+union' = M.unionWith (++)
+
+unions' :: (Foldable t) => t Vars -> Vars
+unions' = foldl union' M.empty
+
+chainFreeVars :: OpChain P.Expr -> Writer Errors Vars
+chainFreeVars (Operand expr) = freeVars expr
+chainFreeVars (Operation left op chain) = do
+  leftFvs <- freeVars left
+  chainFvs <- chainFreeVars chain
+  return $ unions' [leftFvs, singleton' (varName op) op, chainFvs]
+
+freeVars :: P.Expr -> Writer Errors Vars
+freeVars (P.Int _ _) = return M.empty
+freeVars (P.Float _ _) = return M.empty
+freeVars (P.Id var) = return (singleton' (varName var) var)
+freeVars (P.App f args _) = do
+  fVars <- freeVars f
+  argVars <- mapM freeVars args
+  return $ unions' (fVars : argVars)
+freeVars (P.Fun params body _) = do
+  tell (collectErrors $ map RepeatedVar $ repeated params)
+  let params' = M.fromList $ map (\v -> (varName v, v)) params
+  bodyVars <- freeVars body
+  tell (collectWarnings $ map UnusedVar $ M.elems $ M.difference params' bodyVars)
+  return (M.difference bodyVars params')
+freeVars (P.Parens expr _) = freeVars expr
+freeVars (P.Chain chain) = chainFreeVars chain
+
+type Fixities = Map Text Fixity
+
+shuntingYard :: OpChain Expr -> ReaderT Fixities (Writer Errors) Expr
+shuntingYard chain = do
+  ctx <- ask
+  let (expr, errors) = runSy ctx chain
+  lift (tell errors)
+  return expr
+
+transformChain :: OpChain P.Expr -> ReaderT Fixities (Writer Errors) (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr
-transformChain (Operation left op@(Operator name r) chain) = do
+transformChain (Operation left op chain) = do
   left' <- transform left
-  vars <- get
-  if M.member name vars
-    then modify (useVar name)
-    else tell $ collectErrors [UndefinedVar name r]
   chain' <- transformChain chain
   return (Operation left' op chain')
 
-transform :: P.Expr -> RWS Fixities Errors Vars Expr
+transform :: P.Expr -> ReaderT Fixities (Writer Errors) Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
-transform (P.Var name r) = do
-  vars <- get
-  if M.member name vars
-    then modify (useVar name)
-    else tell $ collectErrors [UndefinedVar name r]
-  return (Var name r)
+transform (P.Id var) = return (Id var)
 transform (P.App f args r) = do
   f' <- transform f
   args' <- mapM transform args
   return (App f' args' r)
 transform (P.Fun params body r) = do
-  tell $ collectErrors $ map RepeatedVar $ repeated params
-  let params' = M.fromList $ map (\b -> (binderName b, (b, False))) params
-  shadowed <- gets (`M.intersection` params')
-  tell $ collectWarnings $ map (BindShadowing . fst) (M.elems shadowed)
-  modify (M.union params') -- override the values of shadowed
   body' <- transform body
-  unused <- gets $ M.filter (not . snd) . (`M.intersection` params')
-  tell $ collectWarnings $ map (UnusedVar . fst) (M.elems unused)
-  modify $ (`M.union` shadowed) . (`M.difference` params')
   return (Fun params body' r)
 transform (P.Parens expr _) = transform expr
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
--- transformBind :: Bind () P.Expr -> RWS Fixities Errors Vars (Bind () Expr)
--- transformBind (Bind b@(Binder name _) ttype value isRec) = do
---   shadowing <- gets (M.member name)
---   when shadowing (tell $ collectWarnings $ [BindShadowing b])
---   value' <-
---     if isRec
---       then modify (M.insert name (b, False)) >> transform value
---       else transform value >>= \v -> modify (M.insert name (b, False)) >> return v
---   return (Bind b ttype value' isRec)
+transformBind :: Bind () P.Expr -> ReaderT Fixities (Writer Errors) (Bind () Expr)
+transformBind bind@(Bind _ _ v) = do
+  value' <- transform v
+  return (bind {value = value'})
+transformBind bind@(OpBind _ _ v _) = do
+  value' <- transform v
+  return (bind {value = value'})
 
-transformModule :: P.Module -> RWS Fixities Errors Vars Module
-transformModule (P.Module _) = errorTODO
+varAndFixity :: Bind t v -> Maybe (Var, Fixity)
+varAndFixity (OpBind var _ _ fix) = Just (var, fix)
+varAndFixity _ = Nothing
 
-try :: (p -> RWS Fixities Errors Vars q) -> p -> (Either [Error] q, [Warning])
-try f x =
-  let (y, _, (errors, warnings)) = runRWS (f x) M.empty M.empty
+validFixity :: Int -> Int -> Fixity -> Bool
+validFixity lb ub (Fixity _ prec) = lb <= prec && prec < ub
+
+transformModule :: P.Module -> ReaderT a (Writer Errors) Module
+transformModule (P.Module defns) = do
+  let bindings = map (\(P.BindDefn bind) -> bind) defns
+
+  -- error about repeated top binders
+  let binders = map binder bindings
+  lift (tell $ collectErrors $ map RepeatedVar $ repeated binders)
+
+  -- collect free vars and their errors and warnings
+  let (errors, fvs) = traverse (swap . runWriter . freeVars . value) bindings
+  lift (tell errors)
+
+  -- error about undefined top binders and warn about unused ones
+  lift $ do
+    let binders' = M.fromList $ map (\v -> (varName v, v)) binders
+    let allFreeVars = unions' fvs
+    let unusedVars = M.elems $ M.difference binders' allFreeVars
+    let undefinedVars = concat $ M.elems $ M.difference allFreeVars binders'
+    tell (collectWarnings $ map UnusedVar unusedVars)
+    tell (collectErrors $ map UndefinedVar undefinedVars)
+
+  -- error about invalid operator precedences and make the readable ctx
+  let pairedFixities = mapMaybe varAndFixity bindings
+  lift $ do
+    let (lb, ub) = (0, 10) -- TODO: get from some config
+    let invalid = not . validFixity lb ub
+    tell (collectErrors $ map (InvalidPrecedence lb ub . fst) $ filter (invalid . snd) pairedFixities)
+  let fixities = M.fromList $ map (\(var, fix) -> (varName var, fix)) pairedFixities
+
+  bindings' <- withReaderT (const fixities) (mapM transformBind bindings)
+
+  -- binder : its free vars
+  -- let binderFreeVars = M.fromList $ zip (map varName binders) fvs
+
+  -- TODO: handle possible recursive values (not functions)
+
+  return (Module bindings' fixities)
+
+try :: a -> (p -> ReaderT a (Writer Errors) q) -> p -> (Either [Error] q, [Warning])
+try ctx f x =
+  let (y, (errors, warnings)) = runWriter (runReaderT (f x) ctx)
    in (if null errors then Right y else Left errors, warnings)

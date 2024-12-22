@@ -14,7 +14,7 @@ main = do
   let filePath = head args
   code <- TIO.readFile filePath
   let parsed = parseTokens $ lexText code
-  let (result, warnings) = try transformModule parsed
+  let (result, warnings) = try () transformModule parsed
   forM_ warnings print
   case result of
     Left errors -> forM_ errors print
