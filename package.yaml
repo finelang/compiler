@@ -25,6 +25,7 @@ dependencies:
 - containers
 - string-interpolate
 - text
+- text-ansi
 - transformers
 
 ghc-options:

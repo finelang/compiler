@@ -50,6 +50,7 @@ library
     , containers
     , string-interpolate
     , text
+    , text-ansi
     , transformers
   default-language: Haskell2010
 
@@ -73,6 +74,7 @@ executable fine-compiler-exe
     , fine-compiler
     , string-interpolate
     , text
+    , text-ansi
     , transformers
   default-language: Haskell2010
 
@@ -97,5 +99,6 @@ test-suite fine-compiler-test
     , fine-compiler
     , string-interpolate
     , text
+    , text-ansi
     , transformers
   default-language: Haskell2010

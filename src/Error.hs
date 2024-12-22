@@ -8,12 +8,15 @@ module Error
     collectWarnings,
     errorTODO,
     errorUNREACHABLE,
+    wrapWarning,
+    wrapError,
   )
 where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import GHC.Stack (HasCallStack)
+import String.ANSI (red, yellow)
 import Syntax.Common (Fixity, Var (Var))
 
 errorTODO :: (HasCallStack) => a
@@ -52,5 +55,18 @@ instance Show Error where
   show :: Error -> String
   show (UndefinedVar (Var name _)) = [i|Variable #{hl name} is not defined.|]
   show (RepeatedVar (Var name _)) = [i|Variable #{hl name} is repeated.|]
-  show (InvalidPrecedence _ _ _) = errorTODO
+  show (InvalidPrecedence lb ub (Var name _)) =
+    [i|Precedence of operator #{hl name} must be greater or equal than #{lb} and lesser than #{ub}.|]
   show (SameInfixPrecedence (Var _ _, _) (Var _ _, _)) = errorTODO
+
+warningPrefix :: String
+warningPrefix = yellow "Warning: "
+
+wrapWarning :: Warning -> String
+wrapWarning wrn = [i|#{warningPrefix}#{wrn}|]
+
+errorPrefix :: String
+errorPrefix = red "Error: "
+
+wrapError :: Error -> String
+wrapError err = [i|#{errorPrefix}#{err}|]
