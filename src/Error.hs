@@ -35,7 +35,6 @@ collectWarnings wrns = ([], wrns)
 
 data Warning
   = UnusedVar Var
-  | BindShadowing Var
 
 data Error
   = UndefinedVar Var
@@ -49,7 +48,6 @@ hl text = [i|'#{text}'|]
 instance Show Warning where
   show :: Warning -> String
   show (UnusedVar (Var name _)) = [i|Variable #{hl name} is not used.|]
-  show (BindShadowing (Var name _)) = [i|The binding for #{hl name} shadows the existing binding.|]
 
 instance Show Error where
   show :: Error -> String
