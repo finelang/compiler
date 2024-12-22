@@ -68,7 +68,7 @@ transform (P.App f args r) = do
   args' <- mapM transform args
   return (App f' args' r)
 transform (P.Fun params body r) = do
-  tell $ collectErrors $ map RepeatedParam $ repeated params
+  tell $ collectErrors $ map RepeatedVar $ repeated params
   let params' = M.fromList $ map (\b -> (binderName b, (b, False))) params
   shadowed <- gets (`M.intersection` params')
   tell $ collectWarnings $ map (BindShadowing . fst) (M.elems shadowed)

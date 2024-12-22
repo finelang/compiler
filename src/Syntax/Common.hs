@@ -70,8 +70,8 @@ instance Show Fixity where
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
 
 data Bind t v
-  = Bind Binder t v Bool
-  | OpBind Binder t v Bool Fixity
+  = Bind {binder :: Binder, ttype :: t, value :: v, isRec :: Bool}
+  | OpBind {binder :: Binder, ttype :: t, value :: v, isRec :: Bool, _fixity :: Fixity}
   deriving (Show)
 
 data Operator

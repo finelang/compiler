@@ -19,11 +19,10 @@ type Fixities = M.Map Text Fixity
 
 type SYStack = ([Expr], [Operator])
 
-defaultFixity :: Fixity
-defaultFixity = Fixity NonAssoc 10
-
 findFixity :: Operator -> Fixities -> Fixity
-findFixity (Operator name _) = M.findWithDefault defaultFixity name
+findFixity (Operator name _) fxs = case fxs M.!? name of
+  Just fx -> fx
+  Nothing -> errorUNREACHABLE
 
 operatorStack :: SYStack -> [Operator]
 operatorStack (_, ops) = ops

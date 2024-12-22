@@ -36,8 +36,8 @@ data Warning
 
 data Error
   = UndefinedVar Text Range
-  | RepeatedParam Binder
-  | InvalidPrecedence Text Range
+  | RepeatedVar Binder
+  | InvalidPrecedence Binder
   | SameInfixPrecedence (Operator, Fixity) (Operator, Fixity)
 
 hl :: Text -> Text
@@ -51,6 +51,6 @@ instance Show Warning where
 instance Show Error where
   show :: Error -> String
   show (UndefinedVar name _) = [i|Variable #{hl name} is not in scope.|]
-  show (RepeatedParam (Binder name _)) = [i|Parameter #{hl name} is repeated.|]
-  show (InvalidPrecedence _ _) = errorTODO
+  show (RepeatedVar (Binder name _)) = [i|Parameter #{hl name} is repeated.|]
+  show (InvalidPrecedence _) = errorTODO
   show (SameInfixPrecedence (Operator _ _, _) (Operator _ _, _)) = errorTODO
