@@ -1,7 +1,7 @@
 module Transform (try, transformModule) where
 
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask, withReaderT)
+import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask, asks, local, withReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter, tell)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map (Map)
@@ -9,7 +9,6 @@ import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Data.Text (Text)
-import Data.Tuple (swap)
 import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
 import ShuntingYard (runSy)
 import Syntax.Common (Bind (..), Fixity (Fixity), OpChain (..), Var (varName))
@@ -60,6 +59,19 @@ freeVars (P.Fun params body _) = do
 freeVars (P.Parens expr) = freeVars expr
 freeVars (P.Block exprs _) = unions' <$> (mapM freeVars exprs)
 freeVars (P.Chain chain) = chainFreeVars chain
+
+bindingsFreeVars :: [Bind t P.Expr] -> ReaderT (Map Text Var) (Writer Errors) [[Var]]
+bindingsFreeVars [] = return []
+bindingsFreeVars (OpBind b t v _ : bs) = bindingsFreeVars (Bind b t v : bs)
+bindingsFreeVars (Bind b _ v : bs) = do
+  available <- asks (M.insert (varName b) b)
+  let (value's, errors) = runWriter (freeVars v)
+  lift (tell errors)
+  lift $ do
+    let undefined' = concat $ M.elems $ M.difference value's available
+    tell (collectErrors $ map UndefinedVar undefined')
+  let bind's = mapMaybe (available M.!?) (M.keys value's)
+  (bind's :) <$> local (const available) (bindingsFreeVars bs)
 
 shuntingYard :: OpChain Expr -> ReaderT Fixities (Writer Errors) Expr
 shuntingYard chain = do
@@ -119,24 +131,17 @@ transformModule :: P.Module -> ReaderT a (Writer Errors) Module
 transformModule (P.Module defns) = do
   let bindings = map (\(P.BindDefn bind) -> bind) defns
 
-  -- error about repeated top binders
+  -- error about repeated top bindings
   let binders = map binder bindings
   lift (tell $ collectErrors $ map RepeatedVar $ repeated binders)
 
-  -- collect free vars and their errors and warnings
-  let (errors, fvs) = traverse (swap . runWriter . freeVars . value) bindings
-  lift (tell errors)
-
-  let binders' = M.fromList $ map (\v -> (varName v, v)) binders
-  -- error about undefined top binders and warn about unused ones
+  -- collect free vars and warn about unused top bindings
+  freeVars' <- withReaderT (const M.empty) (bindingsFreeVars bindings)
   lift $ do
-    let allFreeVars = unions' fvs
-    let unusedVars = M.elems $ M.difference binders' allFreeVars
-    let undefinedVars = concat $ M.elems $ M.difference allFreeVars binders'
-    tell (collectWarnings $ map UnusedVar unusedVars)
-    tell (collectErrors $ map UndefinedVar undefinedVars)
+    let unused = S.toList $ S.difference (S.fromList binders) (S.fromList $ concat freeVars')
+    tell (collectWarnings $ map UnusedVar unused)
 
-  -- error about invalid operator precedences and make the readable ctx
+  -- error about invalid operator precedences and make the ctx for transformation
   let pairedFixities = mapMaybe varAndFixity bindings
   lift $ do
     let (lb, ub) = (0, 10) -- TODO: get from some config
@@ -145,11 +150,9 @@ transformModule (P.Module defns) = do
   let fixities = M.fromList pairedFixities
 
   bindings' <- withReaderT (const fixities) (mapM transformBind bindings)
-  let binderFreeVars = map (mapMaybe (binders' M.!?) . M.keys) fvs
-  let closureBinds = zipWith (\vs b -> b {value = Closure vs (value b)}) binderFreeVars bindings'
+  let closureBinds = zipWith (\vs b -> b {value = Closure vs (value b)}) freeVars' bindings'
 
   -- TODO: handle possible recursive values (not functions)
-  -- TODO: refactor in the future
 
   return (Module closureBinds fixities)
 
