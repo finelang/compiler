@@ -13,6 +13,7 @@ import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWar
 import ShuntingYard (runSy)
 import Syntax.Common (Bind (..), Fixity (Fixity), OpChain (..), Var (varName))
 import Syntax.Expr (Closure (Closure), Expr (..), Fixities, Module (Module))
+import Syntax.Parsed (defnBind)
 import qualified Syntax.Parsed as P
 
 repeated :: (Ord a) => [a] -> [a]
@@ -62,7 +63,6 @@ freeVars (P.Chain chain) = chainFreeVars chain
 
 bindingsFreeVars :: [Bind t P.Expr] -> ReaderT (Map Text Var) (Writer Errors) [[Var]]
 bindingsFreeVars [] = return []
-bindingsFreeVars (OpBind b t v _ : bs) = bindingsFreeVars (Bind b t v : bs)
 bindingsFreeVars (Bind b _ v : bs) = do
   available <- asks (M.insert (varName b) b)
   let (value's, errors) = runWriter (freeVars v)
@@ -115,13 +115,10 @@ transform (P.Chain chain) = transformChain chain >>= shuntingYard
 transformBind :: Bind () P.Expr -> ReaderT Fixities (Writer Errors) (Bind () Expr)
 transformBind bind@(Bind _ _ v) = do
   value' <- transform v
-  return (bind {value = value'})
-transformBind bind@(OpBind _ _ v _) = do
-  value' <- transform v
-  return (bind {value = value'})
+  return (bind {boundValue = value'})
 
-varAndFixity :: Bind t v -> Maybe (Var, Fixity)
-varAndFixity (OpBind var _ _ fix) = Just (var, fix)
+varAndFixity :: P.Defn -> Maybe (Var, Fixity)
+varAndFixity (P.OpDefn (Bind var _ _) fix) = Just (var, fix)
 varAndFixity _ = Nothing
 
 validFixity :: Int -> Int -> Fixity -> Bool
@@ -129,10 +126,10 @@ validFixity lb ub (Fixity _ prec) = lb <= prec && prec < ub
 
 transformModule :: P.Module -> ReaderT a (Writer Errors) Module
 transformModule (P.Module defns) = do
-  let bindings = map (\(P.BindDefn bind) -> bind) defns
+  let bindings = map defnBind defns
+  let binders = map binder bindings
 
   -- error about repeated top bindings
-  let binders = map binder bindings
   lift (tell $ collectErrors $ map RepeatedVar $ repeated binders)
 
   -- collect free vars and warn about unused top bindings
@@ -142,7 +139,7 @@ transformModule (P.Module defns) = do
     tell (collectWarnings $ map UnusedVar unused)
 
   -- error about invalid operator precedences and make the ctx for transformation
-  let pairedFixities = mapMaybe varAndFixity bindings
+  let pairedFixities = mapMaybe varAndFixity defns
   lift $ do
     let (lb, ub) = (0, 10) -- TODO: get from some config
     let invalid = not . validFixity lb ub
@@ -150,7 +147,7 @@ transformModule (P.Module defns) = do
   let fixities = M.fromList pairedFixities
 
   bindings' <- withReaderT (const fixities) (mapM transformBind bindings)
-  let closureBinds = zipWith (\vs b -> b {value = Closure vs (value b)}) freeVars' bindings'
+  let closureBinds = zipWith (\vs b -> b {boundValue = Closure vs (boundValue b)}) freeVars' bindings'
 
   -- TODO: handle possible recursive values (not functions)
 

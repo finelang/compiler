@@ -47,8 +47,8 @@ Module : Defns    { Module (reverse $1) }
 Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
-Defn : let id '=' Expr   { BindDefn (Bind (mkVar $2) () $4) }
-     | Fix Op '=' Expr   { BindDefn (OpBind $2 () $4 $1) }
+Defn : let id '=' Expr   { Defn (Bind (mkVar $2) () $4) }
+     | Fix Op '=' Expr   { OpDefn (Bind $2 () $4) $1 }
 
 Fix : Assoc int   { Fixity $1 (read $ unpack $ tokenLexeme $2) }
 

@@ -1,7 +1,7 @@
-module Syntax.Parsed (Defn (..), Expr (..), Module (..)) where
+module Syntax.Parsed (Defn (..), Expr (..), Module (..), defnBind) where
 
 import Data.List.NonEmpty (NonEmpty)
-import Syntax.Common (Bind, HasRange (..), OpChain, Range, Var (Var))
+import Syntax.Common (Bind, Fixity, HasRange (..), OpChain, Range, Var (Var))
 
 data Expr
   = Int Int Range
@@ -26,8 +26,13 @@ instance HasRange Expr where
   getRange (Chain chain) = getRange chain
 
 data Defn
-  = BindDefn (Bind () Expr)
+  = Defn (Bind () Expr)
+  | OpDefn (Bind () Expr) Fixity
   deriving (Show)
+
+defnBind :: Defn -> Bind () Expr
+defnBind (Defn b) = b
+defnBind (OpDefn b _) = b
 
 data Module = Module
   { definitions :: [Defn]
