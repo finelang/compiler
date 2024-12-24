@@ -10,11 +10,11 @@ import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Data.Text (Text)
 import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
-import ShuntingYard (runSy)
 import Syntax.Common (Bind (..), Fixity (Fixity), OpChain (..), Var (varName))
 import Syntax.Expr (Closure (Closure), Expr (..), Fixities, Module (Module))
 import Syntax.Parsed (defnBind)
 import qualified Syntax.Parsed as P
+import Transform.ShuntingYard (runSy)
 
 repeated :: (Ord a) => [a] -> [a]
 repeated xs = reverse (go xs S.empty)

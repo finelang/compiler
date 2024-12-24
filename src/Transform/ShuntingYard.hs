@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-x-partial #-}
 
-module ShuntingYard (runSy) where
+module Transform.ShuntingYard (runSy) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, asks, get, gets, modify, runRWS, tell)

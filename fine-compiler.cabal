@@ -29,11 +29,11 @@ library
       Error
       Lexer
       Parser
-      ShuntingYard
       Syntax.Common
       Syntax.Expr
       Syntax.Parsed
       Transform
+      Transform.ShuntingYard
   other-modules:
       Paths_fine_compiler
   autogen-modules:
