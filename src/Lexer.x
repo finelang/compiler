@@ -30,7 +30,6 @@ tokens :-
   "{"                       { mkt Obrace }
   "}"                       { mkt Cbrace }
   $sym{1, 3}                { mkt Op }
-  ","                       { mkt Comma }
   ";"                       { mkt Semi }
 
 {
@@ -51,7 +50,6 @@ data TokenType
   | Obrace
   | Cbrace
   | Op
-  | Comma
   | Semi
   deriving (Show)
 

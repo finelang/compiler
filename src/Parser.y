@@ -38,7 +38,6 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   '{'     { Token Obrace _ _ }
   '}'     { Token Cbrace _ _ }
   op      { Token Op _ _ }
-  ','     { Token Comma _ _ }
   ';'     { Token Semi _ _ }
 
 %%
