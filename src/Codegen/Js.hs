@@ -10,7 +10,6 @@ import Data.List (unsnoc)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.String.Interpolate (i)
 import Data.Text (Text, concat, intercalate, pack)
-import Error (errorTODO)
 import Syntax.Common (Bind (..), Var (Var), varName)
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
 import Prelude hiding (concat)
@@ -66,7 +65,6 @@ instance CodeGens (Bind () (Closure any Expr)) Ctx where
   genCode (Bind (Var name _) _ (Closure _ expr)) = do
     expr' <- genCode expr
     return [i|const #{name} = #{expr'};|]
-  genCode _ = errorTODO
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
