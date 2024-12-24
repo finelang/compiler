@@ -18,11 +18,12 @@ tokens :-
   "infix"                   { mkt Infix }
   "infixl"                  { mkt Infixl }
   "infixr"                  { mkt Infixr }
-  "let"                     { mkt Let }
   "fn"                      { mkt Fn }
+  "let"                     { mkt Let }
   [a-z_][$alpha $digit]*    { mkt IdTok }
   "-"? $digit+              { mkt IntTok }
   "-"? $digit+ "." $digit+  { mkt FloatTok }
+  "->"                      { mkt Arrow }
   "="                       { mkt Eq }
   "("                       { mkt Opar } 
   ")"                       { mkt Cpar }
@@ -37,11 +38,12 @@ data TokenType
   = Infix
   | Infixl
   | Infixr
-  | Let
   | Fn
+  | Let
   | IdTok
   | IntTok
   | FloatTok
+  | Arrow
   | Eq
   | Of
   | Opar

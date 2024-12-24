@@ -26,11 +26,12 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   infix   { Token Infix _ _ }
   infixl  { Token Infixl _ _ }
   infixr  { Token Infixr _ _ }
-  let     { Token Let _ _ }
   fn      { Token Fn _ _ }
+  let     { Token Let _ _ }
   id      { Token IdTok _ _ }
   int     { Token IntTok _ _ }
   float   { Token FloatTok _ _ }
+  '->'    { Token Arrow _ _ }
   '='     { Token Eq _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
@@ -58,24 +59,19 @@ Assoc : infix   { NonAssoc }
 
 Op : '(' op ')'     { Var (tokenLexeme $2) (getRange ($1, $3)) }
 
-Expr : fn '(' Params ')' Expr { Fun (reverse $3) $5 (getRange ($1, $5)) }
+Expr : fn Params '->' Expr    { Fun (reverse $2) $4 (getRange ($1, $4)) }
      | Chain                  { chainToExpr $1 }
 
-Params : Params ',' Param { $3 : $1 }
-       | Param            { [$1] }
-       | {- empty -}      { [] }
+Params : Params Param   { $2 : $1 }
+       | {- empty -}    { [] }
 
 Param : id  { mkVar $1 }
 
-Chain : App              { Operand' $1 }
-      | Chain op App     { Operation' $1 (mkVar $2) $3 }
+Chain : App              { Operand' (mkApp $1) }
+      | Chain op App     { Operation' $1 (mkVar $2) (mkApp $3) }
 
-App : App '(' Args ')'   { App $1 (reverse $3) (getRange ($1, $4)) }
-    | Atom               { $1 }
-
-Args : Args ',' Expr     { $3 : $1 }
-     | Expr              { [$1] }
-     | {- empty -}       { [] }
+App : App Atom    { $2 : $1 }
+    | Atom        { [$1] }
 
 Atom : '(' Expr ')'      { Parens $2 }
      | '{' Block '}'     { mkBlock (reverse $2) (getRange ($1, $3)) }
@@ -84,12 +80,18 @@ Atom : '(' Expr ')'      { Parens $2 }
      | float             { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
 
 Block : Block ';' Expr   { $3 : $1 }
+      | Block ';'        { $1 }
       | Expr             { [$1] }
 
 {
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 mkFix assoc precTok = Fixity assoc (read $ unpack $ tokenLexeme precTok)
+
+mkApp [expr] = expr
+mkApp exprs = let last = head exprs
+                  (f : args) = reverse exprs
+               in App f args (getRange (f, last))
 
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)
