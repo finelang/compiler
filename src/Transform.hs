@@ -87,29 +87,28 @@ transformChain (Operation left op chain) = do
   chain' <- transformChain chain
   return (Operation left' op chain')
 
-stripParens :: P.Expr -> P.Expr
-stripParens (P.Parens expr) = stripParens expr
-stripParens expr = expr
-
-stripBlock :: NonEmpty P.Expr -> NonEmpty P.Expr
-stripBlock ((P.Block exprs _) :| []) = stripBlock exprs
-stripBlock exprs = exprs
-
 transform :: P.Expr -> ReaderT Fixities (Writer Errors) Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
 transform (P.Id var) = return (Id var)
 transform (P.App f args r) = do
   f' <- transform f
-  args' <- mapM (transform . stripParens) args
+  args' <- mapM transform args
   return (App f' args' r)
 transform (P.Fun params body r) = do
   body' <- transform body
   return (Fun params body' r)
-transform (P.Parens expr) = Parens <$> transform (stripParens expr)
+transform (P.Parens expr) = do
+  expr' <- transform expr
+  return $ case expr' of
+    Parens _ -> expr'
+    Block _ _ -> expr'
+    _ -> Parens expr'
 transform (P.Block exprs r) = do
-  exprs' <- mapM transform (stripBlock exprs)
-  return (Block exprs' r)
+  exprs' <- mapM transform exprs
+  return $ case exprs' of
+    expr :| [] -> expr
+    _ -> Block exprs' r
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
 transformBind :: Bind () P.Expr -> ReaderT Fixities (Writer Errors) (Bind () Expr)
