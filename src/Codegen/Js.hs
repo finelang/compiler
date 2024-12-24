@@ -5,14 +5,16 @@
 
 module Codegen.Js (runGenCode) where
 
-import Control.Monad.Trans.Reader (Reader, asks, local, runReader)
+import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
 import Data.List (unsnoc)
 import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.Map (Map)
+import qualified Data.Map as M
 import Data.String.Interpolate (i)
-import Data.Text (Text, concat, intercalate, pack)
+import Data.Text (Text)
+import qualified Data.Text as T
 import Syntax.Common (Bind (..), Var (Var), varName)
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
-import Prelude hiding (concat)
 
 unsnoc' :: NonEmpty a -> ([a], a)
 unsnoc' (x :| xs) = case unsnoc xs of
@@ -22,10 +24,22 @@ unsnoc' (x :| xs) = case unsnoc xs of
 class CodeGens t ctx where
   genCode :: t -> Reader ctx Text
 
-newtype Ctx = Ctx {indentation :: Text}
+data Ctx = Ctx
+  { indentation :: Text,
+    separator :: Char,
+    symNames :: Map Char Text
+  }
 
 withIndentation :: Text -> Ctx -> Ctx
 withIndentation ind ctx = ctx {indentation = ind}
+
+sanitize :: Text -> Reader (Map Char Text) Text
+sanitize name = do
+  syms <- ask
+  let f = go syms
+  return (T.concat $ map f $ T.unpack name)
+  where
+    go names ch = M.findWithDefault (T.singleton ch) ch names
 
 instance CodeGens (NonEmpty Expr) Ctx where
   genCode :: NonEmpty Expr -> Reader Ctx Text
@@ -34,21 +48,21 @@ instance CodeGens (NonEmpty Expr) Ctx where
     let indent = oldIndent <> "  "
     exprs' <- local (withIndentation indent) (mapM genCode exprs)
     let (stmts, expr) = unsnoc' exprs'
-    let stmts' = concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
+    let stmts' = T.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
     let expr' = [i|#{indent}return #{expr};|] :: Text
     return [i|{\n#{stmts'}#{expr'}\n#{oldIndent}}|]
 
 instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
-  genCode (Int v _) = return (pack $ show v)
-  genCode (Float v _) = return (pack $ show v)
-  genCode (Id (Var name _)) = return name
+  genCode (Int v _) = return (T.pack $ show v)
+  genCode (Float v _) = return (T.pack $ show v)
+  genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
-    args' <- (intercalate ", ") <$> mapM genCode args
+    args' <- (T.intercalate ", ") <$> mapM genCode args
     return [i|#{f'}(#{args'})|]
   genCode (Fun params body _) = do
-    let params' = intercalate ", " (map varName params)
+    let params' = T.intercalate ", " (map varName params)
     body' <- case body of
       Block exprs _ -> genCode exprs
       _ -> genCode body
@@ -63,14 +77,42 @@ instance CodeGens Expr Ctx where
 instance CodeGens (Bind () (Closure any Expr)) Ctx where
   genCode :: Bind () (Closure any Expr) -> Reader Ctx Text
   genCode (Bind (Var name _) _ (Closure _ expr)) = do
+    name' <- withReaderT symNames (sanitize name)
     expr' <- genCode expr
-    return [i|const #{name} = #{expr'};|]
+    return [i|const #{name'} = #{expr'};|]
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
   genCode (Module bindings _) = do
     stmts <- mapM genCode bindings
-    return (intercalate "\n" stmts <> "\n")
+    return (T.intercalate "\n" stmts <> "\n")
 
 runGenCode :: (CodeGens t Ctx) => t -> Text
-runGenCode x = runReader (genCode x) Ctx {indentation = ""}
+runGenCode x =
+  runReader
+    (genCode x)
+    Ctx
+      { indentation = "",
+        separator = '$',
+        symNames =
+          M.fromList
+            [ ('+', "$plus"),
+              ('-', "$mnus"),
+              ('*', "$ast"),
+              ('/', "$sol"),
+              ('%', "$pcnt"),
+              ('^', "$hat"),
+              ('|', "$bar"),
+              ('&', "$amp"),
+              ('<', "$lt"),
+              ('>', "$gt"),
+              ('=', "$eq"),
+              (':', "$coln"),
+              ('\\', "$bsol"),
+              ('?', "$qust"),
+              ('!', "$excl"),
+              ('$', "$dllr"),
+              ('@', "$at"),
+              ('~', "$tild")
+            ]
+      }
