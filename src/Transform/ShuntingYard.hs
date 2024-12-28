@@ -13,8 +13,8 @@ import Error
     collectWarnings,
     errorUNREACHABLE,
   )
-import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Var)
-import Syntax.Expr (Expr (..), Fixities)
+import Syntax.Common (Assoc (..), Fixities, Fixity (..), HasRange (getRange), OpChain (..), Var)
+import Syntax.Expr (Expr (..))
 
 type SYStack = ([Expr], [Var])
 

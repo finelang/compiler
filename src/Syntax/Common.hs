@@ -3,6 +3,7 @@
 module Syntax.Common (module Syntax.Common) where
 
 import Data.Function (on)
+import Data.Map (Map)
 import Data.String.Interpolate (i)
 import Data.Text (Text, unpack)
 
@@ -65,6 +66,8 @@ data Fixity = Fixity Assoc Int
 instance Show Fixity where
   show :: Fixity -> String
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
+
+type Fixities = Map Var Fixity
 
 data Bind t v = Bind
   { binder :: Var,

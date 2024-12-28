@@ -1,8 +1,7 @@
-module Syntax.Expr (Expr (..), Closure (..), Module (..), Fixities) where
+module Syntax.Expr (Expr (..), Closure (..), Module (..)) where
 
 import Data.List.NonEmpty (NonEmpty)
-import Data.Map (Map)
-import Syntax.Common (Bind, Fixity, HasRange (..), Range, Var (Var))
+import Syntax.Common (Bind, Fixities, HasRange (..), Range, Var (Var))
 
 data Expr
   = Int Int Range
@@ -29,8 +28,6 @@ data Closure ctx v = Closure
     closureValue :: v
   }
   deriving (Show)
-
-type Fixities = Map Var Fixity
 
 data Module = Module
   { bindings :: [Bind () (Closure [Var] Expr)],

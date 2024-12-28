@@ -1,4 +1,4 @@
-module Syntax.Parsed (Defn (..), Expr (..), Module (..), justBind) where
+module Syntax.Parsed (Defn (..), Expr (..), Module (..), justBind, justFixDefn) where
 
 import Data.List.NonEmpty (NonEmpty)
 import Syntax.Common (Bind, Fixity, HasRange (..), OpChain, Range, Var (Var))
@@ -33,6 +33,10 @@ data Defn
 justBind :: Defn -> Maybe (Bind () Expr)
 justBind (Defn b) = Just b
 justBind _ = Nothing
+
+justFixDefn :: Defn -> Maybe (Fixity, Var)
+justFixDefn (FixDefn fix op) = Just (fix, op)
+justFixDefn _ = Nothing
 
 data Module = Module
   { definitions :: [Defn]
