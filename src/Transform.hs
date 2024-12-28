@@ -4,6 +4,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask, asks, local, withReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter, tell)
 import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
@@ -70,10 +71,11 @@ transform (P.Chain chain) = transformChain chain >>= shuntingYard
 
 data Ctx = Ctx
   { vars :: Set Var,
-    fixities :: Fixities
+    fixities :: Fixities,
+    superEnv :: Map Var (Closure Expr)
   }
 
-transformBinds :: [Bind () P.Expr] -> ReaderT Ctx (Writer Errors) [Bind () (Closure [Var] Expr)]
+transformBinds :: [Bind () P.Expr] -> ReaderT Ctx (Writer Errors) [Bind () (Closure Expr)]
 transformBinds [] = return []
 transformBinds (Bind bder _ v : bs) = do
   currentFreeVars <- do
@@ -84,8 +86,14 @@ transformBinds (Bind bder _ v : bs) = do
   let (vFreeVars, fvErrors) = runFreeVars currentFreeVars v
   lift (tell fvErrors)
   v' <- withReaderT fixities (transform v)
-  let b' = Bind bder () (Closure (S.toList vFreeVars) v')
-  bs' <- local (\ctx -> ctx {vars = S.union currentFreeVars vFreeVars}) (transformBinds bs)
+  currentEnv <- asks superEnv
+  let recBder = if S.member bder vFreeVars then Just bder else Nothing
+  let closure = Closure (M.restrictKeys currentEnv vFreeVars) v' recBder
+  let b' = Bind bder () closure
+  bs' <-
+    local
+      (\ctx -> ctx {vars = S.union currentFreeVars vFreeVars, superEnv = M.insert bder closure currentEnv})
+      (transformBinds bs)
   return (b' : bs')
 
 checkPrecedence :: Int -> Int -> (Fixity, Var) -> Maybe Error
@@ -100,7 +108,7 @@ checkFixDefns fixDefns =
       repeatedErrors = collectErrors (map RepeatedFixity $ repeated $ map snd fixDefns)
    in precErrors <> repeatedErrors
 
-checkUnusedTopBinds :: [Bind () (Closure [Var] v)] -> Errors
+checkUnusedTopBinds :: [Bind () (Closure v)] -> Errors
 checkUnusedTopBinds bs =
   let used = S.fromList $ concat $ map (closureVars . boundValue) bs
       binders = S.fromList $ map binder bs
@@ -112,7 +120,7 @@ transformModule (P.Module defns) =
       fixDefnErrors = checkFixDefns fixDefns
       fixs = M.fromList (map swap fixDefns)
 
-      writer = runReaderT (transformBinds $ mapMaybe P.justBind defns) (Ctx S.empty fixs)
+      writer = runReaderT (transformBinds $ mapMaybe P.justBind defns) (Ctx S.empty fixs M.empty)
       (bindings', bindErrors) = runWriter writer
 
       (errors, warnings) = fixDefnErrors <> bindErrors <> checkUnusedTopBinds bindings'

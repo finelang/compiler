@@ -1,6 +1,9 @@
-module Syntax.Expr (Expr (..), Closure (..), Module (..)) where
+module Syntax.Expr (Expr (..), Closure (..), Module (..), closureVars) where
 
 import Data.List.NonEmpty (NonEmpty)
+import Data.Map (Map)
+import qualified Data.Map as M
+import Data.Maybe (maybeToList)
 import Syntax.Common (Bind, Fixities, HasRange (..), Range, Var (Var))
 
 data Expr
@@ -23,14 +26,18 @@ instance HasRange Expr where
   getRange (Block _ r) = r
   getRange (Parens expr) = getRange expr
 
-data Closure ctx v = Closure
-  { closureVars :: ctx,
-    closureValue :: v
+data Closure v = Closure
+  { closureEnv :: Map Var (Closure v),
+    closureValue :: v,
+    recBinder :: Maybe Var
   }
   deriving (Show)
 
+closureVars :: Closure v -> [Var]
+closureVars (Closure env _ bder) = M.keys env ++ maybeToList bder
+
 data Module = Module
-  { bindings :: [Bind () (Closure [Var] Expr)],
+  { bindings :: [Bind () (Closure Expr)],
     fixities :: Fixities
   }
   deriving (Show)

@@ -74,9 +74,9 @@ instance CodeGens Expr Ctx where
     expr' <- genCode expr
     return [i|(#{expr'})|]
 
-instance CodeGens (Bind () (Closure any Expr)) Ctx where
-  genCode :: Bind () (Closure any Expr) -> Reader Ctx Text
-  genCode (Bind (Var name _) _ (Closure _ expr)) = do
+instance CodeGens (Bind () (Closure Expr)) Ctx where
+  genCode :: Bind () (Closure Expr) -> Reader Ctx Text
+  genCode (Bind (Var name _) _ (Closure _ expr _)) = do
     name' <- withReaderT symNames (sanitize name)
     expr' <- genCode expr
     return [i|const #{name'} = #{expr'};|]
