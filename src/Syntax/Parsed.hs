@@ -1,4 +1,4 @@
-module Syntax.Parsed (Defn (..), Expr (..), Module (..), defnBind) where
+module Syntax.Parsed (Defn (..), Expr (..), Module (..), justBind) where
 
 import Data.List.NonEmpty (NonEmpty)
 import Syntax.Common (Bind, Fixity, HasRange (..), OpChain, Range, Var (Var))
@@ -27,12 +27,12 @@ instance HasRange Expr where
 
 data Defn
   = Defn (Bind () Expr)
-  | OpDefn (Bind () Expr) Fixity
+  | FixDefn Fixity Var
   deriving (Show)
 
-defnBind :: Defn -> Bind () Expr
-defnBind (Defn b) = b
-defnBind (OpDefn b _) = b
+justBind :: Defn -> Maybe (Bind () Expr)
+justBind (Defn b) = Just b
+justBind _ = Nothing
 
 data Module = Module
   { definitions :: [Defn]

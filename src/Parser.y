@@ -39,6 +39,7 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   '}'     { Token Cbrace _ _ }
   op      { Token Op _ _ }
   ';'     { Token Semi _ _ }
+  '`'     { Token Btick _ _ }
 
 %%
 
@@ -47,8 +48,8 @@ Module : Defns  { Module (reverse $1) }
 Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
-Defn : let id '=' Expr  { Defn (Bind (mkVar $2) () $4) }
-     | Fix Op '=' Expr  { OpDefn (Bind $2 () $4) $1 }
+Defn : let Prefix '=' Expr  { Defn (Bind $2 () $4) }
+     | Fix Infix            { FixDefn $1 $2 }
 
 Fix : Assoc int { Fixity $1 (read $ unpack $ tokenLexeme $2) }
 
@@ -56,7 +57,11 @@ Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
       | infixr  { RightAssoc }
 
-Op : '(' op ')' { Var (tokenLexeme $2) (getRange ($1, $3)) }
+Prefix : id         { mkVar $1 }
+       | '(' op ')' { Var (tokenLexeme $2) (getRange ($1, $3)) }
+
+Infix : op          { mkVar $1 }
+      | '`' id '`'  { Var (tokenLexeme $2) (getRange ($1, $3)) }
 
 Expr : fn Params '->' Expr  { Fun (reverse $2) $4 (getRange ($1, $4)) }
      | Chain                { chainToExpr $1 }
@@ -66,15 +71,15 @@ Params : Params Param { $2 : $1 }
 
 Param : id  { mkVar $1 }
 
-Chain : App           { Operand' (mkApp $1) }
-      | Chain op App  { Operation' $1 (mkVar $2) (mkApp $3) }
+Chain : App             { Operand' (mkApp $1) }
+      | Chain Infix App { Operation' $1 $2 (mkApp $3) }
 
 App : App Atom  { $2 : $1 }
     | Atom      { [$1] }
 
 Atom : '(' Expr ')'   { Parens $2 }
      | '{' Block '}'  { mkBlock (reverse $2) (getRange ($1, $3)) }
-     | id             { Id $ mkVar $1 }
+     | Prefix         { Id $1 }
      | int            { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
      | float          { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
 

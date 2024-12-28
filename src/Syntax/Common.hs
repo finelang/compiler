@@ -4,7 +4,7 @@ module Syntax.Common (module Syntax.Common) where
 
 import Data.Function (on)
 import Data.String.Interpolate (i)
-import Data.Text (Text)
+import Data.Text (Text, unpack)
 
 data Range = Range
   { startIndex :: Int,
@@ -49,7 +49,7 @@ instance HasRange Var where
 
 instance Show Var where
   show :: Var -> String
-  show (Var name _) = show name
+  show (Var name _) = unpack name
 
 data Assoc = LeftAssoc | RightAssoc | NonAssoc
   deriving (Eq)

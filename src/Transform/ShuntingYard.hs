@@ -8,7 +8,9 @@ import qualified Data.Map as M
 import Error
   ( Error (SameInfixPrecedence),
     Errors,
+    Warning (MissingFixity),
     collectErrors,
+    collectWarnings,
     errorUNREACHABLE,
   )
 import Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Var)
@@ -16,10 +18,17 @@ import Syntax.Expr (Expr (..), Fixities)
 
 type SYStack = ([Expr], [Var])
 
-findFixity :: Var -> Fixities -> Fixity
-findFixity var fxs = case fxs M.!? var of
-  Just fx -> fx
-  Nothing -> errorUNREACHABLE
+defaultFixity :: Fixity
+defaultFixity = Fixity LeftAssoc 9
+
+findFixity :: Var -> RWS Fixities Errors s Fixity
+findFixity var = do
+  maybeFix <- asks (M.lookup var)
+  case maybeFix of
+    Just fix -> return fix
+    Nothing -> do
+      tell (collectWarnings [MissingFixity var defaultFixity])
+      return defaultFixity
 
 operatorStack :: SYStack -> [Var]
 operatorStack (_, ops) = ops
@@ -55,8 +64,8 @@ sy' curr chain = do
     then continueWithChain curr chain
     else do
       top <- gets (head . operatorStack)
-      topFix@(Fixity _ topPrec) <- asks (findFixity top)
-      currFix@(Fixity currAssoc currPrec) <- asks (findFixity curr)
+      topFix@(Fixity _ topPrec) <- findFixity top
+      currFix@(Fixity currAssoc currPrec) <- findFixity curr
       case compare topPrec currPrec of
         GT -> continueWithCurr curr chain
         EQ -> case currAssoc of

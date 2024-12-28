@@ -9,10 +9,10 @@ import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Data.Text (Text)
-import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
+import Error (Error (..), Errors, Warning (UnusedFixity, UnusedVar), collectErrors, collectWarnings)
 import Syntax.Common (Bind (..), Fixity (Fixity), OpChain (..), Var (varName))
 import Syntax.Expr (Closure (Closure), Expr (..), Fixities, Module (Module))
-import Syntax.Parsed (defnBind)
+import Syntax.Parsed (justBind)
 import qualified Syntax.Parsed as P
 import Transform.ShuntingYard (runSy)
 
@@ -117,7 +117,7 @@ transformBind bind@(Bind _ _ v) = do
   return (bind {boundValue = value'})
 
 varAndFixity :: P.Defn -> Maybe (Var, Fixity)
-varAndFixity (P.OpDefn (Bind var _ _) fix) = Just (var, fix)
+varAndFixity (P.FixDefn fix var) = Just (var, fix)
 varAndFixity _ = Nothing
 
 validFixity :: Int -> Int -> Fixity -> Bool
@@ -125,26 +125,31 @@ validFixity lb ub (Fixity _ prec) = lb <= prec && prec < ub
 
 transformModule :: P.Module -> ReaderT a (Writer Errors) Module
 transformModule (P.Module defns) = do
-  let bindings = map defnBind defns
+  let bindings = mapMaybe justBind defns
   let binders = map binder bindings
+  let binderSet = S.fromList binders
 
   -- error about repeated top bindings
   lift (tell $ collectErrors $ map RepeatedVar $ repeated binders)
 
-  -- collect free vars and warn about unused top bindings
   freeVars' <- withReaderT (const M.empty) (bindingsFreeVars bindings)
+  -- collect free vars and warn about unused top bindings
   lift $ do
-    let unused = S.toList $ S.difference (S.fromList binders) (S.fromList $ concat freeVars')
+    let unused = S.toList $ S.difference binderSet (S.fromList $ concat freeVars')
     tell (collectWarnings $ map UnusedVar unused)
 
-  -- error about invalid operator precedences and make the ctx for transformation
   let pairedFixities = mapMaybe varAndFixity defns
+  -- error about invalid operator precedences, repeated fixities
+  -- and warn about unused fixities
   lift $ do
     let (lb, ub) = (0, 10) -- TODO: get from some config
     let invalid = not . validFixity lb ub
     tell (collectErrors $ map (InvalidPrecedence lb ub . fst) $ filter (invalid . snd) pairedFixities)
-  let fixities = M.fromList pairedFixities
+    let vars = map fst pairedFixities
+    tell (collectErrors $ map RepeatedFixity $ repeated vars)
+    tell (collectWarnings $ map UnusedFixity $ S.toList $ S.difference (S.fromList vars) binderSet)
 
+  let fixities = M.fromList pairedFixities
   bindings' <- withReaderT (const fixities) (mapM transformBind bindings)
   let closureBinds = zipWith (\vs b -> b {boundValue = Closure vs (boundValue b)}) freeVars' bindings'
 

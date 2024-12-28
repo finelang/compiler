@@ -31,6 +31,7 @@ tokens :-
   "}"                       { mkt Cbrace }
   $sym{1, 3}                { mkt Op }
   ";"                       { mkt Semi }
+  "`"                       { mkt Btick }
 
 {
 data TokenType
@@ -51,6 +52,7 @@ data TokenType
   | Cbrace
   | Op
   | Semi
+  | Btick
   deriving (Show)
 
 data TokenPosn = TokenPosn
