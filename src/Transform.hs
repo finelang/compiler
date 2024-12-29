@@ -68,6 +68,11 @@ transform (P.App f args r) = do
   f' <- transform f
   args' <- mapM transform args
   return (App f' args' r)
+transform (P.Cond cond yes no r) = do
+  cond' <- transform cond
+  yes' <- transform yes
+  no' <- transform no
+  return (Cond cond' yes' no' r)
 transform (P.Fun params body r) = do
   lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body

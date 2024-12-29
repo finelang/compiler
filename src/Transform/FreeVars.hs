@@ -31,12 +31,13 @@ freeVars :: Expr -> Writer Errors Vars
 freeVars (Int _ _) = return M.empty
 freeVars (Float _ _) = return M.empty
 freeVars (Str _ _) = return M.empty
-freeVars (Obj (Data members) _) = unions' <$> (mapM (freeVars . snd) members)
+freeVars (Obj (Data members) _) = unions' <$> mapM (freeVars . snd) members
 freeVars (Id var) = return (singleton' var)
 freeVars (App f args _) = do
   fVars <- freeVars f
   argVars <- mapM freeVars args
   return $ unions' (fVars : argVars)
+freeVars (Cond cond yes no _) = unions' <$> mapM freeVars [cond, yes, no]
 freeVars (Fun params body _) = do
   let params' = M.fromList $ map (\v -> (v, v)) params
   bodyVars <- freeVars body
@@ -44,7 +45,7 @@ freeVars (Fun params body _) = do
   return (M.difference bodyVars params')
 freeVars (Ctor _ _) = return M.empty
 freeVars (Parens expr) = freeVars expr
-freeVars (Block exprs _) = unions' <$> (mapM freeVars exprs)
+freeVars (Block exprs _) = unions' <$> mapM freeVars exprs
 freeVars (Chain chain) = chainFreeVars chain
 
 undefinedVars :: Set Var -> Vars -> [Var]

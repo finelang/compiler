@@ -34,12 +34,15 @@ tokens :-
 
   $white+                     ;
   "--"\-*[^$symbol].*         ;
+  "else"                      { mkt Else }
   "data"                      { mkt DataTok }
+  "if"                        { mkt If }
   "infix"                     { mkt Infix }
   "infixl"                    { mkt Infixl }
   "infixr"                    { mkt Infixr }
   "fn"                        { mkt Fn }
   "let"                       { mkt Let }
+  "then"                      { mkt Then }
   [$alpha][$alpha $digit]*    { mkt IdTok }
   \" @string* \"              { mkt StrTok }
   "-"? @decimal               { mkt IntTok }
@@ -57,12 +60,15 @@ tokens :-
 
 {
 data TokenType
-  = DataTok
+  = Else
+  | DataTok
+  | If
   | Infix
   | Infixl
   | Infixr
   | Fn
   | Let
+  | Then
   | IdTok
   | StrTok
   | IntTok

@@ -24,12 +24,15 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 %error { parseError }
 
 %token
+  else    { Token Else _ _ }
   data    { Token DataTok _ _ }
+  if      { Token If _ _ }
   infix   { Token Infix _ _ }
   infixl  { Token Infixl _ _ }
   infixr  { Token Infixr _ _ }
   fn      { Token Fn _ _ }
   let     { Token Let _ _ }
+  then    { Token Then _ _ }
   id      { Token IdTok _ _ }
   str     { Token StrTok _ _ }
   int     { Token IntTok _ _ }
@@ -73,8 +76,9 @@ Prefix : id         { mkVar $1 }
 Infix : op          { mkVar $1 }
       | '`' id '`'  { Var (tokenLexeme $2) (getRange ($1, $3)) }
 
-Expr : fn Params '->' Expr  { Fun (reverse $2) $4 (getRange ($1, $4)) }
-     | Chain                { chainToExpr $1 }
+Expr : fn Params '->' Expr          { Fun (reverse $2) $4 (getRange ($1, $4)) }
+     | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
+     | Chain                        { chainToExpr $1 }
 
 Params : Params Param { $2 : $1 }
        | {- empty -}  { [] }

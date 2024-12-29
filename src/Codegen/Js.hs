@@ -94,6 +94,11 @@ instance CodeGens Expr Ctx where
     f' <- genCode f
     args' <- (T.intercalate ", ") <$> mapM genCode args
     return [i|#{f'}(#{args'})|]
+  genCode (Cond cond yes no _) = do
+    cond' <- genCode cond
+    yes' <- genCode yes
+    no' <- genCode no
+    return [i|#{cond'} ? #{yes'} : #{no'}|]
   genCode (Fun params body _) = genFunCode "" params body
   genCode (Block exprs _) = do
     content <- genStmtsCode exprs

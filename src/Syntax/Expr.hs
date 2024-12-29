@@ -15,6 +15,7 @@ data Expr
   | Variant Var (Data Expr)
   | Id Var
   | App Expr [Expr] Range
+  | Cond Expr Expr Expr Range
   | Fun [Var] Expr Range
   | Parens Expr
   | Block (NonEmpty Expr) Range
@@ -29,6 +30,7 @@ instance HasRange Expr where
   getRange (Variant v _) = getRange v
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
+  getRange (Cond _ _ _ r) = r
   getRange (Fun _ _ r) = r
   getRange (Block _ r) = r
   getRange (Parens expr) = getRange expr
