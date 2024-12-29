@@ -3,7 +3,7 @@
 module Parser (parseTokens) where
 
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import Data.Text (unpack)
+import qualified Data.Text as T
 import Lexer (Token (..), TokenType (..))
 import Syntax.Common
   ( Bind (..),
@@ -64,7 +64,7 @@ Ctors : Ctors Ctor  { $2 : $1 }
 
 Ctor : let Prefix Params  { Bind $2 () (Ctor $2 (reverse $3)) }
 
-Fix : Assoc int { Fixity $1 (read $ unpack $ tokenLexeme $2) }
+Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
 Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
@@ -95,8 +95,8 @@ Atom : '(' Expr ')'   { Parens $2 }
      | '{' Obj '}'    { Obj (Data $ reverse $2) (getRange ($1, $3)) }
      | '{' Block '}'  { mkBlock (reverse $2) (getRange ($1, $3)) }
      | Prefix         { Id $1 }
-     | int            { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
-     | float          { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
+     | int            { Int (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | float          { Float (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
      | str            { mkStr $1 }
 
 Block : Block ';' Expr  { $3 : $1 }
@@ -112,9 +112,11 @@ ObjMember : Param '=' Expr  { ($1, $3) }
 {
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
-mkStr tok = Str (tokenLexeme tok) (getRange tok)
+transformStr = T.tail . T.init
 
-mkFix assoc precTok = Fixity assoc (read $ unpack $ tokenLexeme precTok)
+mkStr tok = Str (transformStr $ tokenLexeme tok) (getRange tok)
+
+mkFix assoc precTok = Fixity assoc (read $ T.unpack $ tokenLexeme precTok)
 
 mkApp [expr] = expr
 mkApp exprs =
