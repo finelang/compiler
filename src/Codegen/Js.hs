@@ -81,7 +81,7 @@ instance CodeGens Expr Ctx where
     body' <- case body of
       Block exprs _ -> genCode exprs
       _ -> genCode body
-    return [i|(#{params'}) => #{body'}|]
+    return [i|((#{params'}) => #{body'})|]
   genCode (Ctor tag params) =
     if null params
       then return [i|({ $tag: "#{tag}" })|]
@@ -91,9 +91,7 @@ instance CodeGens Expr Ctx where
   genCode (Block exprs _) = do
     content <- genCode exprs
     return [i|(() => #{content})()|]
-  genCode (Parens expr) = do
-    expr' <- genCode expr
-    return [i|(#{expr'})|]
+  genCode (Parens expr) = genCode expr
 
 instance CodeGens (Bind () (Closure Expr)) Ctx where
   genCode :: Bind () (Closure Expr) -> Reader Ctx Text
