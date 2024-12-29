@@ -64,8 +64,8 @@ Defn : let Prefix '=' Expr  { Defn (Bind $2 () $4) }
 Ctors : Ctors Ctor  { $2 : $1 }
       | Ctor        { [$1] }
 
-Ctor : let Prefix Params  { Bind $2 () (mkCtor $2 (reverse $3)) }
-     | Ext let Prefix     { Bind $3 () $1 }
+Ctor : let Prefix '(' Params ')'  { Bind $2 () (mkCtor $2 (reverse $4)) }
+     | Ext let Prefix             { Bind $3 () $1 }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
@@ -79,20 +79,25 @@ Prefix : id         { mkVar $1 }
 Infix : op          { mkVar $1 }
       | '`' id '`'  { Var (tokenLexeme $2) (getRange ($1, $3)) }
 
-Expr : fn Params '->' Expr          { Fun (reverse $2) $4 (getRange ($1, $4)) }
+Expr : fn '(' Params ')' '->' Expr  { Fun (reverse $3) $6 (getRange ($1, $6)) }
      | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
      | Chain                        { chainToExpr $1 }
 
-Params : Params Param { $2 : $1 }
-       | {- empty -}  { [] }
+Params : Params ',' Param { $3 : $1 }
+       | Param            { [$1] }
+       | {- empty -}      { [] }
 
 Param : id  { mkVar $1 }
 
-Chain : App             { Operand' (mkApp $1) }
-      | Chain Infix App { Operation' $1 $2 (mkApp $3) }
+Chain : App             { Operand' $1 }
+      | Chain Infix App { Operation' $1 $2 $3 }
 
-App : App Atom  { $2 : $1 }
-    | Atom      { [$1] }
+App : App '(' Args ')'  { App $1 (reverse $3) (getRange ($1, $4)) }
+    | Atom              { $1 }
+
+Args : Args ',' Expr  { $3 : $1 }
+     | Expr           { [$1] }
+     | {- empty -}    { [] }
 
 Atom : '(' Expr ')'   { Parens $2 }
      | '{' Obj '}'    { Obj (Data $ reverse $2) (getRange ($1, $3)) }
