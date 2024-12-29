@@ -4,7 +4,6 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask, asks, local, withReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter, tell)
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as L
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
@@ -12,7 +11,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Tuple (swap)
 import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
-import Syntax.Common (Bind (Bind), Fixities, Fixity (Fixity), OpChain (..), Var, binder, boundValue)
+import Syntax.Common (Bind (Bind), Data (Data), Fixities, Fixity (Fixity), OpChain (..), Var, binder, boundValue)
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
 import qualified Syntax.Parsed as P
 import Transform.FreeVars (runFreeVars)
@@ -42,11 +41,11 @@ transformChain (Operation left op chain) = do
 transform :: P.Expr -> ReaderT Fixities (Writer Errors) Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
-transform (P.Obj members r) = do
-  let keys = L.map fst members
-  lift (tell $ collectErrors $ map RepeatedMember $ repeated $ L.toList keys)
+transform (P.Obj (Data members) r) = do
+  let keys = map fst members
+  lift (tell $ collectErrors $ map RepeatedMember $ repeated $ keys)
   values <- mapM (transform . snd) members
-  return $ Obj (L.zip keys values) r
+  return $ Obj (Data $ zip keys values) r
 transform (P.Id var) = return (Id var)
 transform (P.App f args r) = do
   f' <- transform f

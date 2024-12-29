@@ -1,12 +1,12 @@
 module Syntax.Parsed (Defn (..), Expr (..), Module (..), justBind, justFixDefn) where
 
 import Data.List.NonEmpty (NonEmpty)
-import Syntax.Common (Bind, Fixity, HasRange (..), OpChain, Range, Var (Var))
+import Syntax.Common (Bind, Data, Fixity, HasRange (..), OpChain, Range, Var (Var))
 
 data Expr
   = Int Int Range
   | Float Float Range
-  | Obj (NonEmpty (Var, Expr)) Range
+  | Obj (Data Expr) Range
   | Id Var
   | App Expr [Expr] Range
   | Fun [Var] Expr Range

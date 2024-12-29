@@ -100,3 +100,6 @@ instance (HasRange t) => HasRange (OpChain t) where
   getRange :: OpChain t -> Range
   getRange (Operand expr) = getRange expr
   getRange (Operation l _ chain) = getRange (l, chain)
+
+newtype Data t = Data {dataMembers :: [(Var, t)]}
+  deriving (Show)

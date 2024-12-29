@@ -4,12 +4,12 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (maybeToList)
-import Syntax.Common (Bind, Fixities, HasRange (..), Range, Var (Var))
+import Syntax.Common (Bind, Data, Fixities, HasRange (..), Range, Var (Var))
 
 data Expr
   = Int Int Range
   | Float Float Range
-  | Obj (NonEmpty (Var, Expr)) Range
+  | Obj (Data Expr) Range
   | Id Var
   | App Expr [Expr] Range
   | Fun [Var] Expr Range

@@ -8,13 +8,12 @@ module Codegen.Js (runGenCode) where
 import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
 import Data.List (unsnoc)
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as L
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Syntax.Common (Bind (..), Var (Var), varName)
+import Syntax.Common (Bind (..), Data (Data), Var (Var), varName)
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
 
 unsnoc' :: NonEmpty a -> ([a], a)
@@ -63,13 +62,16 @@ instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
   genCode (Int v _) = return (T.pack $ show v)
   genCode (Float v _) = return (T.pack $ show v)
-  genCode (Obj members _) = do
-    oldIndent <- asks indentation
-    let indent = oldIndent <> "  "
-    members' <- do
-      chunks <- L.toList <$> local (withIndentation indent) (mapM genObjMemberCode members)
-      return (T.intercalate ",\n" chunks)
-    return [i|({\n#{members'}\n#{oldIndent}})|]
+  genCode (Obj (Data members) _) =
+    if null members
+      then return "({})"
+      else do
+        oldIndent <- asks indentation
+        let indent = oldIndent <> "  "
+        members' <- do
+          chunks <- local (withIndentation indent) (mapM genObjMemberCode members)
+          return (T.intercalate ",\n" chunks)
+        return [i|({\n#{members'}\n#{oldIndent}})|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
