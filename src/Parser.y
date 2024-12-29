@@ -24,6 +24,7 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 %error { parseError }
 
 %token
+  data    { Token DataTok _ _ }
   infix   { Token Infix _ _ }
   infixl  { Token Infixl _ _ }
   infixr  { Token Infixr _ _ }
@@ -53,6 +54,13 @@ Defns : Defns Defn  { $2 : $1 }
 
 Defn : let Prefix '=' Expr  { Defn (Bind $2 () $4) }
      | Fix Infix            { FixDefn $1 $2 }
+     | data '{' Ctors '}'     { DtypeDefn (reverse $3) }
+
+Ctors : Ctors Ctor  { $2 : $1 }
+      | Ctor        { [$1] }
+
+Ctor : let Prefix '{' Params '}' { Bind $2 () (Ctor $2 (reverse $4)) }
+     | let Prefix                { Bind $2 () (Ctor $2 []) }
 
 Fix : Assoc int { Fixity $1 (read $ unpack $ tokenLexeme $2) }
 
@@ -70,7 +78,7 @@ Expr : fn Params '->' Expr  { Fun (reverse $2) $4 (getRange ($1, $4)) }
      | Chain                { chainToExpr $1 }
 
 Params : Params Param { $2 : $1 }
-       | {- empty -}  { [] }
+       | Param        { [$1] }
 
 Param : id  { mkVar $1 }
 

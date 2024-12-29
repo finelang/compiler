@@ -1,4 +1,12 @@
-module Syntax.Parsed (Defn (..), Expr (..), Module (..), justBind, justFixDefn) where
+module Syntax.Parsed
+  ( Defn (..),
+    Expr (..),
+    Module (..),
+    justFixDefn,
+    justDataCtors,
+    justBinds,
+  )
+where
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
@@ -12,6 +20,7 @@ data Expr
   | Id Var
   | App Expr [Expr] Range
   | Fun [Var] Expr Range
+  | Ctor Var [Var]
   | Parens Expr
   | Block (NonEmpty Expr) Range
   | Chain (OpChain Expr)
@@ -26,6 +35,7 @@ instance HasRange Expr where
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
   getRange (Fun _ _ r) = r
+  getRange (Ctor v _) = getRange v
   getRange (Parens expr) = getRange expr
   getRange (Block _ r) = r
   getRange (Chain chain) = getRange chain
@@ -33,15 +43,22 @@ instance HasRange Expr where
 data Defn
   = Defn (Bind () Expr)
   | FixDefn Fixity Var
+  | DtypeDefn [Bind () Expr]
   deriving (Show)
 
-justBind :: Defn -> Maybe (Bind () Expr)
-justBind (Defn b) = Just b
-justBind _ = Nothing
+justBinds :: [Defn] -> [Bind () Expr]
+justBinds [] = []
+justBinds (Defn b : defns) = b : justBinds defns
+justBinds (DtypeDefn bs : defns) = bs ++ justBinds defns
+justBinds (_ : defns) = justBinds defns
 
 justFixDefn :: Defn -> Maybe (Fixity, Var)
 justFixDefn (FixDefn fix op) = Just (fix, op)
 justFixDefn _ = Nothing
+
+justDataCtors :: Defn -> Maybe [Bind () Expr]
+justDataCtors (DtypeDefn ctors) = Just ctors
+justDataCtors _ = Nothing
 
 data Module = Module
   { definitions :: [Defn]

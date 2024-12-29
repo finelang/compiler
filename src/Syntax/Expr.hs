@@ -15,6 +15,7 @@ data Expr
   | Id Var
   | App Expr [Expr] Range
   | Fun [Var] Expr Range
+  | Ctor Var [Var]
   | Parens Expr
   | Block (NonEmpty Expr) Range
   deriving (Show)
@@ -28,6 +29,7 @@ instance HasRange Expr where
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
   getRange (Fun _ _ r) = r
+  getRange (Ctor v _) = getRange v
   getRange (Block _ r) = r
   getRange (Parens expr) = getRange expr
 

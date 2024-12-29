@@ -33,6 +33,7 @@ $charesc      = [abfnrtv\\\"\'\&]
 tokens :-
 
   $white+                     ;
+  "data"                      { mkt DataTok }
   "infix"                     { mkt Infix }
   "infixl"                    { mkt Infixl }
   "infixr"                    { mkt Infixr }
@@ -55,7 +56,8 @@ tokens :-
 
 {
 data TokenType
-  = Infix
+  = DataTok
+  | Infix
   | Infixl
   | Infixr
   | Fn

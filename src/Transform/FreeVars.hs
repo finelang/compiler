@@ -42,6 +42,7 @@ freeVars (Fun params body _) = do
   bodyVars <- freeVars body
   tell (collectWarnings $ map UnusedVar $ M.elems $ M.difference params' bodyVars)
   return (M.difference bodyVars params')
+freeVars (Ctor _ _) = return M.empty
 freeVars (Parens expr) = freeVars expr
 freeVars (Block exprs _) = unions' <$> (mapM freeVars exprs)
 freeVars (Chain chain) = chainFreeVars chain

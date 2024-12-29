@@ -62,6 +62,9 @@ transform (P.Fun params body r) = do
   lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
+transform (P.Ctor tag memberNames) = do
+  lift (tell $ collectErrors $ map RepeatedParam $ repeated memberNames)
+  return (Ctor tag memberNames)
 transform (P.Parens expr) = do
   expr' <- transform expr
   return $ case expr' of
@@ -127,7 +130,7 @@ transformModule (P.Module defns) =
       fixDefnErrors = checkFixDefns fixDefns
       fixs = M.fromList (map swap fixDefns)
 
-      writer = runReaderT (transformBinds $ mapMaybe P.justBind defns) (Ctx S.empty fixs M.empty)
+      writer = runReaderT (transformBinds $ P.justBinds defns) (Ctx S.empty fixs M.empty)
       (bindings', bindErrors) = runWriter writer
 
       (errors, warnings) = fixDefnErrors <> bindErrors <> checkUnusedTopBinds bindings'

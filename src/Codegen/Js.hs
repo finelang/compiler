@@ -67,12 +67,10 @@ instance CodeGens Expr Ctx where
     if null members
       then return "({})"
       else do
-        oldIndent <- asks indentation
-        let indent = oldIndent <> "  "
         members' <- do
-          chunks <- local (withIndentation indent) (mapM genObjMemberCode members)
-          return (T.intercalate ",\n" chunks)
-        return [i|({\n#{members'}\n#{oldIndent}})|]
+          chunks <- mapM genObjMemberCode members
+          return (T.intercalate ", " chunks)
+        return [i|({ #{members'} })|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
@@ -84,6 +82,10 @@ instance CodeGens Expr Ctx where
       Block exprs _ -> genCode exprs
       _ -> genCode body
     return [i|(#{params'}) => #{body'}|]
+  genCode (Ctor tag memberNames) =
+    if null memberNames
+      then return [i|({ $tag: "#{tag}" })|]
+      else return [i|($obj) => ({ $tag: "#{tag}", ...$obj })|]
   genCode (Block exprs _) = do
     content <- genCode exprs
     return [i|(() => #{content})()|]
