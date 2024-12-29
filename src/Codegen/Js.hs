@@ -82,10 +82,12 @@ instance CodeGens Expr Ctx where
       Block exprs _ -> genCode exprs
       _ -> genCode body
     return [i|(#{params'}) => #{body'}|]
-  genCode (Ctor tag memberNames) =
-    if null memberNames
+  genCode (Ctor tag params) =
+    if null params
       then return [i|({ $tag: "#{tag}" })|]
-      else return [i|($obj) => ({ $tag: "#{tag}", ...$obj })|]
+      else do
+        let params' = T.intercalate ", " (map varName params)
+        return [i|(#{params'}) => ({ $tag: "#{tag}", #{params'} })|]
   genCode (Block exprs _) = do
     content <- genCode exprs
     return [i|(() => #{content})()|]

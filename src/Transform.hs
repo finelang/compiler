@@ -62,9 +62,9 @@ transform (P.Fun params body r) = do
   lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
-transform (P.Ctor tag memberNames) = do
-  lift (tell $ collectErrors $ map RepeatedParam $ repeated memberNames)
-  return (Ctor tag memberNames)
+transform (P.Ctor tag params) = do
+  lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
+  return (Ctor tag params)
 transform (P.Parens expr) = do
   expr' <- transform expr
   return $ case expr' of
