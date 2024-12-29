@@ -13,7 +13,17 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Tuple (swap)
 import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings, errorUNREACHABLE)
-import Syntax.Common (Bind (Bind), Data (Data), Fixities, Fixity (Fixity), OpChain (..), Var, binder, boundValue)
+import Syntax.Common
+  ( Bind (Bind),
+    Data (Data),
+    Fixities,
+    Fixity (Fixity),
+    HasRange (getRange),
+    OpChain (..),
+    Var,
+    binder,
+    boundValue,
+  )
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
 import qualified Syntax.Parsed as P
 import Transform.FreeVars (runFreeVars)
@@ -62,9 +72,13 @@ transform (P.Fun params body r) = do
   lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
-transform (P.Ctor tag params) = do
-  lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
-  return (Ctor tag params)
+transform (P.Ctor tag params) =
+  if null params
+    then return (Variant tag (Data []))
+    else do
+      lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
+      let obj = Data $ map (\v -> (v, Id v)) params
+      return $ Fun params (Variant tag obj) (getRange tag)
 transform (P.Parens expr) = do
   expr' <- transform expr
   return $ case expr' of

@@ -71,6 +71,14 @@ instance CodeGens Expr Ctx where
           chunks <- mapM genObjMemberCode members
           return (T.intercalate ", " chunks)
         return [i|({ #{members'} })|]
+  genCode (Variant tag (Data members)) = do
+    if null members
+      then return [i|({ $tag: "#{tag}" })|]
+      else do
+        members' <- do
+          chunks <- mapM genObjMemberCode members
+          return (T.intercalate ", " chunks)
+        return [i|({ $tag: "#{tag}", #{members'} })|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
@@ -82,12 +90,6 @@ instance CodeGens Expr Ctx where
       Block exprs _ -> genCode exprs
       _ -> genCode body
     return [i|((#{params'}) => #{body'})|]
-  genCode (Ctor tag params) =
-    if null params
-      then return [i|({ $tag: "#{tag}" })|]
-      else do
-        let params' = T.intercalate ", " (map varName params)
-        return [i|(#{params'}) => ({ $tag: "#{tag}", #{params'} })|]
   genCode (Block exprs _) = do
     content <- genCode exprs
     return [i|(() => #{content})()|]
