@@ -31,6 +31,7 @@ tokens :-
   "}"                       { mkt Cbrace }
   $sym{1, 3}                { mkt Op }
   ";"                       { mkt Semi }
+  ","                       { mkt Comma }
   "`"                       { mkt Btick }
 
 {
@@ -52,6 +53,7 @@ data TokenType
   | Cbrace
   | Op
   | Semi
+  | Comma
   | Btick
   deriving (Show)
 

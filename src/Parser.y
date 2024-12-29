@@ -39,6 +39,7 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   '}'     { Token Cbrace _ _ }
   op      { Token Op _ _ }
   ';'     { Token Semi _ _ }
+  ','     { Token Comma _ _ }
   '`'     { Token Btick _ _ }
 
 %%
@@ -78,6 +79,7 @@ App : App Atom  { $2 : $1 }
     | Atom      { [$1] }
 
 Atom : '(' Expr ')'   { Parens $2 }
+     | '{' Obj '}'    { mkObj (reverse $2) (getRange ($1, $3)) }
      | '{' Block '}'  { mkBlock (reverse $2) (getRange ($1, $3)) }
      | Prefix         { Id $1 }
      | int            { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
@@ -86,6 +88,12 @@ Atom : '(' Expr ')'   { Parens $2 }
 Block : Block ';' Expr  { $3 : $1 }
       | Block ';'       { $1 }
       | Expr            { [$1] }
+
+Obj : Obj ',' ObjMember { $3 : $1 }
+    | Obj ','           { $1 }
+    | ObjMember         { [$1] }
+
+ObjMember : Param '=' Expr  { ($1, $3) }
 
 {
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
@@ -100,6 +108,8 @@ mkApp exprs =
 
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)
+
+mkObj (m : ms) r = Obj (m :| ms) r
 
 mkBlock [e] _ = e
 mkBlock (e : es) r = Block (e :| es) r

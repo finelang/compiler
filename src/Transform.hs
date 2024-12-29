@@ -4,19 +4,14 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask, asks, local, withReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter, tell)
 import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as L
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Tuple (swap)
-import Error
-  ( Error (InvalidPrecedence, RepeatedFixity, RepeatedVar),
-    Errors,
-    Warning (UnusedVar),
-    collectErrors,
-    collectWarnings,
-  )
+import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
 import Syntax.Common (Bind (Bind), Fixities, Fixity (Fixity), OpChain (..), Var, binder, boundValue)
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
 import qualified Syntax.Parsed as P
@@ -47,13 +42,18 @@ transformChain (Operation left op chain) = do
 transform :: P.Expr -> ReaderT Fixities (Writer Errors) Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
+transform (P.Obj members r) = do
+  let keys = L.map fst members
+  lift (tell $ collectErrors $ map RepeatedMember $ repeated $ L.toList keys)
+  values <- mapM (transform . snd) members
+  return $ Obj (L.zip keys values) r
 transform (P.Id var) = return (Id var)
 transform (P.App f args r) = do
   f' <- transform f
   args' <- mapM transform args
   return (App f' args' r)
 transform (P.Fun params body r) = do
-  lift (tell $ collectErrors $ map RepeatedVar $ repeated params)
+  lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
 transform (P.Parens expr) = do
@@ -61,6 +61,7 @@ transform (P.Parens expr) = do
   return $ case expr' of
     Parens _ -> expr'
     Block _ _ -> expr'
+    Obj _ _ -> expr'
     _ -> Parens expr'
 transform (P.Block exprs r) = do
   exprs' <- mapM transform exprs

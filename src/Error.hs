@@ -31,6 +31,8 @@ hl x = [i|'#{show x}'|]
 data Error
   = UndefinedVar Var
   | RepeatedVar Var
+  | RepeatedParam Var
+  | RepeatedMember Var
   | InvalidPrecedence Int Int Var
   | RepeatedFixity Var
   | SameInfixPrecedence (Var, Fixity) (Var, Fixity)
@@ -41,6 +43,10 @@ instance Show Error where
     [i|Variable #{hl var} is not defined.|]
   show (RepeatedVar var) =
     [i|Variable #{hl var} is repeated.|]
+  show (RepeatedParam var) =
+    [i|Parameter #{hl var} is repeated.|]
+  show (RepeatedMember var) =
+    [i|Member #{hl var} is repeated.|]
   show (InvalidPrecedence lb ub var) =
     [i|Precedence of operator #{hl var} must be greater or equal than #{lb} and lesser than #{ub}.|]
   show (RepeatedFixity var) =
