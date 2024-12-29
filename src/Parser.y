@@ -24,6 +24,7 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 %error { parseError }
 
 %token
+  ext     { Token ExtTok _ _ }
   else    { Token Else _ _ }
   data    { Token DataTok _ _ }
   if      { Token If _ _ }
@@ -56,13 +57,15 @@ Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
 Defn : let Prefix '=' Expr  { Defn (Bind $2 () $4) }
+     | Ext let Prefix       { Defn (Bind $3 () $1) }
      | Fix Infix            { FixDefn $1 $2 }
-     | data '{' Ctors '}'     { DtypeDefn (reverse $3) }
+     | data '{' Ctors '}'   { DtypeDefn (reverse $3) }
 
 Ctors : Ctors Ctor  { $2 : $1 }
       | Ctor        { [$1] }
 
 Ctor : let Prefix Params  { Bind $2 () (Ctor $2 (reverse $3)) }
+     | Ext let Prefix     { Bind $3 () $1 }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
@@ -108,6 +111,8 @@ Obj : Obj ',' ObjMember { $3 : $1 }
     | ObjMember         { [$1] }
 
 ObjMember : Param '=' Expr  { ($1, $3) }
+
+Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
 
 {
 mkVar tok = Var (tokenLexeme tok) (getRange tok)

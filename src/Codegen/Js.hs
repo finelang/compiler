@@ -104,6 +104,7 @@ instance CodeGens Expr Ctx where
     content <- genStmtsCode exprs
     return [i|(() => #{content})()|]
   genCode (Parens expr) = genCode expr
+  genCode (Ext code _) = return code
 
 instance CodeGens (Bind () (Closure Expr)) Ctx where
   genCode :: Bind () (Closure Expr) -> Reader Ctx Text
@@ -119,7 +120,7 @@ instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
   genCode (Module bindings _) = do
     stmts <- mapM genCode bindings
-    return (T.intercalate "\n\n" stmts <> "\n")
+    return (T.intercalate "\n" stmts <> "\n")
 
 runGenCode :: (CodeGens t Ctx) => t -> Text
 runGenCode x =

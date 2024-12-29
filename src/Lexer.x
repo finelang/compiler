@@ -34,6 +34,7 @@ tokens :-
 
   $white+                     ;
   "--"\-*[^$symbol].*         ;
+  "#external"                 { mkt ExtTok }
   "else"                      { mkt Else }
   "data"                      { mkt DataTok }
   "if"                        { mkt If }
@@ -60,7 +61,8 @@ tokens :-
 
 {
 data TokenType
-  = Else
+  = ExtTok
+  | Else
   | DataTok
   | If
   | Infix

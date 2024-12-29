@@ -25,6 +25,7 @@ data Expr
   | Parens Expr
   | Block (NonEmpty Expr) Range
   | Chain (OpChain Expr)
+  | Ext Text Range
   deriving (Show)
 
 instance HasRange Expr where
@@ -41,6 +42,7 @@ instance HasRange Expr where
   getRange (Parens expr) = getRange expr
   getRange (Block _ r) = r
   getRange (Chain chain) = getRange chain
+  getRange (Ext _ r) = r
 
 data Defn
   = Defn (Bind () Expr)

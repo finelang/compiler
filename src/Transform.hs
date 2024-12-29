@@ -91,6 +91,7 @@ transform (P.Block exprs r) = do
     expr :| [] -> expr
     _ -> Block exprs' r
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
+transform (P.Ext txt r) = return (Ext txt r)
 
 data Ctx = Ctx
   { vars :: Set Var,
