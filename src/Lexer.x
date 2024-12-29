@@ -33,6 +33,7 @@ $charesc      = [abfnrtv\\\"\'\&]
 tokens :-
 
   $white+                     ;
+  "--"\-*[^$symbol].*         ;
   "data"                      { mkt DataTok }
   "infix"                     { mkt Infix }
   "infixl"                    { mkt Infixl }
