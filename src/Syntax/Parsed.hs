@@ -17,11 +17,11 @@ data Expr
   | Float Float Range
   | Str Text Range
   | Obj (Data Expr) Range
+  | Variant Var (Data Expr)
   | Id Var
   | App Expr [Expr] Range
   | Cond Expr Expr Expr Range
   | Fun [Var] Expr Range
-  | Ctor Var [Var]
   | Parens Expr
   | Block (NonEmpty Expr) Range
   | Chain (OpChain Expr)
@@ -34,11 +34,11 @@ instance HasRange Expr where
   getRange (Float _ r) = r
   getRange (Str _ r) = r
   getRange (Obj _ r) = r
+  getRange (Variant v _) = getRange v
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
   getRange (Cond _ _ _ r) = r
   getRange (Fun _ _ r) = r
-  getRange (Ctor v _) = getRange v
   getRange (Parens expr) = getRange expr
   getRange (Block _ r) = r
   getRange (Chain chain) = getRange chain

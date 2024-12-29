@@ -118,7 +118,7 @@ instance CodeGens (Bind () (Closure Expr)) Ctx where
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
-  genCode (Module bindings _) = do
+  genCode (Module bindings _ _) = do
     stmts <- mapM genCode bindings
     return (T.intercalate "\n" stmts <> "\n")
 

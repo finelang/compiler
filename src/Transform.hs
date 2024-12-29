@@ -16,13 +16,13 @@ import Syntax.Common
     Data (Data),
     Fixities,
     Fixity (Fixity),
-    HasRange (getRange),
     OpChain (..),
     Var,
     binder,
     boundValue,
   )
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
+import Syntax.Parsed (justDataCtors)
 import qualified Syntax.Parsed as P
 import Transform.FreeVars (runFreeVars)
 import Transform.ShuntingYard (runSy)
@@ -57,6 +57,11 @@ transform (P.Obj (Data members) r) = do
   lift (tell $ collectErrors $ map RepeatedMember $ repeated $ keys)
   values <- mapM (transform . snd) members
   return $ Obj (Data $ zip keys values) r
+transform (P.Variant tag (Data members)) = do
+  let (names, values) = unzip members
+  values' <- mapM transform values
+  let members' = zip names values'
+  return $ Variant tag (Data members')
 transform (P.Id var) = return (Id var)
 transform (P.App f args r) = do
   f' <- transform f
@@ -71,13 +76,6 @@ transform (P.Fun params body r) = do
   lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
-transform (P.Ctor tag params) =
-  if null params
-    then return (Variant tag (Data []))
-    else do
-      lift (tell $ collectErrors $ map RepeatedParam $ repeated params)
-      let obj = Data $ map (\v -> (v, Id v)) params
-      return $ Fun params (Variant tag obj) (getRange tag)
 transform (P.Parens expr) = do
   expr' <- transform expr
   return $ case expr' of
@@ -147,5 +145,7 @@ transformModule (P.Module defns) =
       writer = runReaderT (transformBinds $ P.justBinds defns) (Ctx S.empty fixs M.empty)
       (bindings', bindErrors) = runWriter writer
 
+      ctors = map binder $ concat $ mapMaybe justDataCtors defns
+
       (errors, warnings) = fixDefnErrors <> bindErrors <> checkUnusedTopBinds bindings'
-   in (if null errors then Right (Module bindings' fixs) else Left errors, warnings)
+   in (if null errors then Right (Module bindings' fixs ctors) else Left errors, warnings)

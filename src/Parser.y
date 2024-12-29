@@ -64,7 +64,7 @@ Defn : let Prefix '=' Expr  { Defn (Bind $2 () $4) }
 Ctors : Ctors Ctor  { $2 : $1 }
       | Ctor        { [$1] }
 
-Ctor : let Prefix Params  { Bind $2 () (Ctor $2 (reverse $3)) }
+Ctor : let Prefix Params  { Bind $2 () (mkCtor $2 (reverse $3)) }
      | Ext let Prefix     { Bind $3 () $1 }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
@@ -128,6 +128,11 @@ mkApp exprs =
   let last = head exprs
       (f : args) = reverse exprs
    in App f args (getRange (f, last))
+
+mkCtor tag [] = Variant tag (Data [])
+mkCtor tag params =
+  let obj = Data $ map (\v -> (v, Id v)) params
+  in Fun params (Variant tag obj) (getRange tag)
 
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)
