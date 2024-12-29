@@ -62,6 +62,7 @@ instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
   genCode (Int v _) = return (T.pack $ show v)
   genCode (Float v _) = return (T.pack $ show v)
+  genCode (Str s _) = return [i|"#{s}"|]
   genCode (Obj (Data members) _) =
     if null members
       then return "({})"

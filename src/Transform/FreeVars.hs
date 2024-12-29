@@ -30,6 +30,7 @@ chainFreeVars (Operation left op chain) = do
 freeVars :: Expr -> Writer Errors Vars
 freeVars (Int _ _) = return M.empty
 freeVars (Float _ _) = return M.empty
+freeVars (Str _ _) = return M.empty
 freeVars (Obj (Data members) _) = unions' <$> (mapM (freeVars . snd) members)
 freeVars (Id var) = return (singleton' var)
 freeVars (App f args _) = do

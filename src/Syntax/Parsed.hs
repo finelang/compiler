@@ -1,11 +1,13 @@
 module Syntax.Parsed (Defn (..), Expr (..), Module (..), justBind, justFixDefn) where
 
 import Data.List.NonEmpty (NonEmpty)
+import Data.Text (Text)
 import Syntax.Common (Bind, Data, Fixity, HasRange (..), OpChain, Range, Var (Var))
 
 data Expr
   = Int Int Range
   | Float Float Range
+  | Str Text Range
   | Obj (Data Expr) Range
   | Id Var
   | App Expr [Expr] Range
@@ -19,6 +21,7 @@ instance HasRange Expr where
   getRange :: Expr -> Range
   getRange (Int _ r) = r
   getRange (Float _ r) = r
+  getRange (Str _ r) = r
   getRange (Obj _ r) = r
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r

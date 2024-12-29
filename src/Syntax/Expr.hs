@@ -4,11 +4,13 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (maybeToList)
+import Data.Text (Text)
 import Syntax.Common (Bind, Data, Fixities, HasRange (..), Range, Var (Var))
 
 data Expr
   = Int Int Range
   | Float Float Range
+  | Str Text Range
   | Obj (Data Expr) Range
   | Id Var
   | App Expr [Expr] Range
@@ -21,6 +23,7 @@ instance HasRange Expr where
   getRange :: Expr -> Range
   getRange (Int _ r) = r
   getRange (Float _ r) = r
+  getRange (Str _ r) = r
   getRange (Obj _ r) = r
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r

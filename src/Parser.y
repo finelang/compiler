@@ -30,6 +30,7 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   fn      { Token Fn _ _ }
   let     { Token Let _ _ }
   id      { Token IdTok _ _ }
+  str     { Token StrTok _ _ }
   int     { Token IntTok _ _ }
   float   { Token FloatTok _ _ }
   '->'    { Token Arrow _ _ }
@@ -85,6 +86,7 @@ Atom : '(' Expr ')'   { Parens $2 }
      | Prefix         { Id $1 }
      | int            { Int (read $ unpack $ tokenLexeme $1) (getRange $1) }
      | float          { Float (read $ unpack $ tokenLexeme $1) (getRange $1) }
+     | str            { mkStr $1 }
 
 Block : Block ';' Expr  { $3 : $1 }
       | Block ';'       { $1 }
@@ -98,6 +100,8 @@ ObjMember : Param '=' Expr  { ($1, $3) }
 
 {
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
+
+mkStr tok = Str (tokenLexeme tok) (getRange tok)
 
 mkFix assoc precTok = Fixity assoc (read $ unpack $ tokenLexeme precTok)
 

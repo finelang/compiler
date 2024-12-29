@@ -9,8 +9,10 @@ import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as S
+import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Tuple (swap)
-import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
+import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings, errorUNREACHABLE)
 import Syntax.Common (Bind (Bind), Data (Data), Fixities, Fixity (Fixity), OpChain (..), Var, binder, boundValue)
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
 import qualified Syntax.Parsed as P
@@ -38,9 +40,14 @@ transformChain (Operation left op chain) = do
   chain' <- transformChain chain
   return (Operation left' op chain')
 
+transformStr :: Text -> Text
+transformStr s | T.length s >= 2 = T.tail (T.init s)
+transformStr _ = errorUNREACHABLE
+
 transform :: P.Expr -> ReaderT Fixities (Writer Errors) Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
+transform (P.Str s r) = return $ Str (transformStr s) r
 transform (P.Obj (Data members) r) = do
   let keys = map fst members
   lift (tell $ collectErrors $ map RepeatedMember $ repeated $ keys)
