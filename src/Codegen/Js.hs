@@ -41,22 +41,32 @@ sanitize name = do
   where
     go names ch = M.findWithDefault (T.singleton ch) ch names
 
-instance CodeGens (NonEmpty Expr) Ctx where
-  genCode :: NonEmpty Expr -> Reader Ctx Text
-  genCode exprs = do
-    oldIndent <- asks indentation
-    let indent = oldIndent <> "  "
-    exprs' <- local (withIndentation indent) (mapM genCode exprs)
-    let (stmts, expr) = unsnoc' exprs'
-    let stmts' = T.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
-    let expr' = [i|#{indent}return #{expr};|] :: Text
-    return [i|{\n#{stmts'}#{expr'}\n#{oldIndent}}|]
+genStmtsCode :: NonEmpty Expr -> Reader Ctx Text
+genStmtsCode exprs = do
+  oldIndent <- asks indentation
+  let indent = oldIndent <> "  "
+  exprs' <- local (withIndentation indent) (mapM genCode exprs)
+  let (stmts, expr) = unsnoc' exprs'
+  let stmts' = T.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
+  let expr' = [i|#{indent}return #{expr};|] :: Text
+  return [i|{\n#{stmts'}#{expr'}\n#{oldIndent}}|]
 
 genObjMemberCode :: (Var, Expr) -> Reader Ctx Text
 genObjMemberCode (name, value) = do
   indent <- asks indentation
   value' <- genCode value
   return [i|#{indent}#{name}: #{value'}|]
+
+genFunCode :: Text -> [Var] -> Expr -> Reader Ctx Text
+genFunCode name params body = do
+  let params' = T.intercalate ", " (map varName params)
+  case body of
+    Block exprs _ -> do
+      body' <- genStmtsCode exprs
+      return [i|function #{name}(#{params'}) #{body'}|]
+    _ -> do
+      body' <- genCode body
+      return [i|function #{name}(#{params'}) { return #{body'}; }|]
 
 instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
@@ -65,33 +75,28 @@ instance CodeGens Expr Ctx where
   genCode (Str s _) = return [i|"#{s}"|]
   genCode (Obj (Data members) _) =
     if null members
-      then return "({})"
+      then return "{}"
       else do
         members' <- do
           chunks <- mapM genObjMemberCode members
           return (T.intercalate ", " chunks)
-        return [i|({ #{members'} })|]
+        return [i|{ #{members'} }|]
   genCode (Variant tag (Data members)) = do
     if null members
-      then return [i|({ $tag: "#{tag}" })|]
+      then return [i|{ $tag: "#{tag}" }|]
       else do
         members' <- do
           chunks <- mapM genObjMemberCode members
           return (T.intercalate ", " chunks)
-        return [i|({ $tag: "#{tag}", #{members'} })|]
+        return [i|{ $tag: "#{tag}", #{members'} }|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
     args' <- (T.intercalate ", ") <$> mapM genCode args
     return [i|#{f'}(#{args'})|]
-  genCode (Fun params body _) = do
-    let params' = T.intercalate ", " (map varName params)
-    body' <- case body of
-      Block exprs _ -> genCode exprs
-      _ -> genCode body
-    return [i|((#{params'}) => #{body'})|]
+  genCode (Fun params body _) = genFunCode "" params body
   genCode (Block exprs _) = do
-    content <- genCode exprs
+    content <- genStmtsCode exprs
     return [i|(() => #{content})()|]
   genCode (Parens expr) = genCode expr
 
@@ -99,14 +104,17 @@ instance CodeGens (Bind () (Closure Expr)) Ctx where
   genCode :: Bind () (Closure Expr) -> Reader Ctx Text
   genCode (Bind (Var name _) _ (Closure _ expr _)) = do
     name' <- withReaderT symNames (sanitize name)
-    expr' <- genCode expr
-    return [i|const #{name'} = #{expr'};|]
+    case expr of
+      Fun params body _ -> genFunCode name' params body
+      _ -> do
+        expr' <- genCode expr
+        return [i|const #{name'} = #{expr'};|]
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
   genCode (Module bindings _) = do
     stmts <- mapM genCode bindings
-    return (T.intercalate "\n" stmts <> "\n")
+    return (T.intercalate "\n\n" stmts <> "\n")
 
 runGenCode :: (CodeGens t Ctx) => t -> Text
 runGenCode x =
