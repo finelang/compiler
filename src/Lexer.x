@@ -44,7 +44,8 @@ tokens :-
   "fn"                        { mkt Fn }
   "let"                       { mkt Let }
   "then"                      { mkt Then }
-  [$alpha][$alpha $digit]*    { mkt IdTok }
+  [$large][$alpha $digit]*    { mkt CtorTok }
+  [$small][$alpha $digit]*    { mkt IdTok }
   \" @string* \"              { mkt StrTok }
   "-"? @decimal               { mkt IntTok }
   "-"? @decimal "." @decimal  { mkt FloatTok }
@@ -54,10 +55,9 @@ tokens :-
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
   "}"                         { mkt Cbrace }
-  $opsymbol{1, 3}             { mkt Op }
+  [$opsymbol \:]{1, 3}        { mkt Op }
   ";"                         { mkt Semi }
   ","                         { mkt Comma }
-  "`"                         { mkt Btick }
 
 {
 data TokenType
@@ -71,6 +71,7 @@ data TokenType
   | Fn
   | Let
   | Then
+  | CtorTok
   | IdTok
   | StrTok
   | IntTok
@@ -85,7 +86,6 @@ data TokenType
   | Op
   | Semi
   | Comma
-  | Btick
   deriving (Show)
 
 data TokenPosn = TokenPosn
