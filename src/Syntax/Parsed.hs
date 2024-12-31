@@ -2,15 +2,12 @@ module Syntax.Parsed
   ( Defn (..),
     Expr (..),
     Module (..),
-    justFixDefn,
-    justDataCtors,
-    justBinds,
   )
 where
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
-import Syntax.Common (Bind, Ctor, Data, Ext, Fixity, HasRange (..), OpChain, Range, Var (Var))
+import Syntax.Common (Bind, Data, Ext, Fixity, HasRange (..), OpChain, Range, Var (Var), VariantSpec)
 
 data Expr
   = Int Int Range
@@ -47,21 +44,8 @@ instance HasRange Expr where
 data Defn
   = Defn (Bind () Expr)
   | FixDefn Fixity Var
-  | DtypeDefn [Ctor]
+  | DtypeDefn [VariantSpec]
   deriving (Show)
-
-justBinds :: [Defn] -> [Bind () Expr]
-justBinds [] = []
-justBinds (Defn b : defns) = b : justBinds defns
-justBinds (_ : defns) = justBinds defns
-
-justFixDefn :: Defn -> Maybe (Fixity, Var)
-justFixDefn (FixDefn fix op) = Just (fix, op)
-justFixDefn _ = Nothing
-
-justDataCtors :: Defn -> Maybe [Ctor]
-justDataCtors (DtypeDefn ctors) = Just ctors
-justDataCtors _ = Nothing
 
 data Module = Module
   { definitions :: [Defn]

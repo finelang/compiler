@@ -18,11 +18,11 @@ import Syntax.Common
     Fixity (Fixity),
     OpChain (..),
     Var,
+    VariantSpec,
     binder,
     boundValue,
   )
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
-import Syntax.Parsed (justDataCtors)
 import qualified Syntax.Parsed as P
 import Transform.FreeVars (runFreeVars)
 import Transform.ShuntingYard (runSy)
@@ -136,16 +136,29 @@ checkUnusedTopBinds bs =
       binders = S.fromList $ map binder bs
    in collectWarnings $ map UnusedVar $ S.toList $ S.difference binders used
 
+justBinds :: [P.Defn] -> [Bind () P.Expr]
+justBinds [] = []
+justBinds (P.Defn b : defns) = b : justBinds defns
+justBinds (_ : defns) = justBinds defns
+
+justFixDefn :: P.Defn -> Maybe (Fixity, Var)
+justFixDefn (P.FixDefn fix op) = Just (fix, op)
+justFixDefn _ = Nothing
+
+justVariantSpecs :: P.Defn -> Maybe [VariantSpec]
+justVariantSpecs (P.DtypeDefn ctors) = Just ctors
+justVariantSpecs _ = Nothing
+
 transformModule :: P.Module -> (Either [Error] Module, [Warning])
 transformModule (P.Module defns) =
-  let fixDefns = mapMaybe P.justFixDefn defns
+  let fixDefns = mapMaybe justFixDefn defns
       fixDefnErrors = checkFixDefns fixDefns
       fixs = M.fromList (map swap fixDefns)
 
-      writer = runReaderT (transformBinds $ P.justBinds defns) (Ctx S.empty fixs M.empty)
+      writer = runReaderT (transformBinds $ justBinds defns) (Ctx S.empty fixs M.empty)
       (bindings', bindErrors) = runWriter writer
 
-      ctors = concat (mapMaybe justDataCtors defns)
+      ctors = concat (mapMaybe justVariantSpecs defns)
 
       (errors, warnings) = fixDefnErrors <> bindErrors <> checkUnusedTopBinds bindings'
    in (if null errors then Right (Module bindings' fixs ctors) else Left errors, warnings)

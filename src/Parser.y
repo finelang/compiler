@@ -15,7 +15,7 @@ import Syntax.Common
     Fixity(Fixity),
     Assoc(..),
     Data (Data),
-    Ctor (Ctor),
+    VariantSpec (VariantSpec),
     Ext (Ext)
   )
 import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
@@ -71,8 +71,8 @@ Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
 Varnts : Varnts Varnt { $2 : $1 }
        | Varnt        { [$1] }
 
-Varnt : let Prefix '{' Params '}' { Ctor $2 (reverse $4) Nothing }
-      | Ext let Prefix '{' '}'    { Ctor $3 [] (Just $1) }
+Varnt : let Prefix '{' Params '}' { VariantSpec $2 (reverse $4) Nothing }
+      | Ext let Prefix '{' '}'    { VariantSpec $3 [] (Just $1) }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 

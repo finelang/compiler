@@ -111,5 +111,5 @@ instance HasRange Ext where
   getRange :: Ext -> Range
   getRange (Ext _ r) = r
 
-data Ctor = Ctor Var [Var] (Maybe Ext)
+data VariantSpec = VariantSpec Var [Var] (Maybe Ext)
   deriving (Show)

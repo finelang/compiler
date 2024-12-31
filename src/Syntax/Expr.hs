@@ -5,7 +5,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (maybeToList)
 import Data.Text (Text)
-import Syntax.Common (Bind, Ctor, Data, Ext, Fixities, HasRange (..), Range, Var (Var))
+import Syntax.Common (Bind, Data, Ext, Fixities, HasRange (..), Range, Var (Var), VariantSpec)
 
 data Expr
   = Int Int Range
@@ -50,6 +50,6 @@ closureVars (Closure env _ bder) = M.keys env ++ maybeToList bder
 data Module = Module
   { bindings :: [Bind () (Closure Expr)],
     fixities :: Fixities,
-    constructors :: [Ctor]
+    constructors :: [VariantSpec]
   }
   deriving (Show)
