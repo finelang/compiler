@@ -14,7 +14,9 @@ import Syntax.Common
     fromLRChain,
     Fixity(Fixity),
     Assoc(..),
-    Data (Data)
+    Data (Data),
+    Ctor (Ctor),
+    Ext (Ext)
   )
 import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 }
@@ -34,7 +36,6 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   fn      { Token Fn _ _ }
   let     { Token Let _ _ }
   then    { Token Then _ _ }
-  ct      { Token CtorTok _ _ }
   id      { Token IdTok _ _ }
   str     { Token StrTok _ _ }
   int     { Token IntTok _ _ }
@@ -53,9 +54,7 @@ import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 
 Module : Defns  { Module (reverse $1) }
 
-Prefix : id   { mkVar $1 }
-
-PrefixCt : ct { mkVar $1 }
+Prefix : id { mkVar $1 }
 
 Infix : op  { mkVar $1 }
 
@@ -63,19 +62,17 @@ Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
 Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
-     | Ext let Prefix                     { Defn (Bind $3 () $1) }
+     | Ext let Prefix                     { Defn (Bind $3 () (ExtExpr $1)) }
      | let Prefix '(' Params ')' '=' Expr { Defn (Bind $2 () (Fun (reverse $4) $7 (getRange ($2, $7)))) }
      | let Prefix Infix Prefix '=' Expr   { Defn (Bind $3 () (Fun [$2, $4] $6 (getRange ($2, $6)))) }
      | Fix Infix                          { FixDefn $1 $2 }
-     | data '{' Ctors '}'                 { DtypeDefn (reverse $3) }
+     | data '{' Varnts '}'                { DtypeDefn (reverse $3) }
 
-Ctors : Ctors Ctor  { $2 : $1 }
-      | Ctor        { [$1] }
+Varnts : Varnts Varnt { $2 : $1 }
+       | Varnt        { [$1] }
 
-Ctor : let PrefixCt '(' Params ')'  { Bind $2 () (mkCtor $2 (reverse $4)) }
-     | let PrefixCt                 { Bind $2 () (mkCtor $2 []) }
-     | Ext let PrefixCt             { Bind $3 () $1 }
-     | let Prefix Infix Prefix      { Bind $3 () (mkCtor $3 [$2, $4]) }
+Varnt : let Prefix '{' Params '}' { Ctor $2 (reverse $4) Nothing }
+      | Ext let Prefix '{' '}'    { Ctor $3 [] (Just $1) }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
@@ -101,15 +98,16 @@ Args : Args ',' Expr  { $3 : $1 }
      | Expr           { [$1] }
      | {- empty -}    { [] }
 
-Atom : '(' Expr ')'   { Parens $2 }
-     | '{' Obj '}'    { Obj (Data $ reverse $2) (getRange ($1, $3)) }
-     | '{' Block '}'  { mkBlock (reverse $2) (getRange ($1, $3)) }
-     | Prefix         { Id $1 }
-     | PrefixCt       { Id $1 }
-     | '(' op ')'     { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
-     | int            { Int (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-     | float          { Float (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-     | str            { mkStr $1 }
+Atom : '(' Expr ')'       { Parens $2 }
+     | '{' Obj '}'        { Obj (Data $ reverse $2) (getRange ($1, $3)) }
+     | Prefix '{' Obj '}' { Variant $1 (Data $ reverse $3) (getRange ($1, $4)) }
+     | Prefix '{' '}'     { Variant $1 (Data []) (getRange ($1, $3)) }
+     | '{' Block '}'      { mkBlock (reverse $2) (getRange ($1, $3)) }
+     | Prefix             { Id $1 }
+     | '(' op ')'         { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
+     | int                { Int (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | float              { Float (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | str                { mkStr $1 }
 
 Block : Block ';' Expr  { $3 : $1 }
       | Block ';'       { $1 }
@@ -129,19 +127,6 @@ mkVar tok = Var (tokenLexeme tok) (getRange tok)
 transformStr = T.tail . T.init
 
 mkStr tok = Str (transformStr $ tokenLexeme tok) (getRange tok)
-
-mkFix assoc precTok = Fixity assoc (read $ T.unpack $ tokenLexeme precTok)
-
-mkApp [expr] = expr
-mkApp exprs =
-  let last = head exprs
-      (f : args) = reverse exprs
-   in App f args (getRange (f, last))
-
-mkCtor tag [] = Variant tag (Data [])
-mkCtor tag params =
-  let obj = Data $ map (\v -> (v, Id v)) params
-  in Fun params (Variant tag obj) (getRange tag)
 
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)

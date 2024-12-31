@@ -103,3 +103,13 @@ instance (HasRange t) => HasRange (OpChain t) where
 
 newtype Data t = Data {dataMembers :: [(Var, t)]}
   deriving (Show)
+
+data Ext = Ext Text Range
+  deriving (Show)
+
+instance HasRange Ext where
+  getRange :: Ext -> Range
+  getRange (Ext _ r) = r
+
+data Ctor = Ctor Var [Var] (Maybe Ext)
+  deriving (Show)

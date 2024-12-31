@@ -27,8 +27,15 @@ chainFreeVars (Operation left op chain) = do
   chainFvs <- chainFreeVars chain
   return $ unions' [leftFvs, singleton' op, chainFvs]
 
+dataFreeVars :: Data Expr -> Writer Errors Vars
+dataFreeVars (Data members) = unions' <$> mapM (freeVars . snd) members
+
 freeVars :: Expr -> Writer Errors Vars
-freeVars (Obj (Data members) _) = unions' <$> mapM (freeVars . snd) members
+freeVars (Int _ _) = return M.empty
+freeVars (Float _ _) = return M.empty
+freeVars (Str _ _) = return M.empty
+freeVars (Obj d _) = dataFreeVars d
+freeVars (Variant _ d _) = dataFreeVars d
 freeVars (Id var) = return (singleton' var)
 freeVars (App f args _) = do
   fVars <- freeVars f
@@ -43,7 +50,7 @@ freeVars (Fun params body _) = do
 freeVars (Parens expr) = freeVars expr
 freeVars (Block exprs _) = unions' <$> mapM freeVars exprs
 freeVars (Chain chain) = chainFreeVars chain
-freeVars _ = return M.empty
+freeVars (ExtExpr _) = return M.empty
 
 undefinedVars :: Set Var -> Vars -> [Var]
 undefinedVars alreadyFree free =

@@ -44,8 +44,7 @@ tokens :-
   "fn"                        { mkt Fn }
   "let"                       { mkt Let }
   "then"                      { mkt Then }
-  [$large][$alpha $digit]*    { mkt CtorTok }
-  [$small][$alpha $digit]*    { mkt IdTok }
+  [$alpha][$alpha $digit]*    { mkt IdTok }
   \" @string* \"              { mkt StrTok }
   "-"? @decimal               { mkt IntTok }
   "-"? @decimal "." @decimal  { mkt FloatTok }
@@ -71,7 +70,6 @@ data TokenType
   | Fn
   | Let
   | Then
-  | CtorTok
   | IdTok
   | StrTok
   | IntTok

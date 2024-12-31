@@ -13,7 +13,7 @@ import qualified Data.Map as M
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Syntax.Common (Bind (..), Data (Data), Var (Var), varName)
+import Syntax.Common (Bind (..), Data (Data), Ext (Ext), Var (Var), varName)
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
 
 unsnoc' :: NonEmpty a -> ([a], a)
@@ -75,20 +75,20 @@ instance CodeGens Expr Ctx where
   genCode (Str s _) = return [i|"#{s}"|]
   genCode (Obj (Data members) _) =
     if null members
-      then return "{}"
+      then return "({})"
       else do
         members' <- do
           chunks <- mapM genObjMemberCode members
           return (T.intercalate ", " chunks)
-        return [i|{ #{members'} }|]
-  genCode (Variant tag (Data members)) = do
+        return [i|({ #{members'} })|]
+  genCode (Variant tag (Data members) _) = do
     if null members
-      then return [i|{ $tag: "#{tag}" }|]
+      then return [i|({ $tag: "#{tag}" })|]
       else do
         members' <- do
           chunks <- mapM genObjMemberCode members
           return (T.intercalate ", " chunks)
-        return [i|{ $tag: "#{tag}", #{members'} }|]
+        return [i|({ $tag: "#{tag}", #{members'} })|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
@@ -104,7 +104,7 @@ instance CodeGens Expr Ctx where
     content <- genStmtsCode exprs
     return [i|(() => #{content})()|]
   genCode (Parens expr) = genCode expr
-  genCode (Ext code _) = return code
+  genCode (ExtExpr (Ext code _)) = return code
 
 instance CodeGens (Bind () (Closure Expr)) Ctx where
   genCode :: Bind () (Closure Expr) -> Reader Ctx Text
@@ -120,7 +120,7 @@ instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
   genCode (Module bindings _ _) = do
     stmts <- mapM genCode bindings
-    return (T.intercalate "\n" stmts <> "\n")
+    return (T.intercalate "\n\n" stmts <> "\n")
 
 runGenCode :: (CodeGens t Ctx) => t -> Text
 runGenCode x =

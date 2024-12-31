@@ -57,11 +57,11 @@ transform (P.Obj (Data members) r) = do
   lift (tell $ collectErrors $ map RepeatedMember $ repeated $ keys)
   values <- mapM (transform . snd) members
   return $ Obj (Data $ zip keys values) r
-transform (P.Variant tag (Data members)) = do
+transform (P.Variant tag (Data members) r) = do
   let (names, values) = unzip members
   values' <- mapM transform values
   let members' = zip names values'
-  return $ Variant tag (Data members')
+  return $ Variant tag (Data members') r
 transform (P.Id var) = return (Id var)
 transform (P.App f args r) = do
   f' <- transform f
@@ -89,7 +89,7 @@ transform (P.Block exprs r) = do
     expr :| [] -> expr
     _ -> Block exprs' r
 transform (P.Chain chain) = transformChain chain >>= shuntingYard
-transform (P.Ext txt r) = return (Ext txt r)
+transform (P.ExtExpr ext) = return (ExtExpr ext)
 
 data Ctx = Ctx
   { vars :: Set Var,
@@ -145,7 +145,7 @@ transformModule (P.Module defns) =
       writer = runReaderT (transformBinds $ P.justBinds defns) (Ctx S.empty fixs M.empty)
       (bindings', bindErrors) = runWriter writer
 
-      ctors = map binder $ concat $ mapMaybe justDataCtors defns
+      ctors = concat (mapMaybe justDataCtors defns)
 
       (errors, warnings) = fixDefnErrors <> bindErrors <> checkUnusedTopBinds bindings'
    in (if null errors then Right (Module bindings' fixs ctors) else Left errors, warnings)
