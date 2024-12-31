@@ -111,5 +111,11 @@ instance HasRange Ext where
   getRange :: Ext -> Range
   getRange (Ext _ r) = r
 
-data VariantSpec = VariantSpec Var [Var] (Maybe Ext)
+data VariantSpec = VariantSpec
+  { variantTag :: Var,
+    variantProps :: [Var],
+    variantExtValue :: Maybe Ext
+  }
   deriving (Show)
+
+type VariantSpecs = Map Var VariantSpec

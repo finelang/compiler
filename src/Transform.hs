@@ -18,7 +18,7 @@ import Syntax.Common
     Fixity (Fixity),
     OpChain (..),
     Var,
-    VariantSpec,
+    VariantSpec (variantTag),
     binder,
     boundValue,
   )
@@ -155,10 +155,10 @@ transformModule (P.Module defns) =
       fixDefnErrors = checkFixDefns fixDefns
       fixs = M.fromList (map swap fixDefns)
 
+      variants = M.fromList $ map (\vn -> (variantTag vn, vn)) $ concat (mapMaybe justVariantSpecs defns)
+
       writer = runReaderT (transformBinds $ justBinds defns) (Ctx S.empty fixs M.empty)
       (bindings', bindErrors) = runWriter writer
 
-      ctors = concat (mapMaybe justVariantSpecs defns)
-
       (errors, warnings) = fixDefnErrors <> bindErrors <> checkUnusedTopBinds bindings'
-   in (if null errors then Right (Module bindings' fixs ctors) else Left errors, warnings)
+   in (if null errors then Right (Module bindings' fixs variants) else Left errors, warnings)
