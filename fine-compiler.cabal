@@ -33,7 +33,9 @@ library
       Syntax.Expr
       Syntax.Parsed
       Transform
+      Transform.Expr
       Transform.FreeVars
+      Transform.Module
       Transform.ShuntingYard
   other-modules:
       Paths_fine_compiler

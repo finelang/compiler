@@ -7,7 +7,7 @@ import Error (wrapError, wrapWarning)
 import Lexer (lexText)
 import Parser (parseTokens)
 import System.Environment (getArgs)
-import Transform (transformModule)
+import Transform (runTransform)
 
 getPaths :: IO (String, String)
 getPaths = do
@@ -21,7 +21,7 @@ main = do
   (inFilePath, outFilePath) <- getPaths
   code <- TIO.readFile inFilePath
   let parsed = parseTokens $ lexText code
-  let (result, warnings) = transformModule parsed
+  let (result, warnings) = runTransform parsed
   forM_ warnings (putStrLn . wrapWarning)
   case result of
     Left errors -> forM_ errors (putStrLn . wrapError)
