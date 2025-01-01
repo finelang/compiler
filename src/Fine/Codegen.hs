@@ -13,7 +13,14 @@ import qualified Data.Map as M
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Fine.Syntax.Common (Bind (..), Data (Data), Ext (Ext), Var (Var), varName)
+import Fine.Syntax.Common
+  ( Bind (..),
+    Data (Data),
+    Ext (Ext),
+    Var (Var),
+    VariantSpec (variantExtValue),
+    varName,
+  )
 import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
 
 class CodeGens t ctx where
@@ -22,7 +29,8 @@ class CodeGens t ctx where
 data Ctx = Ctx
   { indentation :: Text,
     separator :: Char,
-    symNames :: Map Char Text
+    symNames :: Map Char Text,
+    variantExtValues :: Map Var Ext
   }
 
 withIndentation :: Text -> Ctx -> Ctx
@@ -79,7 +87,11 @@ instance CodeGens Expr Ctx where
   genCode (Float v _) = return (T.pack $ show v)
   genCode (Str s _) = return [i|"#{s}"|]
   genCode (Obj dt _) = genDataCode dt
-  genCode (Variant _ dt _) = genDataCode dt
+  genCode (Variant tag dt _) = do
+    extValue <- asks (M.lookup tag . variantExtValues)
+    case extValue of
+      Nothing -> genDataCode dt
+      Just (Ext code _) -> return code
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
@@ -109,8 +121,12 @@ instance CodeGens (Bind () (Closure Expr)) Ctx where
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
-  genCode (Module bindings _ _) = do
-    stmts <- mapM genCode bindings
+  genCode (Module bindings _ specs) = do
+    let extValues = M.mapMaybe variantExtValue specs
+    stmts <-
+      local
+        (\ctx -> ctx {variantExtValues = M.union extValues (variantExtValues ctx)})
+        (mapM genCode bindings)
     return (T.intercalate "\n\n" stmts <> "\n")
 
 runGenCode :: (CodeGens t Ctx) => t -> Text
@@ -140,5 +156,6 @@ runGenCode x =
               ('$', "$dllr"),
               ('@', "$at"),
               ('~', "$tild")
-            ]
+            ],
+        variantExtValues = M.empty
       }
