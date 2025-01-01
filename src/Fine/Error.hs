@@ -32,7 +32,11 @@ data Error
   = UndefinedVar Var
   | RepeatedVar Var
   | RepeatedParam Var
-  | RepeatedMember Var
+  | RepeatedVariant Var
+  | UndefinedVariant Var
+  | RepeatedProp Var
+  | RequiredProp Var Var
+  | InvalidProp Var Var
   | InvalidPrecedence Int Int Var
   | RepeatedFixity Var
   | SameInfixPrecedence (Var, Fixity) (Var, Fixity)
@@ -45,8 +49,16 @@ instance Show Error where
     [i|Variable #{hl var} is repeated.|]
   show (RepeatedParam var) =
     [i|Parameter #{hl var} is repeated.|]
-  show (RepeatedMember var) =
-    [i|Member #{hl var} is repeated.|]
+  show (RepeatedVariant var) =
+    [i|Variant #{hl var} is repeated.|]
+  show (UndefinedVariant var) =
+    [i|Variant #{hl var} is not defined.|]
+  show (RepeatedProp var) =
+    [i|Property #{hl var} is repeated.|]
+  show (RequiredProp tag prop) =
+    [i|Property #{hl prop} of variant #{hl tag} is missing.|]
+  show (InvalidProp tag prop) =
+    [i|Variant #{hl tag} does not have a #{hl prop} property.|]
   show (InvalidPrecedence lb ub var) =
     [i|Precedence of operator #{hl var} must be greater or equal than #{lb} and lesser than #{ub}.|]
   show (RepeatedFixity var) =

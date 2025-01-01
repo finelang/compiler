@@ -1,7 +1,7 @@
 module Fine.Transform.Module (runTransform) where
 
 import Control.Monad (forM_, unless)
-import Control.Monad.Trans.RWS (RWS, asks, gets, local, modify, runRWS, tell)
+import Control.Monad.Trans.RWS (RWS, asks, get, gets, local, modify, runRWS, tell)
 import Data.List.Extra (repeated)
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -34,11 +34,11 @@ data SCtx = SCtx
   }
 
 handleSpec :: VariantSpec -> RWS r Errors SCtx ()
-handleSpec spec@(VariantSpec var members _) = do
-  tell (collectErrors $ map RepeatedMember $ repeated members)
+handleSpec spec@(VariantSpec var props _) = do
+  tell (collectErrors $ map RepeatedProp $ repeated props)
   specs' <- gets variantSpecs
   if M.member var specs'
-    then tell (collectErrors [RepeatedVar var])
+    then tell (collectErrors [RepeatedVariant var])
     else modify (\ctx -> ctx {variantSpecs = M.insert var spec specs'})
 
 transformDefns :: [P.Defn] -> RWS RCtx Errors SCtx [Bind () (Closure Expr)]
@@ -62,8 +62,8 @@ transformDefns (P.Defn (Bind bder _ v) : defns) = do
   let (vFreeVars, fvErrors) = runFreeVars currentFreeVars v
   tell fvErrors
   v'' <- do
-    fixities' <- gets fixities
-    let (v', transfErrors) = TE.runTransform fixities' v
+    (SCtx fixs specs) <- get
+    let (v', transfErrors) = TE.runTransform fixs specs v
     tell transfErrors
     return v'
   currentEnv <- asks env

@@ -1,10 +1,12 @@
 module Fine.Transform.Expr (runTransform) where
 
-import Control.Monad.Trans.RW (RW, ask, runRW, tell)
+import Control.Monad.Trans.RW (RW, ask, asks, runRW, tell, withReader)
 import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.Map as M
+import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, collectErrors)
-import Fine.Syntax.Common (Data (Data), Fixities, OpChain (..))
+import Fine.Syntax.Common (Data (Data), Fixities, OpChain (..), VariantSpec (VariantSpec), VariantSpecs)
 import Fine.Syntax.Expr (Expr (..))
 import qualified Fine.Syntax.Parsed as P
 import Fine.Transform.ShuntingYard (runSy)
@@ -16,24 +18,38 @@ shuntingYard chain = do
   tell errors
   return expr
 
-transformChain :: OpChain P.Expr -> RW Fixities Errors (OpChain Expr)
+data Ctx = Ctx
+  { fixities :: Fixities,
+    variantSpecs :: VariantSpecs
+  }
+
+transformChain :: OpChain P.Expr -> RW Ctx Errors (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr
 transformChain (Operation left op chain) = do
   left' <- transform left
   chain' <- transformChain chain
   return (Operation left' op chain')
 
-transform :: P.Expr -> RW Fixities Errors Expr
+transform :: P.Expr -> RW Ctx Errors Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
 transform (P.Str s r) = return (Str s r)
 transform (P.Obj (Data members) r) = do
   let keys = map fst members
-  tell (collectErrors $ map RepeatedMember $ repeated $ keys)
+  tell (collectErrors $ map RepeatedProp $ repeated $ keys)
   values <- mapM (transform . snd) members
   return $ Obj (Data $ zip keys values) r
 transform (P.Variant tag (Data members) r) = do
   let (names, values) = unzip members
+  tell (collectErrors $ map RepeatedProp $ repeated names)
+  spec <- asks (M.lookup tag . variantSpecs)
+  case spec of
+    Nothing -> tell (collectErrors [UndefinedVariant tag])
+    Just (VariantSpec _ memberNames _) -> do
+      let memberNames' = S.fromList memberNames
+      let names' = S.fromList names
+      tell (collectErrors $ map (RequiredProp tag) $ S.toList $ S.difference memberNames' names')
+      tell (collectErrors $ map (InvalidProp tag) $ S.toList $ S.difference names' memberNames')
   values' <- mapM transform values
   let members' = zip names values'
   return $ Variant tag (Data members') r
@@ -63,8 +79,10 @@ transform (P.Block exprs r) = do
   return $ case exprs' of
     expr :| [] -> expr
     _ -> Block exprs' r
-transform (P.Chain chain) = transformChain chain >>= shuntingYard
+transform (P.Chain chain) = do
+  chain' <- transformChain chain
+  withReader fixities (shuntingYard chain')
 transform (P.ExtExpr ext) = return (ExtExpr ext)
 
-runTransform :: Fixities -> P.Expr -> (Expr, Errors)
-runTransform fixs expr = runRW (transform expr) fixs
+runTransform :: Fixities -> VariantSpecs -> P.Expr -> (Expr, Errors)
+runTransform fixs specs expr = runRW (transform expr) (Ctx fixs specs)

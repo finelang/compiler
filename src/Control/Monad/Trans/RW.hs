@@ -11,8 +11,14 @@ type RW r w a = ReaderT r (Writer w) a
 ask :: (Monoid w) => RW r w r
 ask = R.ask
 
+asks :: (Monoid w) => (r -> a) -> RW r w a
+asks = R.asks
+
 tell :: (Monoid w) => w -> RW r w ()
 tell = lift . W.tell
+
+withReader :: (r' -> r) -> RW r w a -> RW r' w a
+withReader = R.withReaderT
 
 runRW :: RW r w a -> r -> (a, w)
 runRW rw r = W.runWriter (R.runReaderT rw r)
