@@ -101,7 +101,6 @@ Args : Args ',' Expr  { $3 : $1 }
 Atom : '(' Expr ')'       { Parens $2 }
      | '{' Obj '}'        { Obj (Data $ reverse $2) (getRange ($1, $3)) }
      | Prefix '{' Obj '}' { Variant $1 (Data $ reverse $3) (getRange ($1, $4)) }
-     | Prefix '{' '}'     { Variant $1 (Data []) (getRange ($1, $3)) }
      | '{' Block '}'      { mkBlock (reverse $2) (getRange ($1, $3)) }
      | Prefix             { Id $1 }
      | '(' op ')'         { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
@@ -114,8 +113,8 @@ Block : Block ';' Expr  { $3 : $1 }
       | Expr            { [$1] }
 
 Obj : Obj ',' ObjMember { $3 : $1 }
-    | Obj ','           { $1 }
     | ObjMember         { [$1] }
+    | {- empty -}       { [] }
 
 ObjMember : Prefix '=' Expr { ($1, $3) }
 
