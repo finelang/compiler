@@ -1,11 +1,11 @@
-module Syntax.Expr (Expr (..), Closure (..), Module (..), closureVars) where
+module Fine.Syntax.Expr (Expr (..), Closure (..), Module (..), closureVars) where
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (maybeToList)
 import Data.Text (Text)
-import Syntax.Common (Bind, Data, Ext, Fixities, HasRange (..), Range, Var (Var), VariantSpecs)
+import Fine.Syntax.Common (Bind, Data, Ext, Fixities, HasRange (..), Range, Var (Var), VariantSpecs)
 
 data Expr
   = Int Int Range

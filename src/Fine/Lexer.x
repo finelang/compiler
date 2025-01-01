@@ -1,9 +1,9 @@
 {
-module Lexer (Token (..), TokenType (..), lexText) where
+module Fine.Lexer (Token (..), TokenType (..), lexText) where
 
 import Data.Text (Text)
 import qualified Data.Text as Text (length)
-import Syntax.Common (HasRange (getRange), Range (Range))
+import Fine.Syntax.Common (HasRange (getRange), Range (Range))
 }
 
 %wrapper "posn-strict-text"

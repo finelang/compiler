@@ -1,4 +1,4 @@
-module Syntax.Parsed
+module Fine.Syntax.Parsed
   ( Defn (..),
     Expr (..),
     Module (..),
@@ -7,7 +7,7 @@ where
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
-import Syntax.Common (Bind, Data, Ext, Fixity, HasRange (..), OpChain, Range, Var (Var), VariantSpec)
+import Fine.Syntax.Common (Bind, Data, Ext, Fixity, HasRange (..), OpChain, Range, Var (Var), VariantSpec)
 
 data Expr
   = Int Int Range

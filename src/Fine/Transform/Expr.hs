@@ -1,13 +1,13 @@
-module Transform.Expr (runTransform) where
+module Fine.Transform.Expr (runTransform) where
 
 import Control.Monad.Trans.RW (RW, ask, runRW, tell)
 import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import Error (Error (..), Errors, collectErrors)
-import Syntax.Common (Data (Data), Fixities, OpChain (..))
-import Syntax.Expr (Expr (..))
-import qualified Syntax.Parsed as P
-import Transform.ShuntingYard (runSy)
+import Fine.Error (Error (..), Errors, collectErrors)
+import Fine.Syntax.Common (Data (Data), Fixities, OpChain (..))
+import Fine.Syntax.Expr (Expr (..))
+import qualified Fine.Syntax.Parsed as P
+import Fine.Transform.ShuntingYard (runSy)
 
 shuntingYard :: OpChain Expr -> RW Fixities Errors Expr
 shuntingYard chain = do

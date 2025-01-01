@@ -1,5 +1,5 @@
 #!/bin/bash
 
-alex src/Lexer.x -o src/Lexer.hs
-happy src/Parser.y -o src/Parser.hs --ghc
+alex src/Fine/Lexer.x -o src/Fine/Lexer.hs
+happy src/Fine/Parser.y -o src/Fine/Parser.hs --ghc
 stack run --verbosity error -- $1 $2

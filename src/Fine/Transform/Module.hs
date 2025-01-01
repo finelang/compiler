@@ -1,4 +1,4 @@
-module Transform.Module (runTransform) where
+module Fine.Transform.Module (runTransform) where
 
 import Control.Monad (forM_, unless)
 import Control.Monad.Trans.RWS (RWS, asks, gets, local, modify, runRWS, tell)
@@ -7,8 +7,8 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
-import Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
-import Syntax.Common
+import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
+import Fine.Syntax.Common
   ( Bind (Bind),
     Fixities,
     Fixity (Fixity),
@@ -18,10 +18,10 @@ import Syntax.Common
     binder,
     boundValue,
   )
-import Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
-import qualified Syntax.Parsed as P
-import qualified Transform.Expr as TE (runTransform)
-import Transform.FreeVars (runFreeVars)
+import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
+import qualified Fine.Syntax.Parsed as P
+import qualified Fine.Transform.Expr as TE (runTransform)
+import Fine.Transform.FreeVars (runFreeVars)
 
 data RCtx = RCtx
   { vars :: Set Var,

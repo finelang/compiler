@@ -1,11 +1,11 @@
 {
 {-# LANGUAGE NoStrictData #-}
-module Parser (parseTokens) where
+module Fine.Parser (parseTokens) where
 
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Text as T
-import Lexer (Token (..), TokenType (..))
-import Syntax.Common
+import Fine.Lexer (Token (..), TokenType (..))
+import Fine.Syntax.Common
   ( Bind (..),
     Var (Var),
     HasRange (getRange),
@@ -18,7 +18,7 @@ import Syntax.Common
     VariantSpec (VariantSpec),
     Ext (Ext)
   )
-import Syntax.Parsed (Defn (..), Expr (..), Module (Module))
+import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 }
 
 %name parseTokens

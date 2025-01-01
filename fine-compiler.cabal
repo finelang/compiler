@@ -25,21 +25,21 @@ source-repository head
 
 library
   exposed-modules:
-      Codegen.Js
       Control.Monad.Trans.RW
       Data.List.Extra
       Data.List.NonEmpty.Extra
-      Error
-      Lexer
-      Parser
-      Syntax.Common
-      Syntax.Expr
-      Syntax.Parsed
-      Transform
-      Transform.Expr
-      Transform.FreeVars
-      Transform.Module
-      Transform.ShuntingYard
+      Fine.Codegen
+      Fine.Error
+      Fine.Lexer
+      Fine.Parser
+      Fine.Syntax.Common
+      Fine.Syntax.Expr
+      Fine.Syntax.Parsed
+      Fine.Transform
+      Fine.Transform.Expr
+      Fine.Transform.FreeVars
+      Fine.Transform.Module
+      Fine.Transform.ShuntingYard
   other-modules:
       Paths_fine_compiler
   autogen-modules:

@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Error
+module Fine.Error
   ( Errors,
     Warning (..),
     Error (..),
@@ -15,9 +15,9 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Fine.Syntax.Common (Fixity, Var)
 import GHC.Stack (HasCallStack)
 import String.ANSI (red, yellow)
-import Syntax.Common (Fixity, Var)
 
 errorTODO :: (HasCallStack) => a
 errorTODO = error "Not Implemented"

@@ -1,13 +1,13 @@
 module Main (main) where
 
-import Codegen.Js (runGenCode)
 import Control.Monad (forM_)
 import qualified Data.Text.IO as TIO (readFile, writeFile)
-import Error (wrapError, wrapWarning)
-import Lexer (lexText)
-import Parser (parseTokens)
+import Fine.Codegen (runGenCode)
+import Fine.Error (wrapError, wrapWarning)
+import Fine.Lexer (lexText)
+import Fine.Parser (parseTokens)
+import Fine.Transform (runTransform)
 import System.Environment (getArgs)
-import Transform (runTransform)
 
 getPaths :: IO (String, String)
 getPaths = do

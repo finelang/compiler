@@ -1,13 +1,13 @@
-module Transform.FreeVars (runFreeVars) where
+module Fine.Transform.FreeVars (runFreeVars) where
 
 import Control.Monad.Trans.Writer (Writer, runWriter, tell)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
-import Error (Error (UndefinedVar), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
-import Syntax.Common (Data (Data), OpChain (..), Var)
-import Syntax.Parsed (Expr (..))
+import Fine.Error (Error (UndefinedVar), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
+import Fine.Syntax.Common (Data (Data), OpChain (..), Var)
+import Fine.Syntax.Parsed (Expr (..))
 
 type Vars = Map Var [Var]
 

@@ -3,7 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Codegen.Js (runGenCode) where
+module Fine.Codegen (runGenCode) where
 
 import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
 import Data.List.NonEmpty (NonEmpty)
@@ -13,8 +13,8 @@ import qualified Data.Map as M
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Syntax.Common (Bind (..), Data (Data), Ext (Ext), Var (Var), varName)
-import Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
+import Fine.Syntax.Common (Bind (..), Data (Data), Ext (Ext), Var (Var), varName)
+import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
 
 class CodeGens t ctx where
   genCode :: t -> Reader ctx Text

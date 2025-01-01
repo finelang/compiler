@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wno-x-partial #-}
 
-module Transform.ShuntingYard (runSy) where
+module Fine.Transform.ShuntingYard (runSy) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RWS (RWS, asks, get, gets, modify, runRWS, tell)
 import qualified Data.Map as M
-import Error
+import Fine.Error
   ( Error (SameInfixPrecedence),
     Errors,
     Warning (MissingFixity),
@@ -13,8 +13,8 @@ import Error
     collectWarnings,
     errorUNREACHABLE,
   )
-import Syntax.Common (Assoc (..), Fixities, Fixity (..), HasRange (getRange), OpChain (..), Var)
-import Syntax.Expr (Expr (..))
+import Fine.Syntax.Common (Assoc (..), Fixities, Fixity (..), HasRange (getRange), OpChain (..), Var)
+import Fine.Syntax.Expr (Expr (..))
 
 type SYStack = ([Expr], [Var])
 

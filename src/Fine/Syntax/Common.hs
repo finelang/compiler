@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Syntax.Common (module Syntax.Common) where
+module Fine.Syntax.Common (module Fine.Syntax.Common) where
 
 import Data.Function (on)
 import Data.Map (Map)
