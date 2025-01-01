@@ -6,8 +6,8 @@
 module Codegen.Js (runGenCode) where
 
 import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
-import Data.List (unsnoc)
-import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty.Extra (unsnoc)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.String.Interpolate (i)
@@ -15,11 +15,6 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Syntax.Common (Bind (..), Data (Data), Ext (Ext), Var (Var), varName)
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
-
-unsnoc' :: NonEmpty a -> ([a], a)
-unsnoc' (x :| xs) = case unsnoc xs of
-  Just (xs', x') -> (x : xs', x')
-  Nothing -> ([], x)
 
 class CodeGens t ctx where
   genCode :: t -> Reader ctx Text
@@ -46,7 +41,7 @@ genStmtsCode exprs = do
   oldIndent <- asks indentation
   let indent = oldIndent <> "  "
   exprs' <- local (withIndentation indent) (mapM genCode exprs)
-  let (stmts, expr) = unsnoc' exprs'
+  let (stmts, expr) = unsnoc exprs'
   let stmts' = T.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
   let expr' = [i|#{indent}return #{expr};|] :: Text
   return [i|{\n#{stmts'}#{expr'}\n#{oldIndent}}|]

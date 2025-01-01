@@ -1,20 +1,13 @@
-module Transform.Expr (runTransform, repeated) where
+module Transform.Expr (runTransform) where
 
 import Control.Monad.Trans.RW (RW, ask, runRW, tell)
+import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.Set as S
 import Error (Error (..), Errors, collectErrors)
 import Syntax.Common (Data (Data), Fixities, OpChain (..))
 import Syntax.Expr (Expr (..))
 import qualified Syntax.Parsed as P
 import Transform.ShuntingYard (runSy)
-
-repeated :: (Ord a) => [a] -> [a]
-repeated xs = reverse (go xs S.empty)
-  where
-    go [] _ = []
-    go (y : ys) s | S.member y s = y : go ys s
-    go (y : ys) s = go ys (S.insert y s)
 
 shuntingYard :: OpChain Expr -> RW Fixities Errors Expr
 shuntingYard chain = do

@@ -27,6 +27,8 @@ library
   exposed-modules:
       Codegen.Js
       Control.Monad.Trans.RW
+      Data.List.Extra
+      Data.List.NonEmpty.Extra
       Error
       Lexer
       Parser

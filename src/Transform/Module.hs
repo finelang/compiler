@@ -2,6 +2,7 @@ module Transform.Module (runTransform) where
 
 import Control.Monad (forM_, unless)
 import Control.Monad.Trans.RWS (RWS, asks, gets, local, modify, runRWS, tell)
+import Data.List.Extra (repeated)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
@@ -19,7 +20,7 @@ import Syntax.Common
   )
 import Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
 import qualified Syntax.Parsed as P
-import qualified Transform.Expr as TE (repeated, runTransform)
+import qualified Transform.Expr as TE (runTransform)
 import Transform.FreeVars (runFreeVars)
 
 data RCtx = RCtx
@@ -34,7 +35,7 @@ data SCtx = SCtx
 
 handleSpec :: VariantSpec -> RWS r Errors SCtx ()
 handleSpec spec@(VariantSpec var members _) = do
-  tell (collectErrors $ map RepeatedMember $ TE.repeated members)
+  tell (collectErrors $ map RepeatedMember $ repeated members)
   specs' <- gets variantSpecs
   if M.member var specs'
     then tell (collectErrors [RepeatedVar var])
