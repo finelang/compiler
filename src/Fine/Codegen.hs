@@ -52,6 +52,16 @@ genObjMemberCode (name, value) = do
   value' <- genCode value
   return [i|#{indent}#{name}: #{value'}|]
 
+genDataCode :: Data Expr -> Reader Ctx Text
+genDataCode (Data members) =
+  if null members
+    then return "({})"
+    else do
+      members' <- do
+        chunks <- mapM genObjMemberCode members
+        return (T.intercalate ", " chunks)
+      return [i|({ #{members'} })|]
+
 genFunCode :: Text -> [Var] -> Expr -> Reader Ctx Text
 genFunCode name params body = do
   let params' = T.intercalate ", " (map varName params)
@@ -68,22 +78,8 @@ instance CodeGens Expr Ctx where
   genCode (Int v _) = return (T.pack $ show v)
   genCode (Float v _) = return (T.pack $ show v)
   genCode (Str s _) = return [i|"#{s}"|]
-  genCode (Obj (Data members) _) =
-    if null members
-      then return "({})"
-      else do
-        members' <- do
-          chunks <- mapM genObjMemberCode members
-          return (T.intercalate ", " chunks)
-        return [i|({ #{members'} })|]
-  genCode (Variant tag (Data members) _) = do
-    if null members
-      then return [i|({ $tag: "#{tag}" })|]
-      else do
-        members' <- do
-          chunks <- mapM genObjMemberCode members
-          return (T.intercalate ", " chunks)
-        return [i|({ $tag: "#{tag}", #{members'} })|]
+  genCode (Obj dt _) = genDataCode dt
+  genCode (Variant _ dt _) = genDataCode dt
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
