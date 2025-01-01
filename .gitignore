@@ -2,5 +2,5 @@
 *~
 *input.fn
 *output.js
-src/Lexer.hs
-src/Parser.hs
+src/Fine/Lexer.hs
+src/Fine/Parser.hs
