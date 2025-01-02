@@ -114,7 +114,8 @@ instance HasRange Ext where
 data VariantSpec = VariantSpec
   { variantTag :: Var,
     variantProps :: [Var],
-    variantExtValue :: Maybe Ext
+    variantExtValue :: Maybe Ext,
+    specRange :: Range
   }
   deriving (Show)
 

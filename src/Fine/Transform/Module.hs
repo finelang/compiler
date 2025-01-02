@@ -1,6 +1,6 @@
 module Fine.Transform.Module (runTransform) where
 
-import Control.Monad (forM_, unless)
+import Control.Monad (unless)
 import Control.Monad.Trans.RWS (RWS, asks, get, gets, local, modify, runRWS, tell)
 import Data.List.Extra (repeated)
 import Data.Map (Map)
@@ -10,6 +10,7 @@ import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
 import Fine.Syntax.Common
   ( Bind (Bind),
+    Data (Data),
     Fixities,
     Fixity (Fixity),
     Var,
@@ -33,13 +34,17 @@ data SCtx = SCtx
     variantSpecs :: VariantSpecs
   }
 
-handleSpec :: VariantSpec -> RWS r Errors SCtx ()
-handleSpec spec@(VariantSpec var props _) = do
+handleSpec :: VariantSpec -> RWS r Errors SCtx P.Defn
+handleSpec spec@(VariantSpec var props _ r) = do
   tell (collectErrors $ map RepeatedProp $ repeated props)
   specs' <- gets variantSpecs
   if M.member var specs'
     then tell (collectErrors [RepeatedVariant var])
     else modify (\ctx -> ctx {variantSpecs = M.insert var spec specs'})
+  let data' = Data $ map (\prop -> (prop, P.Id prop)) props
+  let varnt = P.Variant var data' r
+  let value = if null props then varnt else P.Fun props varnt r
+  return $ P.Defn (Bind var () value)
 
 transformDefns :: [P.Defn] -> RWS RCtx Errors SCtx [Bind () (Closure Expr)]
 transformDefns [] = return []
@@ -51,8 +56,8 @@ transformDefns (P.FixDefn fix@(Fixity _ prec) op : defns) = do
     else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
   transformDefns defns
 transformDefns (P.DtypeDefn specs : defns) = do
-  forM_ specs handleSpec
-  transformDefns defns
+  ctors <- mapM handleSpec specs
+  transformDefns (ctors ++ defns)
 transformDefns (P.Defn (Bind bder _ v) : defns) = do
   currentFreeVars <- do
     vs <- asks vars

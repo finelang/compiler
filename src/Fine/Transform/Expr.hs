@@ -45,7 +45,7 @@ transform (P.Variant tag (Data members) r) = do
   spec <- asks (M.lookup tag . variantSpecs)
   case spec of
     Nothing -> tell (collectErrors [UndefinedVariant tag])
-    Just (VariantSpec _ memberNames _) -> do
+    Just (VariantSpec _ memberNames _ _) -> do
       let memberNames' = S.fromList memberNames
       let names' = S.fromList names
       tell (collectErrors $ map (RequiredProp tag) $ S.toList $ S.difference memberNames' names')

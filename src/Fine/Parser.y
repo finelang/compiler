@@ -71,8 +71,8 @@ Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
 Varnts : Varnts Varnt { $2 : $1 }
        | Varnt        { [$1] }
 
-Varnt : let Prefix '{' Params '}' { VariantSpec $2 (reverse $4) Nothing }
-      | Ext let Prefix '{' '}'    { VariantSpec $3 [] (Just $1) }
+Varnt : let Prefix '{' Params '}' { VariantSpec $2 (reverse $4) Nothing (getRange ($1, $5)) }
+      | Ext let Prefix '{' '}'    { VariantSpec $3 [] (Just $1) (getRange ($2, $5)) }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
