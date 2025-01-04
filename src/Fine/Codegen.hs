@@ -86,7 +86,7 @@ instance CodeGens Expr Ctx where
   genCode (Int v _) = return (T.pack $ show v)
   genCode (Float v _) = return (T.pack $ show v)
   genCode (Str s _) = return [i|"#{s}"|]
-  genCode (Unit _) = return "({})"
+  genCode (Unit _) = return "fine$unit"
   genCode (Obj dt _) = genDataCode dt
   genCode (Variant tag dt _) = do
     extValue <- asks (M.lookup tag . variantExtValues)
@@ -100,7 +100,7 @@ instance CodeGens Expr Ctx where
       if null rest
         then return ""
         else mapM genCode rest >>= (return . T.append ", " . T.intercalate ", ")
-    return [i|[#{fst''}, #{snd''}#{rest'}]|]
+    return [i|fine$tuple(#{fst''}, #{snd''}#{rest'})|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
@@ -136,35 +136,37 @@ instance CodeGens Module Ctx where
       local
         (\ctx -> ctx {variantExtValues = M.union extValues (variantExtValues ctx)})
         (mapM genCode bindings)
-    return (T.intercalate "\n\n" stmts <> "\n")
+    return (T.intercalate "\n" stmts)
 
-runGenCode :: (CodeGens t Ctx) => t -> Text
-runGenCode x =
-  runReader
-    (genCode x)
-    Ctx
-      { indentation = "",
-        separator = '$',
-        symNames =
-          M.fromList
-            [ ('+', "$plus"),
-              ('-', "$mnus"),
-              ('*', "$ast"),
-              ('/', "$sol"),
-              ('%', "$pcnt"),
-              ('^', "$hat"),
-              ('|', "$bar"),
-              ('&', "$amp"),
-              ('<', "$lt"),
-              ('>', "$gt"),
-              ('=', "$eq"),
-              (':', "$coln"),
-              ('\\', "$bsol"),
-              ('?', "$qust"),
-              ('!', "$excl"),
-              ('$', "$dllr"),
-              ('@', "$at"),
-              ('~', "$tild")
-            ],
-        variantExtValues = M.empty
-      }
+runGenCode :: (CodeGens t Ctx) => [Text] -> t -> Text
+runGenCode codeInjections x =
+  let code =
+        runReader
+          (genCode x)
+          Ctx
+            { indentation = "",
+              separator = '$',
+              symNames =
+                M.fromList
+                  [ ('+', "$plus"),
+                    ('-', "$mnus"),
+                    ('*', "$ast"),
+                    ('/', "$sol"),
+                    ('%', "$pcnt"),
+                    ('^', "$hat"),
+                    ('|', "$bar"),
+                    ('&', "$amp"),
+                    ('<', "$lt"),
+                    ('>', "$gt"),
+                    ('=', "$eq"),
+                    (':', "$coln"),
+                    ('\\', "$bsol"),
+                    ('?', "$qust"),
+                    ('!', "$excl"),
+                    ('$', "$dllr"),
+                    ('@', "$at"),
+                    ('~', "$tild")
+                  ],
+              variantExtValues = M.empty
+            }
+   in T.intercalate "\n\n" (codeInjections ++ [code]) <> "\n"
