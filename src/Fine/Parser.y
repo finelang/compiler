@@ -42,6 +42,7 @@ import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   float   { Token FloatTok _ _ }
   '->'    { Token Arrow _ _ }
   '='     { Token Eq _ _ }
+  '.'     { Token Dot _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
   '{'     { Token Obrace _ _ }
@@ -92,6 +93,7 @@ Chain : App             { Operand' $1 }
       | Chain Infix App { Operation' $1 $2 $3 }
 
 App : App '(' Args ')'  { App $1 (reverse $3) (getRange ($1, $4)) }
+    | App '.' Prefix    { Access $1 $3 }
     | Atom              { $1 }
 
 Args : Args ',' Expr  { $3 : $1 }

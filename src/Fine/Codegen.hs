@@ -106,6 +106,9 @@ instance CodeGens Expr Ctx where
     f' <- genCode f
     args' <- (T.intercalate ", ") <$> mapM genCode args
     return [i|#{f'}(#{args'})|]
+  genCode (Access expr (Var prop _)) = do
+    expr' <- genCode expr
+    return [i|#{expr'}.#{prop}|]
   genCode (Cond cond yes no _) = do
     cond' <- genCode cond
     yes' <- genCode yes
@@ -165,7 +168,8 @@ runGenCode codeInjections x =
                     ('!', "$excl"),
                     ('$', "$dllr"),
                     ('@', "$at"),
-                    ('~', "$tild")
+                    ('~', "$tild"),
+                    ('.', "$dot")
                   ],
               variantExtValues = M.empty
             }

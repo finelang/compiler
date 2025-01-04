@@ -12,7 +12,7 @@ $whitechar    = [ \t\n\r\f\v]
 $special      = [\(\)\,\;\[\]\`\{\}]
 $digit        = 0-9
 $ascsymbol    = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
-$opsymbol     = $ascsymbol # [\.\#]
+$opsymbol     = [$ascsymbol \:] # [\#]
 $symbol       = $ascsymbol # [$special \_\:\"\']
 $large        = [A-Z \xc0-\xd6 \xd8-\xde]
 $small        = [a-z \xdf-\xf6 \xf8-\xff \_]
@@ -50,11 +50,12 @@ tokens :-
   "-"? @decimal "." @decimal  { mkt FloatTok }
   "->"                        { mkt Arrow }
   "="                         { mkt Eq }
+  "."                         { mkt Dot }
   "("                         { mkt Opar } 
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
   "}"                         { mkt Cbrace }
-  [$opsymbol \:]{1, 3}        { mkt Op }
+  $opsymbol{1, 3}             { mkt Op }
   ";"                         { mkt Semi }
   ","                         { mkt Comma }
 
@@ -76,7 +77,7 @@ data TokenType
   | FloatTok
   | Arrow
   | Eq
-  | Of
+  | Dot
   | Opar
   | Cpar
   | Obrace

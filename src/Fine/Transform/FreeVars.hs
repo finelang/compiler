@@ -43,6 +43,7 @@ freeVars (App f args _) = do
   fVars <- freeVars f
   argVars <- mapM freeVars args
   return $ unions' (fVars : argVars)
+freeVars (Access expr _) = freeVars expr
 freeVars (Cond cond yes no _) = unions' <$> mapM freeVars [cond, yes, no]
 freeVars (Fun params body _) = do
   let params' = M.fromList $ map (\v -> (v, v)) params

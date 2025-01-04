@@ -64,6 +64,9 @@ transform (P.App f args r) = do
   f' <- transform f
   args' <- mapM transform args
   return (App f' args' r)
+transform (P.Access expr prop) = do
+  expr' <- transform expr
+  return (Access expr' prop)
 transform (P.Cond cond yes no r) = do
   cond' <- transform cond
   yes' <- transform yes

@@ -19,6 +19,7 @@ data Expr
   | Tuple Expr Expr [Expr] Range
   | Id Var
   | App Expr [Expr] Range
+  | Access Expr Var
   | Cond Expr Expr Expr Range
   | Fun [Var] Expr Range
   | Parens Expr
@@ -38,6 +39,7 @@ instance HasRange Expr where
   getRange (Tuple _ _ _ r) = r
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
+  getRange (Access expr prop) = getRange (expr, prop)
   getRange (Cond _ _ _ r) = r
   getRange (Fun _ _ r) = r
   getRange (Parens expr) = getRange expr
