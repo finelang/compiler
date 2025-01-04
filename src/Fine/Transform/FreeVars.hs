@@ -36,6 +36,7 @@ freeVars (Float _ _) = return M.empty
 freeVars (Str _ _) = return M.empty
 freeVars (Obj d _) = dataFreeVars d
 freeVars (Variant _ d _) = dataFreeVars d
+freeVars (Tuple fst' snd' rest _) = unions' <$> mapM freeVars (fst' : snd' : rest)
 freeVars (Id var) = return (singleton' var)
 freeVars (App f args _) = do
   fVars <- freeVars f

@@ -98,7 +98,7 @@ Args : Args ',' Expr  { $3 : $1 }
      | Expr           { [$1] }
      | {- empty -}    { [] }
 
-Atom : '(' Expr ')'       { Parens $2 }
+Atom : '(' Args ')'       { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
      | '{' Obj '}'        { Obj (Data $ reverse $2) (getRange ($1, $3)) }
      | Prefix '{' Obj '}' { Variant $1 (Data $ reverse $3) (getRange ($1, $4)) }
      | '{' Block '}'      { mkBlock (reverse $2) (getRange ($1, $3)) }
@@ -132,6 +132,10 @@ chainToExpr chain = Chain (fromLRChain chain)
 
 mkBlock [e] _ = e
 mkBlock (e : es) r = Block (e :| es) r
+
+mkGroupExpr [] r = error "unit not implemented" -- TODO
+mkGroupExpr [expr] _ = Parens expr
+mkGroupExpr (fst : snd : rest) r = Tuple fst snd rest r
 
 parseError tokens = error . show . head $ tokens
 }

@@ -13,6 +13,7 @@ data Expr
   | Str Text Range
   | Obj (Data Expr) Range
   | Variant Var (Data Expr) Range
+  | Tuple Expr Expr [Expr] Range
   | Id Var
   | App Expr [Expr] Range
   | Cond Expr Expr Expr Range
@@ -29,6 +30,7 @@ instance HasRange Expr where
   getRange (Str _ r) = r
   getRange (Obj _ r) = r
   getRange (Variant _ _ r) = getRange r
+  getRange (Tuple _ _ _ r) = r
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
   getRange (Cond _ _ _ r) = r

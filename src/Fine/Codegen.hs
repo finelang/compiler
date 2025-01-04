@@ -92,6 +92,14 @@ instance CodeGens Expr Ctx where
     case extValue of
       Nothing -> genDataCode dt
       Just (Ext code _) -> return code
+  genCode (Tuple fst' snd' rest _) = do
+    fst'' <- genCode fst'
+    snd'' <- genCode snd'
+    rest' <-
+      if null rest
+        then return ""
+        else mapM genCode rest >>= (return . T.append ", " . T.intercalate ", ")
+    return [i|[#{fst''}, #{snd''}#{rest'}]|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f

@@ -53,6 +53,11 @@ transform (P.Variant tag (Data members) r) = do
   values' <- mapM transform values
   let members' = zip names values'
   return $ Variant tag (Data members') r
+transform (P.Tuple fst' snd' rest r) = do
+  fst'' <- transform fst'
+  snd'' <- transform snd'
+  rest' <- mapM transform rest
+  return (Tuple fst'' snd'' rest' r)
 transform (P.Id var) = return (Id var)
 transform (P.App f args r) = do
   f' <- transform f
