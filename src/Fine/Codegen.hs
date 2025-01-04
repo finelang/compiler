@@ -86,6 +86,7 @@ instance CodeGens Expr Ctx where
   genCode (Int v _) = return (T.pack $ show v)
   genCode (Float v _) = return (T.pack $ show v)
   genCode (Str s _) = return [i|"#{s}"|]
+  genCode (Unit _) = return "({})"
   genCode (Obj dt _) = genDataCode dt
   genCode (Variant tag dt _) = do
     extValue <- asks (M.lookup tag . variantExtValues)

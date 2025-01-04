@@ -11,6 +11,7 @@ data Expr
   = Int Int Range
   | Float Float Range
   | Str Text Range
+  | Unit Range
   | Obj (Data Expr) Range
   | Variant Var (Data Expr) Range
   | Tuple Expr Expr [Expr] Range
@@ -28,6 +29,7 @@ instance HasRange Expr where
   getRange (Int _ r) = r
   getRange (Float _ r) = r
   getRange (Str _ r) = r
+  getRange (Unit r) = r
   getRange (Obj _ r) = r
   getRange (Variant _ _ r) = getRange r
   getRange (Tuple _ _ _ r) = r

@@ -34,6 +34,7 @@ transform :: P.Expr -> RW Ctx Errors Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
 transform (P.Str s r) = return (Str s r)
+transform (P.Unit r) = return (Unit r)
 transform (P.Obj (Data members) r) = do
   let keys = map fst members
   tell (collectErrors $ map RepeatedProp $ repeated $ keys)

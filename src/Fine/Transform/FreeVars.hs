@@ -34,6 +34,7 @@ freeVars :: Expr -> Writer Errors Vars
 freeVars (Int _ _) = return M.empty
 freeVars (Float _ _) = return M.empty
 freeVars (Str _ _) = return M.empty
+freeVars (Unit _) = return M.empty
 freeVars (Obj d _) = dataFreeVars d
 freeVars (Variant _ d _) = dataFreeVars d
 freeVars (Tuple fst' snd' rest _) = unions' <$> mapM freeVars (fst' : snd' : rest)

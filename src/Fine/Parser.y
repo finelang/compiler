@@ -133,7 +133,7 @@ chainToExpr chain = Chain (fromLRChain chain)
 mkBlock [e] _ = e
 mkBlock (e : es) r = Block (e :| es) r
 
-mkGroupExpr [] r = error "unit not implemented" -- TODO
+mkGroupExpr [] r = Unit r
 mkGroupExpr [expr] _ = Parens expr
 mkGroupExpr (fst : snd : rest) r = Tuple fst snd rest r
 
