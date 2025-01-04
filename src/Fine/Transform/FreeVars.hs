@@ -7,7 +7,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error (Error (UndefinedVar), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
 import Fine.Syntax.Common (Data (Data), OpChain (..), Var)
-import Fine.Syntax.Parsed (Expr (..))
+import Fine.Syntax.ParsedExpr (Expr (..))
 
 type Vars = Map Var [Var]
 

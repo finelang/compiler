@@ -8,7 +8,7 @@ import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, collectErrors)
 import Fine.Syntax.Common (Data (Data), Fixities, OpChain (..), VariantSpec (VariantSpec), VariantSpecs)
 import Fine.Syntax.Expr (Expr (..))
-import qualified Fine.Syntax.Parsed as P
+import qualified Fine.Syntax.ParsedExpr as P
 import Fine.Transform.ShuntingYard (runSy)
 
 shuntingYard :: OpChain Expr -> RW Fixities Errors Expr

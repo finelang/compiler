@@ -20,7 +20,7 @@ import Fine.Syntax.Common
     boundValue,
   )
 import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
-import qualified Fine.Syntax.Parsed as P
+import qualified Fine.Syntax.ParsedExpr as P
 import qualified Fine.Transform.Expr as TE (runTransform)
 import Fine.Transform.FreeVars (runFreeVars)
 
