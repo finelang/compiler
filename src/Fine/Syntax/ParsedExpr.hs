@@ -21,6 +21,7 @@ data Expr
   | App Expr [Expr] Range
   | Access Expr Var
   | Cond Expr Expr Expr Range
+  | PatternMatch Expr (NonEmpty (Expr, Expr)) Range
   | Fun [Var] Expr Range
   | Parens Expr
   | Block (NonEmpty Expr) Range
@@ -41,6 +42,7 @@ instance HasRange Expr where
   getRange (App _ _ r) = r
   getRange (Access expr prop) = getRange (expr, prop)
   getRange (Cond _ _ _ r) = r
+  getRange (PatternMatch _ _ r) = r
   getRange (Fun _ _ r) = r
   getRange (Parens expr) = getRange expr
   getRange (Block _ r) = r

@@ -35,6 +35,7 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
   infixr  { Token Infixr _ _ }
   fn      { Token Fn _ _ }
   let     { Token Let _ _ }
+  match   { Token Match _ _ }
   then    { Token Then _ _ }
   id      { Token IdTok _ _ }
   str     { Token StrTok _ _ }
@@ -43,6 +44,7 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
   '->'    { Token Arrow _ _ }
   '='     { Token Eq _ _ }
   '.'     { Token Dot _ _ }
+  '|'     { Token Bar _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
   '{'     { Token Obrace _ _ }
@@ -81,9 +83,18 @@ Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
       | infixr  { RightAssoc }
 
-Expr : fn '(' Params ')' '->' Expr  { Fun (reverse $3) $6 (getRange ($1, $6)) }
-     | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
-     | Chain                        { chainToExpr $1 }
+Expr : fn '(' Params ')' '->' Expr            { Fun (reverse $3) $6 (getRange ($1, $6)) }
+     | if Expr then Expr else Expr            { Cond $2 $4 $6 (getRange ($1, $6)) }
+     | match GroupAtom '{' OptBar Matches '}' { PatternMatch $2 (asNonEmpty $ reverse $5) (getRange ($1, $6)) }
+     | Chain                                  { chainToExpr $1 }
+
+OptBar : '|'          { () }
+       | {- empty -}  { () }
+
+Matches : Matches '|' Match { $3 : $1 }
+        | Match             { [$1] }
+
+Match : Atom '->' Expr  { ($1, $3) }
 
 Params : Params ',' Prefix  { $3 : $1 }
        | Prefix             { [$1] }
@@ -100,7 +111,7 @@ Args : Args ',' Expr  { $3 : $1 }
      | Expr           { [$1] }
      | {- empty -}    { [] }
 
-Atom : '(' Args ')'       { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
+Atom : GroupAtom          { $1 }
      | '{' Obj '}'        { Obj (Data $ reverse $2) (getRange ($1, $3)) }
      | Prefix '{' Obj '}' { Variant $1 (Data $ reverse $3) (getRange ($1, $4)) }
      | '{' Block '}'      { mkBlock (reverse $2) (getRange ($1, $3)) }
@@ -109,6 +120,8 @@ Atom : '(' Args ')'       { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
      | int                { Int (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
      | float              { Float (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
      | str                { mkStr $1 }
+
+GroupAtom : '(' Args ')'  { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
 
 Block : Block ';' Expr  { $3 : $1 }
       | Block ';'       { $1 }
@@ -128,6 +141,8 @@ mkVar tok = Var (tokenLexeme tok) (getRange tok)
 transformStr = T.tail . T.init
 
 mkStr tok = Str (transformStr $ tokenLexeme tok) (getRange tok)
+
+asNonEmpty (x : xs) = x :| xs
 
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)

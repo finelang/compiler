@@ -35,6 +35,7 @@ library
       Fine.Syntax.Common
       Fine.Syntax.Expr
       Fine.Syntax.ParsedExpr
+      Fine.Syntax.Pattern
       Fine.Transform
       Fine.Transform.Expr
       Fine.Transform.FreeVars
