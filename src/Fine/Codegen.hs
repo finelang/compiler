@@ -6,7 +6,7 @@
 module Fine.Codegen (runGenCode) where
 
 import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty, toList)
 import Data.List.NonEmpty.Extra (unsnoc)
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -22,6 +22,8 @@ import Fine.Syntax.Common
     varName,
   )
 import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
+import Fine.Syntax.Pattern (Pattern, boundVars)
+import qualified Fine.Syntax.Pattern as Patt
 
 class CodeGens t ctx where
   genCode :: t -> Reader ctx Text
@@ -44,6 +46,53 @@ sanitize name = do
   where
     go names ch = M.findWithDefault (T.singleton ch) ch names
 
+genObjMemberCode :: (CodeGens t Ctx) => (Var, t) -> Reader Ctx Text
+genObjMemberCode (name, value) = do
+  value' <- genCode value
+  return [i|#{name}: #{value'}|]
+
+genDataCode :: (CodeGens t Ctx) => Data t -> Reader Ctx Text
+genDataCode (Data members) =
+  if null members
+    then return "({})"
+    else do
+      members' <- do
+        chunks <- mapM genObjMemberCode members
+        return (T.intercalate ", " chunks)
+      return [i|({ #{members'} })|]
+
+instance CodeGens Pattern Ctx where
+  genCode :: Pattern -> Reader Ctx Text
+  genCode (Patt.Int v _) = return (T.pack $ show v)
+  genCode (Patt.Float v _) = return (T.pack $ show v)
+  genCode (Patt.Str s _) = return [i|"#{s}"|]
+  genCode (Patt.Unit _) = return "fine$unit"
+  genCode (Patt.Obj dt _) = genDataCode dt
+  genCode (Patt.Variant tag dt _) = do
+    extValue <- asks (M.lookup tag . variantExtValues)
+    case extValue of
+      Nothing -> genDataCode dt
+      Just (Ext code _) -> return code
+  genCode (Patt.Tuple fst' snd' rest _) = do
+    fst'' <- genCode fst'
+    snd'' <- genCode snd'
+    rest' <-
+      if null rest
+        then return ""
+        else mapM genCode rest >>= (return . T.append ", " . T.intercalate ", ")
+    return [i|fine$tuple(#{fst''}, #{snd''}#{rest'})|]
+  genCode (Patt.Capture (Var name _)) = return [i|fine$capture("#{name}")|]
+
+genPartialMatchCode :: Pattern -> Reader Ctx Text
+genPartialMatchCode patt = do
+  let bound = boundVars patt
+  let fHead =
+        if null bound
+          then "()" :: Text
+          else [i|({ #{T.intercalate ", " (map varName bound)} })|]
+  patt' <- genCode patt
+  return [i|#{patt'}, #{fHead} =>|]
+
 genStmtsCode :: NonEmpty Expr -> Reader Ctx Text
 genStmtsCode exprs = do
   oldIndent <- asks indentation
@@ -53,22 +102,6 @@ genStmtsCode exprs = do
   let stmts' = T.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
   let expr' = [i|#{indent}return #{expr};|] :: Text
   return [i|{\n#{stmts'}#{expr'}\n#{oldIndent}}|]
-
-genObjMemberCode :: (Var, Expr) -> Reader Ctx Text
-genObjMemberCode (name, value) = do
-  indent <- asks indentation
-  value' <- genCode value
-  return [i|#{indent}#{name}: #{value'}|]
-
-genDataCode :: Data Expr -> Reader Ctx Text
-genDataCode (Data members) =
-  if null members
-    then return "({})"
-    else do
-      members' <- do
-        chunks <- mapM genObjMemberCode members
-        return (T.intercalate ", " chunks)
-      return [i|({ #{members'} })|]
 
 genFunCode :: Text -> [Var] -> Expr -> Reader Ctx Text
 genFunCode name params body = do
@@ -114,6 +147,20 @@ instance CodeGens Expr Ctx where
     yes' <- genCode yes
     no' <- genCode no
     return [i|#{cond'} ? #{yes'} : #{no'}|]
+  genCode (PatternMatch expr matches _) = do
+    oldIndent <- asks indentation
+    let indent = oldIndent <> "  "
+    expr' <- local (withIndentation indent) (genCode expr)
+    let matchList = toList matches
+    patterns <- mapM (genPartialMatchCode . fst) matchList
+    exprs <- local (withIndentation indent) (mapM (genCode . snd) matchList)
+    let matches' =
+          T.concat $
+            zipWith
+              (\p e -> [i|#{indent}[#{p} #{e}],\n|] :: Text)
+              patterns
+              exprs
+    return [i|fine$match(\n#{indent}#{expr'},\n#{matches'}#{oldIndent})|]
   genCode (Fun params body _) = genFunCode "" params body
   genCode (Block exprs _) = do
     content <- genStmtsCode exprs

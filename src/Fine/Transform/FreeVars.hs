@@ -11,21 +11,7 @@ import qualified Data.Set as S
 import Fine.Error (Error (RepeatedVar, UndefinedVar), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
 import Fine.Syntax.Common (Data (Data), Var)
 import Fine.Syntax.Expr (Expr (..))
-import Fine.Syntax.Pattern (Pattern)
-import qualified Fine.Syntax.Pattern as Patt
-
-dataBoundVars :: Data Pattern -> [Var]
-dataBoundVars (Data members) = concat $ map (boundVars . snd) members
-
-boundVars :: Pattern -> [Var]
-boundVars (Patt.Int _ _) = []
-boundVars (Patt.Float _ _) = []
-boundVars (Patt.Str _ _) = []
-boundVars (Patt.Unit _) = []
-boundVars (Patt.Obj d _) = dataBoundVars d
-boundVars (Patt.Variant _ d _) = dataBoundVars d
-boundVars (Patt.Tuple fst' snd' rest _) = concat $ map boundVars (fst' : snd' : rest)
-boundVars (Patt.Capture var) = [var]
+import Fine.Syntax.Pattern (boundVars)
 
 handleBoundVars :: [Var] -> Writer Errors (Set Var)
 handleBoundVars vars = do
