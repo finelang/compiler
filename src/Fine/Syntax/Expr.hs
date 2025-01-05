@@ -25,6 +25,7 @@ data Expr
   | Parens Expr
   | Block (NonEmpty Expr) Range
   | ExtExpr Ext
+  | Debug Expr Range
   deriving (Show)
 
 instance HasRange Expr where
@@ -45,6 +46,7 @@ instance HasRange Expr where
   getRange (Block _ r) = r
   getRange (Parens expr) = getRange expr
   getRange (ExtExpr ext) = getRange ext
+  getRange (Debug _ r) = r
 
 data Closure v = Closure
   { closureEnv :: Map Var (Closure v),

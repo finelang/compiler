@@ -6,7 +6,7 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Fine.Error (Error (..), Errors, collectErrors)
+import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectErrors, collectWarnings)
 import Fine.Syntax.Common (Data (Data), Fixities, OpChain (..), VariantSpec (VariantSpec), VariantSpecs)
 import Fine.Syntax.Expr (Expr (..))
 import qualified Fine.Syntax.ParsedExpr as P
@@ -106,6 +106,10 @@ transform (P.Chain chain) = do
   chain' <- transformChain chain
   withReader fixities (shuntingYard chain')
 transform (P.ExtExpr ext) = return (ExtExpr ext)
+transform (P.Debug expr r) = do
+  tell (collectWarnings [DebugKeywordUsage r])
+  expr' <- transform expr
+  return (Debug expr' r)
 
 runTransform :: Fixities -> VariantSpecs -> P.Expr -> (Expr, Errors)
 runTransform fixs specs expr = runRW (transform expr) (Ctx fixs specs)

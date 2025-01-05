@@ -67,6 +67,7 @@ freeVars (Fun params body _) = do
 freeVars (Parens expr) = freeVars expr
 freeVars (Block exprs _) = unions' <$> mapM freeVars exprs
 freeVars (ExtExpr _) = return M.empty
+freeVars (Debug expr _) = freeVars expr
 
 undefinedVars :: Set Var -> VarOcurrences -> [Var]
 undefinedVars alreadyFree free =

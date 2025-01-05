@@ -176,6 +176,9 @@ instance CodeGens Expr Ctx where
     return [i|(() => #{content})()|]
   genCode (Parens expr) = genCode expr
   genCode (ExtExpr (Ext code _)) = return code
+  genCode (Debug expr _) = do
+    expr' <- genCode expr
+    return [i|fine$debug(#{expr'})|]
 
 instance CodeGens (Bind () (Closure Expr)) Ctx where
   genCode :: Bind () (Closure Expr) -> Reader Ctx Text

@@ -38,6 +38,7 @@ tokens :-
   "#run"                      { mkt Run }
   "else"                      { mkt Else }
   "data"                      { mkt DataTok }
+  "debug"                     { mkt DebugTok }
   "if"                        { mkt If }
   "infix"                     { mkt Infix }
   "infixl"                    { mkt Infixl }
@@ -67,6 +68,7 @@ data TokenType
   | Run
   | Else
   | DataTok
+  | DebugTok
   | If
   | Infix
   | Infixl

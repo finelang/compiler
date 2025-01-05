@@ -30,6 +30,7 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
   run     { Token Run _ _ }
   else    { Token Else _ _ }
   data    { Token DataTok _ _ }
+  debug   { Token DebugTok _ _ }
   if      { Token If _ _ }
   infix   { Token Infix _ _ }
   infixl  { Token Infixl _ _ }
@@ -89,6 +90,7 @@ Assoc : infix   { NonAssoc }
 Expr : fn '(' Params ')' '->' Expr          { Fun (reverse $3) $6 (getRange ($1, $6)) }
      | if Expr then Expr else Expr          { Cond $2 $4 $6 (getRange ($1, $6)) }
      | '|' Expr '|' '{' OptBar Matches '}'  { PatternMatch $2 (asNonEmpty $ reverse $6) (getRange ($1, $7)) }
+     | debug Expr                           { Debug $2 (getRange ($1, $2)) }
      | Chain                                { chainToExpr $1 }
 
 OptBar : '|'          { () }

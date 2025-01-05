@@ -79,6 +79,7 @@ data Warning
   = UnusedVar Var
   | MissingFixity Var Fixity
   | UnusedFixity Var
+  | DebugKeywordUsage Range
 
 instance Show Warning where
   show :: Warning -> String
@@ -88,6 +89,8 @@ instance Show Warning where
     [i|Missing fixity definition for #{hl var}. Defaulting to #{hl fix}.|]
   show (UnusedFixity var) =
     [i|Fixity definition for #{hl var} lacks an accompanying binding.|]
+  show (DebugKeywordUsage _) =
+    [i|Cosider removing the debug keyword since it produces an IO action.|]
 
 warningPrefix :: String
 warningPrefix = yellow "Warning: "

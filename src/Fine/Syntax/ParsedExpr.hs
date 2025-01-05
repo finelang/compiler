@@ -27,6 +27,7 @@ data Expr
   | Block (NonEmpty Expr) Range
   | Chain (OpChain Expr)
   | ExtExpr Ext
+  | Debug Expr Range
   deriving (Show)
 
 instance HasRange Expr where
@@ -48,6 +49,7 @@ instance HasRange Expr where
   getRange (Block _ r) = r
   getRange (Chain chain) = getRange chain
   getRange (ExtExpr ext) = getRange ext
+  getRange (Debug _ r) = r
 
 data Defn
   = Defn (Bind () Expr)
