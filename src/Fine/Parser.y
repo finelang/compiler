@@ -27,6 +27,7 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
 
 %token
   ext     { Token ExtTok _ _ }
+  run     { Token Run _ _ }
   else    { Token Else _ _ }
   data    { Token DataTok _ _ }
   if      { Token If _ _ }
@@ -54,7 +55,10 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
 
 %%
 
-Module : Defns  { Module (reverse $1) }
+Module : Defns Entry  { Module (reverse $ $2 ++ $1) }
+
+Entry : run Expr    { [EntryDefn $2] }
+      | {- empty -} { [] }
 
 Prefix : id { mkVar $1 }
 

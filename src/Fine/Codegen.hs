@@ -21,7 +21,7 @@ import Fine.Syntax.Common
     VariantSpec (variantExtValue),
     varName,
   )
-import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (Module))
+import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (EntryModule, Module))
 import Fine.Syntax.Pattern (Pattern, boundVars)
 import qualified Fine.Syntax.Pattern as Patt
 
@@ -196,6 +196,10 @@ instance CodeGens Module Ctx where
         (\ctx -> ctx {variantExtValues = M.union extValues (variantExtValues ctx)})
         (mapM genCode bindings)
     return (T.intercalate "\n" stmts)
+  genCode (EntryModule bindings fixs specs (Closure _ expr _)) = do
+    code <- genCode (Module bindings fixs specs)
+    entry <- genCode expr
+    return [i|#{code}\n#{entry};|]
 
 runGenCode :: (CodeGens t Ctx) => [Text] -> t -> Text
 runGenCode codeInjections x =

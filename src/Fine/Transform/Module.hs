@@ -19,7 +19,7 @@ import Fine.Syntax.Common
     binder,
     boundValue,
   )
-import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (Module), closureVars)
+import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (EntryModule, Module), closureVars)
 import qualified Fine.Syntax.ParsedExpr as P
 import qualified Fine.Transform.Expr as TE (runTransform)
 import Fine.Transform.FreeVars (runFreeVars)
@@ -31,7 +31,8 @@ data RCtx = RCtx
 
 data SCtx = SCtx
   { fixities :: Fixities,
-    variantSpecs :: VariantSpecs
+    variantSpecs :: VariantSpecs,
+    entryClosure :: Maybe (Closure Expr)
   }
 
 handleSpec :: VariantSpec -> RWS r Errors SCtx P.Defn
@@ -46,6 +47,13 @@ handleSpec spec@(VariantSpec var props _ r) = do
   let value = if null props then varnt else P.Fun props varnt r
   return $ P.Defn (Bind var () value)
 
+transformToExpr :: P.Expr -> RWS r Errors SCtx Expr
+transformToExpr expr = do
+  (SCtx fixs specs _) <- get
+  let (expr', transfErrors) = TE.runTransform fixs specs expr
+  tell transfErrors
+  return expr'
+
 transformDefns :: [P.Defn] -> RWS RCtx Errors SCtx [Bind () (Closure Expr)]
 transformDefns [] = return []
 transformDefns (P.FixDefn fix@(Fixity _ prec) op : defns) = do
@@ -59,27 +67,35 @@ transformDefns (P.DtypeDefn specs : defns) = do
   ctors <- mapM handleSpec specs
   transformDefns (ctors ++ defns)
 transformDefns (P.Defn (Bind bder _ v) : defns) = do
-  v'' <- do
-    (SCtx fixs specs) <- get
-    let (v', transfErrors) = TE.runTransform fixs specs v
-    tell transfErrors
-    return v'
+  v' <- transformToExpr v
   currentFreeVars <- do
     vs <- asks vars
     if S.member bder vs
       then tell (collectErrors [RepeatedVar bder]) >> return vs
       else return (S.insert bder vs)
-  let (vFreeVars, fvErrors) = runFreeVars currentFreeVars v''
+  let (vFreeVars, fvErrors) = runFreeVars currentFreeVars v'
   tell fvErrors
   currentEnv <- asks env
   let recBder = if S.member bder vFreeVars then Just bder else Nothing
-  let closure = Closure (M.restrictKeys currentEnv vFreeVars) v'' recBder
+  let closure = Closure (M.restrictKeys currentEnv vFreeVars) v' recBder
   let b' = Bind bder () closure
   bs' <-
     local
       (\ctx -> ctx {vars = S.union currentFreeVars vFreeVars, env = M.insert bder closure currentEnv})
       (transformDefns defns)
   return (b' : bs')
+transformDefns (P.EntryDefn expr : _) = do
+  expr' <- transformToExpr expr
+  exprFreeVars <- do
+    currentFreeVars <- asks vars
+    let (fvs, errors) = runFreeVars currentFreeVars expr'
+    tell errors
+    return fvs
+  closure <- do
+    currentEnv <- asks env
+    return (Closure (M.restrictKeys currentEnv exprFreeVars) expr' Nothing)
+  modify (\ctx -> ctx {entryClosure = Just closure})
+  return [] -- if entry defn exists, it should be the last
 
 checkUnusedTopBinds :: [Bind () (Closure v)] -> Errors
 checkUnusedTopBinds bs =
@@ -93,11 +109,14 @@ transform (P.Module defns) = do
   tell (checkUnusedTopBinds bindings)
   fixities' <- gets fixities
   specs <- gets variantSpecs
-  return (Module bindings fixities' specs)
+  entry <- gets entryClosure
+  return $ case entry of
+    Nothing -> Module bindings fixities' specs
+    Just closure -> EntryModule bindings fixities' specs closure
 
 runTransform :: P.Module -> (Either [Error] Module, [Warning])
 runTransform mdule =
   let rctx = RCtx S.empty M.empty
-      sctx = SCtx M.empty M.empty
+      sctx = SCtx M.empty M.empty Nothing
       (mdule', _, (errors, warnings)) = runRWS (transform mdule) rctx sctx
    in (if null errors then Right mdule' else Left errors, warnings)

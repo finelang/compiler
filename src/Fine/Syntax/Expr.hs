@@ -56,9 +56,16 @@ data Closure v = Closure
 closureVars :: Closure v -> [Var]
 closureVars (Closure env _ bder) = M.keys env ++ maybeToList bder
 
-data Module = Module
-  { bindings :: [Bind () (Closure Expr)],
-    fixities :: Fixities,
-    variantSpecs :: VariantSpecs
-  }
+data Module
+  = Module
+      { bindings :: [Bind () (Closure Expr)],
+        fixities :: Fixities,
+        variantSpecs :: VariantSpecs
+      }
+  | EntryModule
+      { bindings :: [Bind () (Closure Expr)],
+        fixities :: Fixities,
+        variantSpecs :: VariantSpecs,
+        _entryExpr :: Closure Expr
+      }
   deriving (Show)
