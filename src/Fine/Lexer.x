@@ -43,7 +43,6 @@ tokens :-
   "infixr"                    { mkt Infixr }
   "fn"                        { mkt Fn }
   "let"                       { mkt Let }
-  "match"                     { mkt Match }
   "then"                      { mkt Then }
   [$alpha][$alpha $digit]*    { mkt IdTok }
   \" @string* \"              { mkt StrTok }
@@ -72,7 +71,6 @@ data TokenType
   | Infixr
   | Fn
   | Let
-  | Match
   | Then
   | IdTok
   | StrTok

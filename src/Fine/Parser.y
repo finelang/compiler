@@ -35,7 +35,6 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
   infixr  { Token Infixr _ _ }
   fn      { Token Fn _ _ }
   let     { Token Let _ _ }
-  match   { Token Match _ _ }
   then    { Token Then _ _ }
   id      { Token IdTok _ _ }
   str     { Token StrTok _ _ }
@@ -83,10 +82,10 @@ Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
       | infixr  { RightAssoc }
 
-Expr : fn '(' Params ')' '->' Expr            { Fun (reverse $3) $6 (getRange ($1, $6)) }
-     | if Expr then Expr else Expr            { Cond $2 $4 $6 (getRange ($1, $6)) }
-     | match GroupAtom '{' OptBar Matches '}' { PatternMatch $2 (asNonEmpty $ reverse $5) (getRange ($1, $6)) }
-     | Chain                                  { chainToExpr $1 }
+Expr : fn '(' Params ')' '->' Expr          { Fun (reverse $3) $6 (getRange ($1, $6)) }
+     | if Expr then Expr else Expr          { Cond $2 $4 $6 (getRange ($1, $6)) }
+     | '|' Expr '|' '{' OptBar Matches '}'  { PatternMatch $2 (asNonEmpty $ reverse $6) (getRange ($1, $7)) }
+     | Chain                                { chainToExpr $1 }
 
 OptBar : '|'          { () }
        | {- empty -}  { () }
