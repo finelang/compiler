@@ -1,1 +1,1 @@
-Object.defineProperty(globalThis, "fine$unit", { value: {} });
+(function () { Object.defineProperty(globalThis, "fine$unit", { value: {} }); })();
