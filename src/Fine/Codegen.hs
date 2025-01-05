@@ -52,14 +52,7 @@ genObjMemberCode (name, value) = do
   return [i|#{name}: #{value'}|]
 
 genDataCode :: (CodeGens t Ctx) => Data t -> Reader Ctx Text
-genDataCode (Data members) =
-  if null members
-    then return "({})"
-    else do
-      members' <- do
-        chunks <- mapM genObjMemberCode members
-        return (T.intercalate ", " chunks)
-      return [i|({ #{members'} })|]
+genDataCode (Data members) = T.intercalate ", " <$> mapM genObjMemberCode members
 
 instance CodeGens Pattern Ctx where
   genCode :: Pattern -> Reader Ctx Text
@@ -67,11 +60,19 @@ instance CodeGens Pattern Ctx where
   genCode (Patt.Float v _) = return (T.pack $ show v)
   genCode (Patt.Str s _) = return [i|"#{s}"|]
   genCode (Patt.Unit _) = return "fine$unit"
-  genCode (Patt.Obj dt _) = genDataCode dt
-  genCode (Patt.Variant tag dt _) = do
+  genCode (Patt.Obj dt _) = do
+    members' <- genDataCode dt
+    return [i|({#{members'}})|]
+  genCode (Patt.Variant tag dt@(Data members) _) = do
     extValue <- asks (M.lookup tag . variantExtValues)
     case extValue of
-      Nothing -> genDataCode dt
+      Nothing -> do
+        let tagged = [i|$tag: "#{tag}"|] :: Text
+        members' <- genDataCode dt
+        return $
+          if null members
+            then [i|({#{tagged}})|]
+            else [i|({#{tagged}, #{members'}})|]
       Just (Ext code _) -> return code
   genCode (Patt.Tuple fst' snd' rest _) = do
     fst'' <- genCode fst'
@@ -120,11 +121,19 @@ instance CodeGens Expr Ctx where
   genCode (Float v _) = return (T.pack $ show v)
   genCode (Str s _) = return [i|"#{s}"|]
   genCode (Unit _) = return "fine$unit"
-  genCode (Obj dt _) = genDataCode dt
-  genCode (Variant tag dt _) = do
+  genCode (Obj dt _) = do
+    members' <- genDataCode dt
+    return [i|({#{members'}})|]
+  genCode (Variant tag dt@(Data members) _) = do
     extValue <- asks (M.lookup tag . variantExtValues)
     case extValue of
-      Nothing -> genDataCode dt
+      Nothing -> do
+        let tagged = [i|$tag: "#{tag}"|] :: Text
+        members' <- genDataCode dt
+        return $
+          if null members
+            then [i|({#{tagged}})|]
+            else [i|({#{tagged}, #{members'}})|]
       Just (Ext code _) -> return code
   genCode (Tuple fst' snd' rest _) = do
     fst'' <- genCode fst'
