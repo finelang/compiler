@@ -59,18 +59,18 @@ transformDefns (P.DtypeDefn specs : defns) = do
   ctors <- mapM handleSpec specs
   transformDefns (ctors ++ defns)
 transformDefns (P.Defn (Bind bder _ v) : defns) = do
-  currentFreeVars <- do
-    vs <- asks vars
-    if S.member bder vs
-      then tell (collectErrors [RepeatedVar bder]) >> return vs
-      else return (S.insert bder vs)
-  let (vFreeVars, fvErrors) = runFreeVars currentFreeVars v
-  tell fvErrors
   v'' <- do
     (SCtx fixs specs) <- get
     let (v', transfErrors) = TE.runTransform fixs specs v
     tell transfErrors
     return v'
+  currentFreeVars <- do
+    vs <- asks vars
+    if S.member bder vs
+      then tell (collectErrors [RepeatedVar bder]) >> return vs
+      else return (S.insert bder vs)
+  let (vFreeVars, fvErrors) = runFreeVars currentFreeVars v''
+  tell fvErrors
   currentEnv <- asks env
   let recBder = if S.member bder vFreeVars then Just bder else Nothing
   let closure = Closure (M.restrictKeys currentEnv vFreeVars) v'' recBder

@@ -6,6 +6,7 @@ import qualified Data.Map as M
 import Data.Maybe (maybeToList)
 import Data.Text (Text)
 import Fine.Syntax.Common (Bind, Data, Ext, Fixities, HasRange (..), Range, Var (Var), VariantSpecs)
+import Fine.Syntax.Pattern (Pattern)
 
 data Expr
   = Int Int Range
@@ -18,6 +19,7 @@ data Expr
   | Id Var
   | App Expr [Expr] Range
   | Access Expr Var
+  | PatternMatch Expr (NonEmpty (Pattern, Expr)) Range
   | Cond Expr Expr Expr Range
   | Fun [Var] Expr Range
   | Parens Expr
@@ -38,6 +40,7 @@ instance HasRange Expr where
   getRange (App _ _ r) = r
   getRange (Access expr prop) = getRange (expr, prop)
   getRange (Cond _ _ _ r) = r
+  getRange (PatternMatch _ _ r) = r
   getRange (Fun _ _ r) = r
   getRange (Block _ r) = r
   getRange (Parens expr) = getRange expr

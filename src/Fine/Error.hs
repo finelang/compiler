@@ -15,7 +15,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax.Common (Fixity, Var)
+import Fine.Syntax.Common (Fixity, Range, Var)
 import GHC.Stack (HasCallStack)
 import String.ANSI (red, yellow)
 
@@ -40,6 +40,7 @@ data Error
   | InvalidPrecedence Int Int Var
   | RepeatedFixity Var
   | SameInfixPrecedence (Var, Fixity) (Var, Fixity)
+  | InvalidPattern Range
 
 instance Show Error where
   show :: Error -> String
@@ -64,6 +65,8 @@ instance Show Error where
   show (RepeatedFixity var) =
     [i|Fixity definition for #{hl var} is repeated.|]
   show (SameInfixPrecedence _ _) =
+    errorTODO
+  show (InvalidPattern _) =
     errorTODO
 
 errorPrefix :: String
