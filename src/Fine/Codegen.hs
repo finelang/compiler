@@ -84,15 +84,11 @@ instance CodeGens Pattern Ctx where
     return [i|fine$tuple(#{fst''}, #{snd''}#{rest'})|]
   genCode (Patt.Capture (Var name _)) = return [i|fine$capture("#{name}")|]
 
-genPartialMatchCode :: Pattern -> Reader Ctx Text
-genPartialMatchCode patt = do
-  let bound = boundVars patt
-  let fHead =
-        if null bound
-          then "()" :: Text
-          else [i|({ #{T.intercalate ", " (map varName bound)} })|]
+genMatchCode :: (Pattern, Expr) -> Reader Ctx Text
+genMatchCode (patt, expr) = do
   patt' <- genCode patt
-  return [i|#{patt'}, #{fHead} =>|]
+  expr' <- genFunCode True "" (boundVars patt) expr
+  return [i|[#{patt'}, #{expr'}]|]
 
 genStmtsCode :: NonEmpty Expr -> Reader Ctx Text
 genStmtsCode exprs = do
@@ -104,16 +100,17 @@ genStmtsCode exprs = do
   let expr' = [i|#{indent}return #{expr};|] :: Text
   return [i|{\n#{stmts'}#{expr'}\n#{oldIndent}}|]
 
-genFunCode :: Text -> [Var] -> Expr -> Reader Ctx Text
-genFunCode name params body = do
+genFunCode :: Bool -> Text -> [Var] -> Expr -> Reader Ctx Text
+genFunCode areObjParams name params body = do
   let params' = T.intercalate ", " (map varName params)
+  let params'' = if areObjParams then [i|{#{params'}}|] else params'
   case body of
     Block exprs _ -> do
       body' <- genStmtsCode exprs
-      return [i|function #{name}(#{params'}) #{body'}|]
+      return [i|function #{name}(#{params''}) #{body'}|]
     _ -> do
       body' <- genCode body
-      return [i|function #{name}(#{params'}) { return #{body'}; }|]
+      return [i|function #{name}(#{params''}) { return #{body'}; }|]
 
 instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
@@ -160,17 +157,11 @@ instance CodeGens Expr Ctx where
     oldIndent <- asks indentation
     let indent = oldIndent <> "  "
     expr' <- local (withIndentation indent) (genCode expr)
-    let matchList = toList matches
-    patterns <- mapM (genPartialMatchCode . fst) matchList
-    exprs <- local (withIndentation indent) (mapM (genCode . snd) matchList)
-    let matches' =
-          T.concat $
-            zipWith
-              (\p e -> [i|#{indent}[#{p} #{e}],\n|] :: Text)
-              patterns
-              exprs
-    return [i|fine$match(\n#{indent}#{expr'},\n#{matches'}#{oldIndent})|]
-  genCode (Fun params body _) = genFunCode "" params body
+    matches' <-
+      T.intercalate [i|,\n#{indent}|]
+        <$> local (withIndentation indent) (mapM genMatchCode $ toList matches)
+    return [i|fine$match(\n#{indent}#{expr'},\n#{indent}#{matches'}\n#{oldIndent})|]
+  genCode (Fun params body _) = genFunCode False "" params body
   genCode (Block exprs _) = do
     content <- genStmtsCode exprs
     return [i|(() => #{content})()|]
@@ -185,7 +176,7 @@ instance CodeGens (Bind () (Closure Expr)) Ctx where
   genCode (Bind (Var name _) _ (Closure _ expr _)) = do
     name' <- withReaderT symNames (sanitize name)
     case expr of
-      Fun params body _ -> genFunCode name' params body
+      Fun params body _ -> genFunCode False name' params body
       _ -> do
         expr' <- genCode expr
         return [i|const #{name'} = #{expr'};|]
@@ -198,11 +189,11 @@ instance CodeGens Module Ctx where
       local
         (\ctx -> ctx {variantExtValues = M.union extValues (variantExtValues ctx)})
         (mapM genCode bindings)
-    return (T.intercalate "\n" stmts)
+    return (T.intercalate "\n\n" stmts)
   genCode (EntryModule bindings fixs specs (Closure _ expr _)) = do
     code <- genCode (Module bindings fixs specs)
     entry <- genCode expr
-    return [i|#{code}\n#{entry};|]
+    return [i|#{code}\n\n#{entry};|]
 
 runGenCode :: (CodeGens t Ctx) => [Text] -> t -> Text
 runGenCode codeInjections x =
