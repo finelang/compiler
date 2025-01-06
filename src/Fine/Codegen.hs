@@ -38,6 +38,11 @@ data Ctx = Ctx
 withIndentation :: Text -> Ctx -> Ctx
 withIndentation ind ctx = ctx {indentation = ind}
 
+increaseIndentation :: Reader Ctx Text
+increaseIndentation = do
+  indent <- asks indentation
+  return (indent <> "  ")
+
 sanitize :: Text -> Reader (Map Char Text) Text
 sanitize name = do
   syms <- ask
@@ -86,14 +91,16 @@ instance CodeGens Pattern Ctx where
 
 genMatchCode :: (Pattern, Expr) -> Reader Ctx Text
 genMatchCode (patt, expr) = do
+  oldIndent <- asks indentation
+  indent <- increaseIndentation
   patt' <- genCode patt
-  expr' <- genFunCode True "" (boundVars patt) expr
-  return [i|[#{patt'}, #{expr'}]|]
+  expr' <- local (withIndentation indent) (genFunCode True "" (boundVars patt) expr)
+  return [i|[\n#{indent}#{patt'},\n#{indent}#{expr'}\n#{oldIndent}]|]
 
 genStmtsCode :: NonEmpty Expr -> Reader Ctx Text
 genStmtsCode exprs = do
   oldIndent <- asks indentation
-  let indent = oldIndent <> "  "
+  indent <- increaseIndentation
   exprs' <- local (withIndentation indent) (mapM genCode exprs)
   let (stmts, expr) = unsnoc exprs'
   let stmts' = T.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|] :: Text) stmts
@@ -155,7 +162,7 @@ instance CodeGens Expr Ctx where
     return [i|#{cond'} ? #{yes'} : #{no'}|]
   genCode (PatternMatch expr matches _) = do
     oldIndent <- asks indentation
-    let indent = oldIndent <> "  "
+    indent <- increaseIndentation
     expr' <- local (withIndentation indent) (genCode expr)
     matches' <-
       T.intercalate [i|,\n#{indent}|]
