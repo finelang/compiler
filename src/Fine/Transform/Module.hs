@@ -1,10 +1,10 @@
 module Fine.Transform.Module (runTransform) where
 
 import Control.Monad (unless)
-import Control.Monad.Trans.RWS (RWS, asks, get, gets, local, modify, runRWS, tell)
+import Control.Monad.Trans.RWS.Strict (RWS, asks, get, gets, local, modify, runRWS, tell)
 import Data.List.Extra (repeated)
-import Data.Map (Map)
-import qualified Data.Map as M
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)

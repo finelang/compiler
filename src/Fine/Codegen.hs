@@ -8,8 +8,8 @@ module Fine.Codegen (runGenCode) where
 import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
 import Data.List.NonEmpty (NonEmpty, toList)
 import Data.List.NonEmpty.Extra (unsnoc)
-import Data.Map (Map)
-import qualified Data.Map as M
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T

@@ -3,8 +3,8 @@
 module Fine.Transform.ShuntingYard (runSy) where
 
 import Control.Monad (when)
-import Control.Monad.Trans.RWS (RWS, asks, get, gets, modify, runRWS, tell)
-import qualified Data.Map as M
+import Control.Monad.Trans.RWS.Strict (RWS, asks, get, gets, modify, runRWS, tell)
+import qualified Data.Map.Strict as M
 import Fine.Error
   ( Error (SameInfixPrecedence),
     Errors,

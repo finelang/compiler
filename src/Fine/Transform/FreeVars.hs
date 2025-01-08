@@ -1,11 +1,11 @@
 module Fine.Transform.FreeVars (runFreeVars) where
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.Writer (Writer, runWriter, tell)
+import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
 import Data.List.Extra (repeated)
 import qualified Data.List.NonEmpty as L
-import Data.Map (Map)
-import qualified Data.Map as M
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error

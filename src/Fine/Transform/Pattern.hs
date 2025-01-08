@@ -3,7 +3,7 @@ module Fine.Transform.Pattern (runTransform, handleVariant) where
 import Control.Monad (when)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell)
 import Data.List.Extra (repeated)
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Data.Maybe (isNothing, mapMaybe)
 import qualified Data.Set as S
 import Fine.Error

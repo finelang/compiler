@@ -3,7 +3,7 @@
 module Fine.Syntax.Common (module Fine.Syntax.Common) where
 
 import Data.Function (on)
-import Data.Map (Map)
+import Data.Map.Strict (Map)
 import Data.String.Interpolate (i)
 import Data.Text (Text, unpack)
 

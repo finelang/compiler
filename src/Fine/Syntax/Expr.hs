@@ -1,8 +1,8 @@
 module Fine.Syntax.Expr (Expr (..), Closure (..), Module (..), closureVars) where
 
 import Data.List.NonEmpty (NonEmpty)
-import Data.Map (Map)
-import qualified Data.Map as M
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Maybe (maybeToList)
 import Data.Text (Text)
 import Fine.Syntax.Common (Bind, Ext, Fixities, HasRange (..), Prop (..), Range, Var (Var), VariantSpecs)
