@@ -5,7 +5,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (maybeToList)
 import Data.Text (Text)
-import Fine.Syntax.Common (Bind, Data, Ext, Fixities, HasRange (..), Range, Var (Var), VariantSpecs)
+import Fine.Syntax.Common (Bind, Ext, Fixities, HasRange (..), Prop (..), Range, Var (Var), VariantSpecs)
 import Fine.Syntax.Pattern (Pattern)
 
 data Expr
@@ -13,8 +13,8 @@ data Expr
   | Float Float Range
   | Str Text Range
   | Unit Range
-  | Obj (Data Expr) Range
-  | Variant Var (Data Expr) Range
+  | Obj [Prop Expr] Range
+  | Variant Var [Prop Expr] Range
   | Tuple Expr Expr [Expr] Range
   | Id Var
   | App Expr [Expr] Range

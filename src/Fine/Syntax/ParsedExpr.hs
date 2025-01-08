@@ -7,15 +7,15 @@ where
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
-import Fine.Syntax.Common (Bind, Data, Ext, Fixity, HasRange (..), OpChain, Range, Var (Var), VariantSpec)
+import Fine.Syntax.Common (Bind, Ext, Fixity, HasRange (..), OpChain, Prop (..), Range, Var (Var), VariantSpec)
 
 data Expr
   = Int Int Range
   | Float Float Range
   | Str Text Range
   | Unit Range
-  | Obj (Data Expr) Range
-  | Variant Var (Data Expr) Range
+  | Obj [Prop Expr] Range
+  | Variant Var [Prop Expr] Range
   | Tuple Expr Expr [Expr] Range
   | Id Var
   | App Expr [Expr] Range

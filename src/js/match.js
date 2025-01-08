@@ -1,6 +1,25 @@
 (function () {
   function Capture(under) { this.under = under; }
+  function CaptureMany(under) { this.under = under; }
   function capture(s) { return new Capture(s); }
+  function captureObj(s) { return { [Symbol()]: new CaptureMany(s) }; }
+  function objPatternMatch(x, patt) {
+    const sym = Object.getOwnPropertySymbols(patt)
+      .find(sym => patt[sym] instanceof CaptureMany);
+    const cmPatt = sym && patt[sym];
+    const pairs = [];
+    for (const key in patt)
+      pairs.push([x[key], patt[key]]);
+  
+    if (cmPatt) {
+      const obj = {};
+      for (const key in x)
+        if (!(key in patt))
+          obj[key] = x[key];
+      pairs.push([obj, new Capture(cmPatt.under)])
+    }
+    return pairs;
+  }
   function patternMatch(initX, initPatt) {
     const stack = [[initX, initPatt]];
     const captured = [];
@@ -18,15 +37,7 @@
         continue;
       }
       if (!Array.isArray(x) && !Array.isArray(patt)) {
-        const pairs = [];
-        for (const key in patt) {
-          if (!(key in x))
-            return [false, captured];
-          const innerX = x[key];
-          const innerPatt = patt[key];
-          pairs.push([innerX, innerPatt]);
-        }
-        stack.unshift(...pairs);
+        stack.unshift(...objPatternMatch(x, patt));
         continue;
       }
       return [false, captured];
@@ -43,6 +54,7 @@
   }
   Object.defineProperties(globalThis, {
     fine$capture: { value: capture },
+    fine$captureObj: { value: captureObj },
     fine$match: { value: match }
   });
 })();

@@ -1,13 +1,12 @@
 module Fine.Transform.Expr (runTransform) where
 
-import Control.Monad.Trans.RW (RW, ask, asks, runRW, tell, withReader)
+import Control.Monad.Trans.RW (RW, ask, runRW, tell, withReader)
 import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
-import qualified Data.Map as M
-import qualified Data.Set as S
+import Data.Maybe (mapMaybe)
 import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectErrors, collectWarnings)
-import Fine.Syntax.Common (Data (Data), Fixities, OpChain (..), VariantSpec (VariantSpec), VariantSpecs)
+import Fine.Syntax.Common (Fixities, OpChain (..), Prop (..), VariantSpecs, justNamedProp, justSpreadProp)
 import Fine.Syntax.Expr (Expr (..))
 import qualified Fine.Syntax.ParsedExpr as P
 import Fine.Syntax.Pattern (Pattern)
@@ -33,36 +32,38 @@ transformChain (Operation left op chain) = do
   chain' <- transformChain chain
   return (Operation left' op chain')
 
-transformToPatt :: P.Expr -> RW any Errors Pattern
+transformToPatt :: P.Expr -> RW VariantSpecs Errors Pattern
 transformToPatt expr = do
-  let (patt, errors) = PattT.runTransform expr
+  specs <- ask
+  let (patt, errors) = PattT.runTransform specs expr
   tell errors
   return patt
+
+transformProp :: Prop P.Expr -> RW Ctx Errors (Prop Expr)
+transformProp (NamedProp (name, expr)) = do
+  expr' <- transform expr
+  return (NamedProp (name, expr'))
+transformProp (SpreadProp expr) = SpreadProp <$> transform expr
+
+transformProps :: [Prop P.Expr] -> RW Ctx Errors [Prop Expr]
+transformProps props = do
+  tell
+    (collectErrors $ map RepeatedProp $ repeated $ mapMaybe (fmap fst . justNamedProp) props)
+  mapM transformProp props
 
 transform :: P.Expr -> RW Ctx Errors Expr
 transform (P.Int v r) = return (Int v r)
 transform (P.Float v r) = return (Float v r)
 transform (P.Str s r) = return (Str s r)
 transform (P.Unit r) = return (Unit r)
-transform (P.Obj (Data members) r) = do
-  let keys = map fst members
-  tell (collectErrors $ map RepeatedProp $ repeated $ keys)
-  values <- mapM (transform . snd) members
-  return $ Obj (Data $ zip keys values) r
-transform (P.Variant tag (Data members) r) = do
-  let (names, values) = unzip members
-  tell (collectErrors $ map RepeatedProp $ repeated names)
-  spec <- asks (M.lookup tag . variantSpecs)
-  case spec of
-    Nothing -> tell (collectErrors [UndefinedVariant tag])
-    Just (VariantSpec _ memberNames _ _) -> do
-      let memberNames' = S.fromList memberNames
-      let names' = S.fromList names
-      tell (collectErrors $ map (RequiredProp tag) $ S.toList $ S.difference memberNames' names')
-      tell (collectErrors $ map (InvalidProp tag) $ S.toList $ S.difference names' memberNames')
-  values' <- mapM transform values
-  let members' = zip names values'
-  return $ Variant tag (Data members') r
+transform (P.Obj props r) = do
+  props' <- transformProps props
+  return (Obj props' r)
+transform (P.Variant tag props r) = do
+  props' <- transformProps props
+  let noSpread = null (mapMaybe justSpreadProp props')
+  withReader variantSpecs (PattT.handleVariant noSpread tag props)
+  return (Variant tag props' r)
 transform (P.Tuple fst' snd' rest r) = do
   fst'' <- transform fst'
   snd'' <- transform snd'
@@ -83,7 +84,7 @@ transform (P.Cond cond yes no r) = do
   return (Cond cond' yes' no' r)
 transform (P.PatternMatch expr matches r) = do
   expr' <- transform expr
-  patterns' <- mapM (transformToPatt . fst) matches
+  patterns' <- withReader variantSpecs (mapM (transformToPatt . fst) matches)
   exprs' <- mapM (transform . snd) matches
   return $ PatternMatch expr' (L.zip patterns' exprs') r
 transform (P.Fun params body r) = do

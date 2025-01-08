@@ -15,14 +15,14 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Fine.Syntax.Common
   ( Bind (..),
-    Data (Data),
     Ext (Ext),
+    Prop (..),
     Var (Var),
     VariantSpec (variantExtValue),
     varName,
   )
 import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (EntryModule, Module))
-import Fine.Syntax.Pattern (Pattern, boundVars)
+import Fine.Syntax.Pattern (Pattern)
 import qualified Fine.Syntax.Pattern as Patt
 
 class CodeGens t ctx where
@@ -51,13 +51,15 @@ sanitize name = do
   where
     go names ch = M.findWithDefault (T.singleton ch) ch names
 
-genObjMemberCode :: (CodeGens t Ctx) => (Var, t) -> Reader Ctx Text
-genObjMemberCode (name, value) = do
-  value' <- genCode value
-  return [i|#{name}: #{value'}|]
-
-genDataCode :: (CodeGens t Ctx) => Data t -> Reader Ctx Text
-genDataCode (Data members) = T.intercalate ", " <$> mapM genObjMemberCode members
+genPatternPropsCode :: [(Var, Pattern)] -> Maybe Var -> Reader Ctx Text
+genPatternPropsCode named spread = do
+  let (names, patts) = unzip named
+  patts' <- mapM genCode patts
+  let props = zipWith (\n p -> [i|#{n}: #{p}|] :: Text) names patts'
+  let props' = case spread of
+        Nothing -> props
+        Just name -> [i|...fine$captureObj("#{name}")|] : props
+  return (T.intercalate ", " props')
 
 instance CodeGens Pattern Ctx where
   genCode :: Pattern -> Reader Ctx Text
@@ -65,19 +67,19 @@ instance CodeGens Pattern Ctx where
   genCode (Patt.Float v _) = return (T.pack $ show v)
   genCode (Patt.Str s _) = return [i|"#{s}"|]
   genCode (Patt.Unit _) = return "fine$unit"
-  genCode (Patt.Obj dt _) = do
-    members' <- genDataCode dt
-    return [i|({#{members'}})|]
-  genCode (Patt.Variant tag dt@(Data members) _) = do
+  genCode (Patt.Obj named spread _) = do
+    props <- genPatternPropsCode named spread
+    return [i|({#{props}})|]
+  genCode (Patt.Variant tag named spread _) = do
     extValue <- asks (M.lookup tag . variantExtValues)
     case extValue of
       Nothing -> do
         let tagged = [i|$tag: "#{tag}"|] :: Text
-        members' <- genDataCode dt
+        props <- genPatternPropsCode named spread
         return $
-          if null members
+          if T.null props
             then [i|({#{tagged}})|]
-            else [i|({#{tagged}, #{members'}})|]
+            else [i|({#{tagged}, #{props}})|] :: Text
       Just (Ext code _) -> return code
   genCode (Patt.Tuple fst' snd' rest _) = do
     fst'' <- genCode fst'
@@ -89,12 +91,23 @@ instance CodeGens Pattern Ctx where
     return [i|fine$tuple(#{fst''}, #{snd''}#{rest'})|]
   genCode (Patt.Capture (Var name _)) = return [i|fine$capture("#{name}")|]
 
+genPropCode :: (CodeGens t Ctx) => Prop t -> Reader Ctx Text
+genPropCode (NamedProp (name, value)) = do
+  value' <- genCode value
+  return [i|#{name}: #{value'}|]
+genPropCode (SpreadProp value) = do
+  value' <- genCode value
+  return [i|...#{value'}|]
+
+genPropsCode :: (CodeGens t Ctx) => [Prop t] -> Reader Ctx Text
+genPropsCode props = T.intercalate ", " <$> mapM genPropCode props
+
 genMatchCode :: (Pattern, Expr) -> Reader Ctx Text
 genMatchCode (patt, expr) = do
   oldIndent <- asks indentation
   indent <- increaseIndentation
   patt' <- genCode patt
-  expr' <- local (withIndentation indent) (genFunCode True "" (boundVars patt) expr)
+  expr' <- local (withIndentation indent) (genFunCode True "" (Patt.boundVars patt) expr)
   return [i|[\n#{indent}#{patt'},\n#{indent}#{expr'}\n#{oldIndent}]|]
 
 genStmtsCode :: NonEmpty Expr -> Reader Ctx Text
@@ -125,19 +138,19 @@ instance CodeGens Expr Ctx where
   genCode (Float v _) = return (T.pack $ show v)
   genCode (Str s _) = return [i|"#{s}"|]
   genCode (Unit _) = return "fine$unit"
-  genCode (Obj dt _) = do
-    members' <- genDataCode dt
-    return [i|({#{members'}})|]
-  genCode (Variant tag dt@(Data members) _) = do
+  genCode (Obj props _) = do
+    props' <- genPropsCode props
+    return [i|({#{props'}})|]
+  genCode (Variant tag props _) = do
     extValue <- asks (M.lookup tag . variantExtValues)
     case extValue of
       Nothing -> do
         let tagged = [i|$tag: "#{tag}"|] :: Text
-        members' <- genDataCode dt
+        props' <- genPropsCode props
         return $
-          if null members
+          if null props
             then [i|({#{tagged}})|]
-            else [i|({#{tagged}, #{members'}})|]
+            else [i|({#{tagged}, #{props'}})|]
       Just (Ext code _) -> return code
   genCode (Tuple fst' snd' rest _) = do
     fst'' <- genCode fst'

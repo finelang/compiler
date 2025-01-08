@@ -41,6 +41,7 @@ data Error
   | RepeatedFixity Var
   | SameInfixPrecedence (Var, Fixity) (Var, Fixity)
   | InvalidPattern Range
+  | MultipleSpreadPatterns [Range]
 
 instance Show Error where
   show :: Error -> String
@@ -67,6 +68,8 @@ instance Show Error where
   show (SameInfixPrecedence _ _) =
     errorTODO
   show (InvalidPattern _) =
+    errorTODO
+  show (MultipleSpreadPatterns _) =
     errorTODO
 
 errorPrefix :: String

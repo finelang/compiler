@@ -8,8 +8,14 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
-import Fine.Error (Error (RepeatedVar, UndefinedVar), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
-import Fine.Syntax.Common (Data (Data), Var)
+import Fine.Error
+  ( Error (RepeatedVar, UndefinedVar),
+    Errors,
+    Warning (UnusedVar),
+    collectErrors,
+    collectWarnings,
+  )
+import Fine.Syntax.Common (Prop (..), Var)
 import Fine.Syntax.Expr (Expr (..))
 import Fine.Syntax.Pattern (boundVars)
 
@@ -33,16 +39,17 @@ union' = M.unionWith (++)
 unions' :: (Foldable t) => t VarOcurrences -> VarOcurrences
 unions' = foldl union' M.empty
 
-dataFreeVars :: Data Expr -> Writer Errors VarOcurrences
-dataFreeVars (Data members) = unions' <$> mapM (freeVars . snd) members
+propFreeVars :: Prop Expr -> Writer Errors VarOcurrences
+propFreeVars (NamedProp (_, expr)) = freeVars expr
+propFreeVars (SpreadProp expr) = freeVars expr
 
 freeVars :: Expr -> Writer Errors VarOcurrences
 freeVars (Int _ _) = return M.empty
 freeVars (Float _ _) = return M.empty
 freeVars (Str _ _) = return M.empty
 freeVars (Unit _) = return M.empty
-freeVars (Obj d _) = dataFreeVars d
-freeVars (Variant _ d _) = dataFreeVars d
+freeVars (Obj props _) = unions' <$> mapM propFreeVars props
+freeVars (Variant _ props _) = unions' <$> mapM propFreeVars props
 freeVars (Tuple fst' snd' rest _) = unions' <$> mapM freeVars (fst' : snd' : rest)
 freeVars (Id var) = return (singleton' var)
 freeVars (App f args _) = do

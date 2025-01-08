@@ -12,7 +12,7 @@ $whitechar    = [ \t\n\r\f\v]
 $special      = [\(\)\,\;\[\]\`\{\}]
 $digit        = 0-9
 $ascsymbol    = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
-$opsymbol     = [$ascsymbol \:] # [\#]
+$opsymbol     = [$ascsymbol \:] # [\# \.]
 $symbol       = $ascsymbol # [$special \_\:\"\']
 $large        = [A-Z \xc0-\xd6 \xd8-\xde]
 $small        = [a-z \xdf-\xf6 \xf8-\xff \_]
@@ -37,7 +37,7 @@ tokens :-
   "#external"                 { mkt ExtTok }
   "#run"                      { mkt Run }
   "else"                      { mkt Else }
-  "data"                      { mkt DataTok }
+  "data"                      { mkt Data }
   "debug"                     { mkt DebugTok }
   "if"                        { mkt If }
   "infix"                     { mkt Infix }
@@ -53,6 +53,7 @@ tokens :-
   "->"                        { mkt Arrow }
   "="                         { mkt Eq }
   "."                         { mkt Dot }
+  "..."                       { mkt Spread }
   "|"                         { mkt Bar }
   "("                         { mkt Opar } 
   ")"                         { mkt Cpar }
@@ -67,7 +68,7 @@ data TokenType
   = ExtTok
   | Run
   | Else
-  | DataTok
+  | Data
   | DebugTok
   | If
   | Infix
@@ -83,6 +84,7 @@ data TokenType
   | Arrow
   | Eq
   | Dot
+  | Spread
   | Bar
   | Opar
   | Cpar

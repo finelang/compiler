@@ -14,9 +14,9 @@ import Fine.Syntax.Common
     fromLRChain,
     Fixity(Fixity),
     Assoc(..),
-    Data (Data),
     VariantSpec (VariantSpec),
-    Ext (Ext)
+    Ext (Ext),
+    Prop (..)
   )
 import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
 }
@@ -29,7 +29,7 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
   ext     { Token ExtTok _ _ }
   run     { Token Run _ _ }
   else    { Token Else _ _ }
-  data    { Token DataTok _ _ }
+  data    { Token Data _ _ }
   debug   { Token DebugTok _ _ }
   if      { Token If _ _ }
   infix   { Token Infix _ _ }
@@ -45,6 +45,7 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
   '->'    { Token Arrow _ _ }
   '='     { Token Eq _ _ }
   '.'     { Token Dot _ _ }
+  '...'   { Token Spread _ _ }
   '|'     { Token Bar _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
@@ -116,9 +117,9 @@ Args : Args ',' Expr  { $3 : $1 }
      | Expr           { [$1] }
      | {- empty -}    { [] }
 
-Atom : GroupAtom          { $1 }
-     | '{' Obj '}'        { Obj (Data $ reverse $2) (getRange ($1, $3)) }
-     | Prefix '{' Obj '}' { Variant $1 (Data $ reverse $3) (getRange ($1, $4)) }
+Atom : '(' Args ')'       { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
+     | '{' Obj '}'        { Obj (reverse $2) (getRange ($1, $3)) }
+     | Prefix '{' Obj '}' { Variant $1 (reverse $3) (getRange ($1, $4)) }
      | '{' Block '}'      { mkBlock (reverse $2) (getRange ($1, $3)) }
      | Prefix             { Id $1 }
      | '(' op ')'         { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
@@ -126,17 +127,16 @@ Atom : GroupAtom          { $1 }
      | float              { Float (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
      | str                { mkStr $1 }
 
-GroupAtom : '(' Args ')'  { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
-
 Block : Block ';' Expr  { $3 : $1 }
       | Block ';'       { $1 }
       | Expr            { [$1] }
 
-Obj : Obj ',' ObjMember { $3 : $1 }
-    | ObjMember         { [$1] }
-    | {- empty -}       { [] }
+Obj : Obj ',' Prop  { $3 : $1 }
+    | Prop          { [$1] }
+    | {- empty -}   { [] }
 
-ObjMember : Prefix '=' Expr { ($1, $3) }
+Prop : Prefix '=' Expr  { NamedProp ($1, $3) }
+     | '...' Expr       { SpreadProp $2 }
 
 Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
 

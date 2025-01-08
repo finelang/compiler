@@ -101,9 +101,6 @@ instance (HasRange t) => HasRange (OpChain t) where
   getRange (Operand expr) = getRange expr
   getRange (Operation l _ chain) = getRange (l, chain)
 
-newtype Data t = Data {dataMembers :: [(Var, t)]}
-  deriving (Show)
-
 data Ext = Ext Text Range
   deriving (Show)
 
@@ -120,3 +117,16 @@ data VariantSpec = VariantSpec
   deriving (Show)
 
 type VariantSpecs = Map Var VariantSpec
+
+data Prop t
+  = NamedProp (Var, t)
+  | SpreadProp t
+  deriving (Show)
+
+justSpreadProp :: Prop t -> Maybe t
+justSpreadProp (SpreadProp expr) = Just expr
+justSpreadProp _ = Nothing
+
+justNamedProp :: Prop t -> Maybe (Var, t)
+justNamedProp (NamedProp pair) = Just pair
+justNamedProp _ = Nothing

@@ -10,9 +10,9 @@ import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
 import Fine.Syntax.Common
   ( Bind (Bind),
-    Data (Data),
     Fixities,
     Fixity (Fixity),
+    Prop (NamedProp),
     Var,
     VariantSpec (VariantSpec),
     VariantSpecs,
@@ -42,8 +42,8 @@ handleSpec spec@(VariantSpec var props _ r) = do
   if M.member var specs'
     then tell (collectErrors [RepeatedVariant var])
     else modify (\ctx -> ctx {variantSpecs = M.insert var spec specs'})
-  let data' = Data $ map (\prop -> (prop, P.Id prop)) props
-  let varnt = P.Variant var data' r
+  let props' = map (\prop -> NamedProp (prop, P.Id prop)) props
+  let varnt = P.Variant var props' r
   let value = if null props then varnt else P.Fun props varnt r
   return $ P.Defn (Bind var () value)
 
