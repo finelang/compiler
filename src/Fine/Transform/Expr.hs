@@ -44,7 +44,7 @@ transformProp (NamedProp (name, expr)) = do
   expr' <- transform expr
   return (NamedProp (name, expr'))
 transformProp (SpreadProp expr) = SpreadProp <$> transform expr
-transformProp (SelfProp name) = return (SelfProp name)
+transformProp (SelfProp name) = return $ NamedProp (name, Id name)
 
 transformProps :: [Prop P.Expr] -> RW Ctx Errors [Prop Expr]
 transformProps props = do
@@ -63,7 +63,7 @@ transform (P.Obj props r) = do
 transform (P.Variant tag props r) = do
   props' <- transformProps props
   let noSpread = null (mapMaybe justSpreadProp props')
-  withReader variantSpecs (PattT.handleVariant noSpread tag props)
+  withReader variantSpecs (PattT.handleVariant noSpread tag props')
   return (Variant tag props' r)
 transform (P.Tuple fst' snd' rest r) = do
   fst'' <- transform fst'
