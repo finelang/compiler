@@ -98,6 +98,7 @@ genPropCode (NamedProp (name, value)) = do
 genPropCode (SpreadProp value) = do
   value' <- genCode value
   return [i|...#{value'}|]
+genPropCode (SelfProp name) = return [i|#{name}|]
 
 genPropsCode :: (CodeGens t Ctx) => [Prop t] -> Reader Ctx Text
 genPropsCode props = T.intercalate ", " <$> mapM genPropCode props

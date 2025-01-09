@@ -44,6 +44,7 @@ transformProp (NamedProp (name, expr)) = do
   expr' <- transform expr
   return (NamedProp (name, expr'))
 transformProp (SpreadProp expr) = SpreadProp <$> transform expr
+transformProp (SelfProp name) = return (SelfProp name)
 
 transformProps :: [Prop P.Expr] -> RW Ctx Errors [Prop Expr]
 transformProps props = do

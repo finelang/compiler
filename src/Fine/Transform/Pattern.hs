@@ -26,6 +26,7 @@ import Fine.Syntax.Common
     VariantSpecs,
     getRange,
     justNamedProp,
+    justSelfProp,
     justSpreadProp,
   )
 import Fine.Syntax.ParsedExpr (Expr (..))
@@ -34,6 +35,10 @@ import qualified Fine.Syntax.Pattern as Patt
 
 errorPattern :: Range -> Pattern
 errorPattern = Patt.Unit
+
+checkSelfProps :: [Prop Expr] -> RW r Errors ()
+checkSelfProps props =
+  tell (collectErrors $ mapMaybe (fmap (InvalidPattern . getRange) . justSelfProp) props)
 
 extractSpreadProp :: [Prop Expr] -> RW r Errors (Maybe Var)
 extractSpreadProp props =
@@ -74,10 +79,12 @@ transform (Float v r) = return (Patt.Float v r)
 transform (Str s r) = return (Patt.Str s r)
 transform (Unit r) = return (Patt.Unit r)
 transform (Obj props r) = do
+  checkSelfProps props
   named <- extractNamedProps props
   spread <- extractSpreadProp props
   return (Patt.Obj named spread r)
 transform (Variant tag props r) = do
+  checkSelfProps props
   spread <- extractSpreadProp props
   handleVariant (isNothing spread) tag props
   named <- extractNamedProps props
