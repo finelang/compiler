@@ -39,6 +39,7 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
   let     { Token Let _ _ }
   then    { Token Then _ _ }
   id      { Token IdTok _ _ }
+  ct      { Token Ct _ _ }
   str     { Token StrTok _ _ }
   int     { Token IntTok _ _ }
   float   { Token FloatTok _ _ }
@@ -64,6 +65,8 @@ Entry : run Expr    { [EntryDefn $2] }
 
 Prefix : id { mkVar $1 }
 
+CtPrefix : ct { mkVar $1 }
+
 Infix : op  { mkVar $1 }
 
 Defns : Defns Defn  { $2 : $1 }
@@ -79,8 +82,8 @@ Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
 Varnts : Varnts Varnt { $2 : $1 }
        | Varnt        { [$1] }
 
-Varnt : let Prefix '{' Params '}' { VariantSpec $2 (reverse $4) Nothing (getRange ($1, $5)) }
-      | Ext let Prefix '{' '}'    { VariantSpec $3 [] (Just $1) (getRange ($2, $5)) }
+Varnt : let CtPrefix '{' Params '}' { VariantSpec $2 (reverse $4) Nothing (getRange ($1, $5)) }
+      | Ext let CtPrefix '{' '}'    { VariantSpec $3 [] (Just $1) (getRange ($2, $5)) }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
@@ -117,15 +120,16 @@ Args : Args ',' Expr  { $3 : $1 }
      | Expr           { [$1] }
      | {- empty -}    { [] }
 
-Atom : '(' Args ')'       { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
-     | '{' Obj '}'        { Obj (reverse $2) (getRange ($1, $3)) }
-     | Prefix '{' Obj '}' { Variant $1 (reverse $3) (getRange ($1, $4)) }
-     | '{' Block '}'      { mkBlock (reverse $2) (getRange ($1, $3)) }
-     | Prefix             { Id $1 }
-     | '(' op ')'         { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
-     | int                { Int (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-     | float              { Float (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-     | str                { mkStr $1 }
+Atom : '(' Args ')'         { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
+     | '{' Obj '}'          { Obj (reverse $2) (getRange ($1, $3)) }
+     | CtPrefix '{' Obj '}' { Variant $1 (reverse $3) (getRange ($1, $4)) }
+     | CtPrefix             { Id $1 }
+     | '{' Block '}'        { mkBlock (reverse $2) (getRange ($1, $3)) }
+     | Prefix               { Id $1 }
+     | '(' op ')'           { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
+     | int                  { Int (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | float                { Float (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | str                  { mkStr $1 }
 
 Block : Block ';' Expr  { $3 : $1 }
       | Block ';'       { $1 }
