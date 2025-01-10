@@ -1,7 +1,7 @@
 module Fine.Transform.Module (runTransform) where
 
 import Control.Monad (unless)
-import Control.Monad.Trans.RWS.Strict (RWS, asks, get, gets, local, modify, runRWS, tell)
+import Control.Monad.Trans.SW (SW, gets, modify, runSW, tell)
 import Data.List.Extra (repeated)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -24,37 +24,37 @@ import qualified Fine.Syntax.ParsedExpr as P
 import qualified Fine.Transform.Expr as TE (runTransform)
 import Fine.Transform.FreeVars (runFreeVars)
 
-data RCtx = RCtx
-  { vars :: Set Var,
-    env :: Map Var (Closure Expr)
-  }
-
-data SCtx = SCtx
-  { fixities :: Fixities,
+data State = State
+  { freeVars :: Set Var,
+    closures :: Map Var (Closure Expr),
+    fixities :: Fixities,
     variantSpecs :: VariantSpecs,
     entryClosure :: Maybe (Closure Expr)
   }
 
-handleSpec :: VariantSpec -> RWS r Errors SCtx P.Defn
-handleSpec spec@(VariantSpec var props _ r) = do
+extractCt :: VariantSpec -> SW State Errors (Bind () (Closure Expr))
+extractCt spec@(VariantSpec var props _ r) = do
   tell (collectErrors $ map RepeatedProp $ repeated props)
-  specs' <- gets variantSpecs
-  if M.member var specs'
+  specs <- gets variantSpecs
+  if M.member var specs
     then tell (collectErrors [RepeatedVariant var])
-    else modify (\ctx -> ctx {variantSpecs = M.insert var spec specs'})
-  let props' = map (\prop -> NamedProp (prop, P.Id prop)) props
-  let varnt = P.Variant var props' r
-  let value = if null props then varnt else P.Fun props varnt r
-  return $ P.Defn (Bind var () value)
+    else modify (\st -> st {variantSpecs = M.insert var spec specs})
+  let props' = map (\prop -> NamedProp (prop, Id prop)) props
+  let varnt = Variant var props' r
+  let value = if null props then varnt else Fun props varnt r
+  let closure = Closure M.empty value Nothing
+  modify (\st -> st {closures = M.insert var closure (closures st), freeVars = S.insert var (freeVars st)})
+  return (Bind var () closure)
 
-transformToExpr :: P.Expr -> RWS r Errors SCtx Expr
-transformToExpr expr = do
-  (SCtx fixs specs _) <- get
+transformExpr :: P.Expr -> SW State Errors Expr
+transformExpr expr = do
+  fixs <- gets fixities
+  specs <- gets variantSpecs
   let (expr', transfErrors) = TE.runTransform fixs specs expr
   tell transfErrors
   return expr'
 
-transformDefns :: [P.Defn] -> RWS RCtx Errors SCtx [Bind () (Closure Expr)]
+transformDefns :: [P.Defn] -> SW State Errors [Bind () (Closure Expr)]
 transformDefns [] = return []
 transformDefns (P.FixDefn fix@(Fixity _ prec) op : defns) = do
   unless (0 <= prec && prec < 10) (tell $ collectErrors [InvalidPrecedence 0 10 op]) -- TODO: read from some config
@@ -64,37 +64,36 @@ transformDefns (P.FixDefn fix@(Fixity _ prec) op : defns) = do
     else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
   transformDefns defns
 transformDefns (P.DtypeDefn specs : defns) = do
-  ctors <- mapM handleSpec specs
-  transformDefns (ctors ++ defns)
+  ctors <- mapM extractCt specs
+  bs <- transformDefns defns
+  return (ctors ++ bs)
 transformDefns (P.Defn (Bind bder _ v) : defns) = do
-  v' <- transformToExpr v
+  v' <- transformExpr v
   currentFreeVars <- do
-    vs <- asks vars
+    vs <- gets freeVars
     if S.member bder vs
       then tell (collectErrors [RepeatedVar bder]) >> return vs
       else return (S.insert bder vs)
   let (vFreeVars, fvErrors) = runFreeVars currentFreeVars v'
   tell fvErrors
-  currentEnv <- asks env
+  currentEnv <- gets closures
   let recBder = if S.member bder vFreeVars then Just bder else Nothing
   let closure = Closure (M.restrictKeys currentEnv vFreeVars) v' recBder
   let b' = Bind bder () closure
-  bs' <-
-    local
-      (\ctx -> ctx {vars = S.union currentFreeVars vFreeVars, env = M.insert bder closure currentEnv})
-      (transformDefns defns)
+  modify (\st -> st {freeVars = S.union currentFreeVars vFreeVars, closures = M.insert bder closure currentEnv})
+  bs' <- transformDefns defns
   return (b' : bs')
 transformDefns (P.EntryDefn expr : _) = do
-  expr' <- transformToExpr expr
+  expr' <- transformExpr expr
   exprFreeVars <- do
-    currentFreeVars <- asks vars
+    currentFreeVars <- gets freeVars
     let (fvs, errors) = runFreeVars currentFreeVars expr'
     tell errors
     return fvs
   closure <- do
-    currentEnv <- asks env
+    currentEnv <- gets closures
     return (Closure (M.restrictKeys currentEnv exprFreeVars) expr' Nothing)
-  modify (\ctx -> ctx {entryClosure = Just closure})
+  modify (\st -> st {entryClosure = Just closure})
   return [] -- if entry defn exists, it should be the last
 
 checkUnusedTopBinds :: [Bind () (Closure v)] -> Errors
@@ -103,7 +102,7 @@ checkUnusedTopBinds bs =
       binders = S.fromList $ map binder bs
    in collectWarnings $ map UnusedVar $ S.toList $ S.difference binders used
 
-transform :: P.Module -> RWS RCtx Errors SCtx Module
+transform :: P.Module -> SW State Errors Module
 transform (P.Module defns) = do
   bindings <- transformDefns defns
   tell (checkUnusedTopBinds bindings)
@@ -116,7 +115,6 @@ transform (P.Module defns) = do
 
 runTransform :: P.Module -> (Either [Error] Module, [Warning])
 runTransform mdule =
-  let rctx = RCtx S.empty M.empty
-      sctx = SCtx M.empty M.empty Nothing
-      (mdule', _, (errors, warnings)) = runRWS (transform mdule) rctx sctx
+  let st = State S.empty M.empty M.empty M.empty Nothing
+      (mdule', _, (errors, warnings)) = runSW (transform mdule) st
    in (if null errors then Right mdule' else Left errors, warnings)

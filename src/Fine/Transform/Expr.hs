@@ -60,11 +60,14 @@ transform (P.Unit r) = return (Unit r)
 transform (P.Obj props r) = do
   props' <- transformProps props
   return (Obj props' r)
-transform (P.Variant tag props r) = do
-  props' <- transformProps props
-  let noSpread = null (mapMaybe justSpreadProp props')
-  withReader variantSpecs (PattT.handleVariant noSpread tag props')
-  return (Variant tag props' r)
+transform (P.Variant tag props r) =
+  if null props
+    then return (Id tag)
+    else do
+      props' <- transformProps props
+      let noSpread = null (mapMaybe justSpreadProp props')
+      withReader variantSpecs (PattT.handleVariant noSpread tag props')
+      return (Variant tag props' r)
 transform (P.Tuple fst' snd' rest r) = do
   fst'' <- transform fst'
   snd'' <- transform snd'

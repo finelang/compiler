@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Control.Monad.Trans.RW
+      Control.Monad.Trans.SW
       Data.List.Extra
       Data.List.NonEmpty.Extra
       Fine.Codegen
