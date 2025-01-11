@@ -35,7 +35,7 @@ instance HasRange Expr where
   getRange (Str _ r) = r
   getRange (Unit r) = r
   getRange (Obj _ r) = r
-  getRange (Variant _ _ r) = getRange r
+  getRange (Variant _ _ r) = r
   getRange (Tuple _ _ _ r) = r
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
