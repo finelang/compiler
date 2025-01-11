@@ -139,7 +139,7 @@ Obj : Obj ',' Prop  { $3 : $1 }
     | Prop          { [$1] }
     | {- empty -}   { [] }
 
-Prop : Prefix '=' Expr  { NamedProp ($1, $3) }
+Prop : Prefix '=' Expr  { NamedProp $1 $3 }
      | '...' Expr       { SpreadProp $2 }
      | '=' Prefix       { SelfProp $2 }
 

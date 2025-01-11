@@ -6,7 +6,7 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
 import Data.Maybe (mapMaybe)
 import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectErrors, collectWarnings)
-import Fine.Syntax.Common (Fixities, OpChain (..), Prop (..), VariantSpecs, justNamedProp, justSpreadProp)
+import Fine.Syntax.Common (Fixities, OpChain (..), Prop (..), VariantSpecs, justNamedProp)
 import Fine.Syntax.Expr (Expr (..))
 import qualified Fine.Syntax.ParsedExpr as P
 import Fine.Syntax.Pattern (Pattern)
@@ -40,11 +40,11 @@ transformToPatt expr = do
   return patt
 
 transformProp :: Prop P.Expr -> RW Ctx Errors (Prop Expr)
-transformProp (NamedProp (name, expr)) = do
+transformProp (NamedProp name expr) = do
   expr' <- transform expr
-  return (NamedProp (name, expr'))
+  return (NamedProp name expr')
 transformProp (SpreadProp expr) = SpreadProp <$> transform expr
-transformProp (SelfProp name) = return $ NamedProp (name, Id name)
+transformProp (SelfProp name) = return (SelfProp name)
 
 transformProps :: [Prop P.Expr] -> RW Ctx Errors [Prop Expr]
 transformProps props = do
@@ -65,8 +65,7 @@ transform (P.Variant tag props r) =
     then return (Id tag)
     else do
       props' <- transformProps props
-      let noSpread = null (mapMaybe justSpreadProp props')
-      withReader variantSpecs (PattT.handleVariant noSpread tag props')
+      withReader variantSpecs (PattT.checkVariant tag props')
       return (Variant tag props' r)
 transform (P.Tuple fst' snd' rest r) = do
   fst'' <- transform fst'

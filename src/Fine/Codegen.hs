@@ -13,6 +13,7 @@ import qualified Data.Map.Strict as M
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax.Common
   ( Bind (..),
     Ext (Ext),
@@ -51,15 +52,17 @@ sanitize name = do
   where
     go names ch = M.findWithDefault (T.singleton ch) ch names
 
-genPatternPropsCode :: [(Var, Pattern)] -> Maybe Var -> Reader Ctx Text
-genPatternPropsCode named spread = do
-  let (names, patts) = unzip named
-  patts' <- mapM genCode patts
-  let props = zipWith (\n p -> [i|#{n}: #{p}|] :: Text) names patts'
-  let props' = case spread of
-        Nothing -> props
-        Just name -> [i|...fine$captureObj("#{name}")|] : props
-  return (T.intercalate ", " props')
+genPatternPropCode :: Prop Pattern -> Reader Ctx Text
+genPatternPropCode (NamedProp name patt) = do
+  patt' <- genCode patt
+  return [i|#{name}: #{patt'}|]
+genPatternPropCode (SpreadProp patt) = case patt of
+  (Patt.Capture name) -> return [i|...fine$captureObj("#{name}")|]
+  _ -> errorUNREACHABLE
+genPatternPropCode (SelfProp name) = genPatternPropCode (NamedProp name (Patt.Capture name))
+
+genPatternPropsCode :: [Prop Pattern] -> Reader Ctx Text
+genPatternPropsCode props = T.intercalate ", " <$> mapM genPatternPropCode props
 
 instance CodeGens Pattern Ctx where
   genCode :: Pattern -> Reader Ctx Text
@@ -67,19 +70,19 @@ instance CodeGens Pattern Ctx where
   genCode (Patt.Float v _) = return (T.pack $ show v)
   genCode (Patt.Str s _) = return [i|"#{s}"|]
   genCode (Patt.Unit _) = return "fine$unit"
-  genCode (Patt.Obj named spread _) = do
-    props <- genPatternPropsCode named spread
-    return [i|({#{props}})|]
-  genCode (Patt.Variant tag named spread _) = do
+  genCode (Patt.Obj props _) = do
+    props' <- genPatternPropsCode props
+    return [i|({#{props'}})|]
+  genCode (Patt.Variant tag props _) = do
     extValue <- asks (M.lookup tag . variantExtValues)
     case extValue of
       Nothing -> do
         let tagged = [i|$tag: "#{tag}"|] :: Text
-        props <- genPatternPropsCode named spread
+        props' <- genPatternPropsCode props
         return $
-          if T.null props
+          if T.null props'
             then [i|({#{tagged}})|]
-            else [i|({#{tagged}, #{props}})|] :: Text
+            else [i|({#{tagged}, #{props'}})|]
       Just (Ext code _) -> return code
   genCode (Patt.Tuple fst' snd' rest _) = do
     fst'' <- genCode fst'
@@ -91,17 +94,18 @@ instance CodeGens Pattern Ctx where
     return [i|fine$tuple(#{fst''}, #{snd''}#{rest'})|]
   genCode (Patt.Capture (Var name _)) = return [i|fine$capture("#{name}")|]
 
-genPropCode :: (CodeGens t Ctx) => Prop t -> Reader Ctx Text
-genPropCode (NamedProp (name, value)) = do
-  value' <- genCode value
-  return [i|#{name}: #{value'}|]
-genPropCode (SpreadProp value) = do
-  value' <- genCode value
-  return [i|...#{value'}|]
-genPropCode (SelfProp name) = return [i|#{name}|]
+instance (CodeGens t Ctx) => CodeGens (Prop t) Ctx where
+  genCode :: Prop t -> Reader Ctx Text
+  genCode (NamedProp name value) = do
+    value' <- genCode value
+    return [i|#{name}: #{value'}|]
+  genCode (SpreadProp value) = do
+    value' <- genCode value
+    return [i|...#{value'}|]
+  genCode (SelfProp name) = return [i|#{name}|]
 
 genPropsCode :: (CodeGens t Ctx) => [Prop t] -> Reader Ctx Text
-genPropsCode props = T.intercalate ", " <$> mapM genPropCode props
+genPropsCode props = T.intercalate ", " <$> mapM genCode props
 
 genMatchCode :: (Pattern, Expr) -> Reader Ctx Text
 genMatchCode (patt, expr) = do

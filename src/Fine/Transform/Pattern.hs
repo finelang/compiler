@@ -1,10 +1,10 @@
-module Fine.Transform.Pattern (runTransform, handleVariant) where
+module Fine.Transform.Pattern (runTransform, checkVariant) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell)
 import Data.List.Extra (repeated)
 import qualified Data.Map.Strict as M
-import Data.Maybe (isNothing, mapMaybe)
+import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Fine.Error
   ( Error
@@ -19,14 +19,14 @@ import Fine.Error
     collectErrors,
   )
 import Fine.Syntax.Common
-  ( Prop (..),
+  ( HasRange,
+    Prop (..),
     Range,
     Var,
     VariantSpec (VariantSpec),
     VariantSpecs,
     getRange,
     justNamedProp,
-    justSelfProp,
     justSpreadProp,
   )
 import Fine.Syntax.ParsedExpr (Expr (..))
@@ -36,32 +36,20 @@ import qualified Fine.Syntax.Pattern as Patt
 errorPattern :: Range -> Pattern
 errorPattern = Patt.Unit
 
-checkSelfProps :: [Prop Expr] -> RW r Errors ()
-checkSelfProps props =
-  tell (collectErrors $ mapMaybe (fmap (InvalidPattern . getRange) . justSelfProp) props)
-
-extractSpreadProp :: [Prop Expr] -> RW r Errors (Maybe Var)
-extractSpreadProp props =
+checkMultipleSpreadProps :: (HasRange t) => [Prop t] -> RW r Errors ()
+checkMultipleSpreadProps props =
   case mapMaybe justSpreadProp props of
-    [] -> return Nothing
-    [expr] -> case expr of
-      Id name -> return (Just name)
-      _ -> do
-        tell (collectErrors [InvalidPattern $ getRange expr])
-        return Nothing
-    terms -> do
-      tell (collectErrors [MultipleSpreadPatterns $ map getRange terms])
-      return Nothing
+    [] -> return ()
+    [_] -> return ()
+    terms -> tell (collectErrors [MultipleSpreadPatterns $ map getRange terms])
 
-extractNamedProps :: [Prop Expr] -> RW VariantSpecs Errors [(Var, Pattern)]
-extractNamedProps props = do
-  let (names, exprs) = unzip (mapMaybe justNamedProp props)
+checkRepeatedNamedProps :: [Prop t] -> RW r Errors ()
+checkRepeatedNamedProps props = do
+  let names = (mapMaybe (fmap fst . justNamedProp) props)
   tell (collectErrors $ map RepeatedProp $ repeated names)
-  patts <- mapM transform exprs
-  return (zip names patts)
 
-handleVariant :: Bool -> Var -> [Prop t] -> RW VariantSpecs Errors ()
-handleVariant requireAllProps tag props = do
+checkVariant :: Var -> [Prop t] -> RW VariantSpecs Errors ()
+checkVariant tag props = do
   spec <- asks (M.lookup tag)
   case spec of
     Nothing -> tell (collectErrors [UndefinedVariant tag])
@@ -69,9 +57,24 @@ handleVariant requireAllProps tag props = do
       let names = S.fromList (mapMaybe (fmap fst . justNamedProp) props)
       let varntNames' = S.fromList varntNames
       when
-        requireAllProps
+        (null $ mapMaybe justSpreadProp props)
         (tell $ collectErrors $ map (RequiredProp tag) $ S.toList $ S.difference varntNames' names)
       tell (collectErrors $ map (InvalidProp tag) $ S.toList $ S.difference names varntNames')
+
+transformProp :: Prop Expr -> RW VariantSpecs Errors (Prop Pattern)
+transformProp (NamedProp name expr) = do
+  patt <- transform expr
+  return (NamedProp name patt)
+transformProp (SpreadProp expr) = do
+  patt <- transform expr
+  case patt of
+    (Patt.Capture _) -> return (SpreadProp patt)
+    _ -> do
+      tell (collectErrors [InvalidPattern $ getRange expr])
+      return $ SpreadProp $ errorPattern (getRange expr)
+transformProp (SelfProp name) = do
+  tell (collectErrors [InvalidPattern (getRange name)])
+  return (SelfProp name)
 
 transform :: Expr -> RW VariantSpecs Errors Pattern
 transform (Int v r) = return (Patt.Int v r)
@@ -79,16 +82,16 @@ transform (Float v r) = return (Patt.Float v r)
 transform (Str s r) = return (Patt.Str s r)
 transform (Unit r) = return (Patt.Unit r)
 transform (Obj props r) = do
-  checkSelfProps props
-  named <- extractNamedProps props
-  spread <- extractSpreadProp props
-  return (Patt.Obj named spread r)
+  checkRepeatedNamedProps props
+  checkMultipleSpreadProps props
+  props' <- mapM transformProp props
+  return (Patt.Obj props' r)
 transform (Variant tag props r) = do
-  checkSelfProps props
-  spread <- extractSpreadProp props
-  handleVariant (isNothing spread) tag props
-  named <- extractNamedProps props
-  return (Patt.Variant tag named spread r)
+  checkRepeatedNamedProps props
+  checkMultipleSpreadProps props
+  checkVariant tag props
+  props' <- mapM transformProp props
+  return (Patt.Variant tag props' r)
 transform (Tuple fst' snd' rest r) = do
   fst'' <- transform fst'
   snd'' <- transform snd'

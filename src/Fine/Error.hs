@@ -68,9 +68,9 @@ instance Show Error where
   show (SameInfixPrecedence _ _) =
     errorTODO
   show (InvalidPattern _) =
-    errorTODO
+    [i|This expression is not a valid pattern.|]
   show (MultipleSpreadPatterns _) =
-    errorTODO
+    [i|An object pattern cannot have multiple spread subpatterns.|]
 
 errorPrefix :: String
 errorPrefix = red "Error: "
@@ -93,7 +93,7 @@ instance Show Warning where
   show (UnusedFixity var) =
     [i|Fixity definition for #{hl var} lacks an accompanying binding.|]
   show (DebugKeywordUsage _) =
-    [i|Cosider removing the debug keyword since it produces an IO action.|]
+    [i|Consider removing the debug keyword because it produces an IO action.|]
 
 warningPrefix :: String
 warningPrefix = yellow "Warning: "

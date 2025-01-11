@@ -40,7 +40,7 @@ unions' :: (Foldable t) => t VarOcurrences -> VarOcurrences
 unions' = foldl union' M.empty
 
 propFreeVars :: Prop Expr -> Writer Errors VarOcurrences
-propFreeVars (NamedProp (_, expr)) = freeVars expr
+propFreeVars (NamedProp _ expr) = freeVars expr
 propFreeVars (SpreadProp expr) = freeVars expr
 propFreeVars (SelfProp var) = return (singleton' var)
 

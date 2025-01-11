@@ -119,7 +119,7 @@ data VariantSpec = VariantSpec
 type VariantSpecs = Map Var VariantSpec
 
 data Prop t
-  = NamedProp (Var, t)
+  = NamedProp Var t
   | SpreadProp t
   | SelfProp Var
   deriving (Show)
@@ -129,7 +129,7 @@ justSpreadProp (SpreadProp expr) = Just expr
 justSpreadProp _ = Nothing
 
 justNamedProp :: Prop t -> Maybe (Var, t)
-justNamedProp (NamedProp pair) = Just pair
+justNamedProp (NamedProp name value) = Just (name, value)
 justNamedProp _ = Nothing
 
 justSelfProp :: Prop t -> Maybe Var
