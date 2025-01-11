@@ -58,10 +58,10 @@ import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
 
 %%
 
-Module : Defns Entry  { Module (reverse $ $2 ++ $1) }
+Module : Defns Entry  { Module (reverse $1) $2 }
 
-Entry : run Expr    { [EntryDefn $2] }
-      | {- empty -} { [] }
+Entry : run Expr    { Just $2 }
+      | {- empty -} { Nothing }
 
 Prefix : id { mkVar $1 }
 

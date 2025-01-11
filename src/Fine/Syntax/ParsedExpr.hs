@@ -55,10 +55,10 @@ data Defn
   = Defn (Bind () Expr)
   | FixDefn Fixity Var
   | DtypeDefn [VariantSpec]
-  | EntryDefn Expr
   deriving (Show)
 
 data Module = Module
-  { definitions :: [Defn]
+  { definitions :: [Defn],
+    entryExpr :: Maybe Expr
   }
   deriving (Show)

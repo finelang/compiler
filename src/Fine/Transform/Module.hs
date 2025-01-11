@@ -28,8 +28,7 @@ data State = State
   { freeVars :: Set Var,
     closures :: Map Var (Closure Expr),
     fixities :: Fixities,
-    variantSpecs :: VariantSpecs,
-    entryClosure :: Maybe (Closure Expr)
+    variantSpecs :: VariantSpecs
   }
 
 extractCt :: VariantSpec -> SW State Errors (Bind () (Closure Expr))
@@ -83,7 +82,9 @@ transformDefns (P.Defn (Bind bder _ v) : defns) = do
   modify (\st -> st {freeVars = S.union currentFreeVars vFreeVars, closures = M.insert bder closure currentEnv})
   bs' <- transformDefns defns
   return (b' : bs')
-transformDefns (P.EntryDefn expr : _) = do
+
+transformEntryExpr :: P.Expr -> SW State Errors (Closure Expr)
+transformEntryExpr expr = do
   expr' <- transformExpr expr
   exprFreeVars <- do
     currentFreeVars <- gets freeVars
@@ -93,28 +94,30 @@ transformDefns (P.EntryDefn expr : _) = do
   closure <- do
     currentEnv <- gets closures
     return (Closure (M.restrictKeys currentEnv exprFreeVars) expr' Nothing)
-  modify (\st -> st {entryClosure = Just closure})
-  return [] -- if entry defn exists, it should be the last
+  return closure
 
-checkUnusedTopBinds :: [Bind () (Closure v)] -> Errors
-checkUnusedTopBinds bs =
+checkUnusedTopBinds :: [Bind () (Closure v)] -> Maybe (Closure v) -> Errors
+checkUnusedTopBinds bs optCl =
   let used = S.fromList $ concat $ map (closureVars . boundValue) bs
+      used' = case optCl of
+        Just (Closure env _ _) -> S.union used (M.keysSet env)
+        _ -> used
       binders = S.fromList $ map binder bs
-   in collectWarnings $ map UnusedVar $ S.toList $ S.difference binders used
+   in collectWarnings $ map UnusedVar $ S.toList $ S.difference binders used'
 
 transform :: P.Module -> SW State Errors Module
-transform (P.Module defns) = do
+transform (P.Module defns optExpr) = do
   bindings <- transformDefns defns
-  tell (checkUnusedTopBinds bindings)
+  optClosure <- mapM transformEntryExpr optExpr
+  tell (checkUnusedTopBinds bindings optClosure)
   fixities' <- gets fixities
   specs <- gets variantSpecs
-  entry <- gets entryClosure
-  return $ case entry of
+  return $ case optClosure of
     Nothing -> Module bindings fixities' specs
     Just closure -> EntryModule bindings fixities' specs closure
 
 runTransform :: P.Module -> (Either [Error] Module, [Warning])
 runTransform mdule =
-  let st = State S.empty M.empty M.empty M.empty Nothing
+  let st = State S.empty M.empty M.empty M.empty
       (mdule', _, (errors, warnings)) = runSW (transform mdule) st
    in (if null errors then Right mdule' else Left errors, warnings)
