@@ -73,7 +73,7 @@ Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
 Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
-     | Ext let Prefix                     { Defn (Bind $3 () (ExtExpr $1)) }
+     | ExtExpr let Prefix                 { Defn (Bind $3 () $1) }
      | let Prefix '(' Params ')' '=' Expr { Defn (Bind $2 () (Fun (reverse $4) $7 (getRange ($2, $7)))) }
      | let Prefix Infix Prefix '=' Expr   { Defn (Bind $3 () (Fun [$2, $4] $6 (getRange ($2, $6)))) }
      | Fix Infix                          { FixDefn $1 $2 }
@@ -144,6 +144,8 @@ Prop : Prefix '=' Expr  { NamedProp $1 $3 }
      | '=' Prefix       { SelfProp $2 }
 
 Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
+
+ExtExpr : Ext { ExtExpr $1 }
 
 {
 mkVar tok = Var (tokenLexeme tok) (getRange tok)
