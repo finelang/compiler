@@ -9,8 +9,8 @@ import Fine.Error
   ( Error (SameInfixPrecedence),
     Errors,
     Warning (MissingFixity),
-    collectErrors,
-    collectWarnings,
+    collectError,
+    collectWarning,
     errorUNREACHABLE,
   )
 import Fine.Syntax.Common (Assoc (..), Fixities, Fixity (..), HasRange (getRange), OpChain (..), Var)
@@ -27,7 +27,7 @@ findFixity var = do
   case maybeFix of
     Just fix -> return fix
     Nothing -> do
-      tell (collectWarnings [MissingFixity var defaultFixity])
+      tell (collectWarning $ MissingFixity var defaultFixity)
       return defaultFixity
 
 operatorStack :: SYStack -> [Var]
@@ -73,7 +73,7 @@ sy' curr chain = do
           _ -> do
             when
               (currAssoc == NonAssoc)
-              (tell $ collectErrors [SameInfixPrecedence (top, topFix) (curr, currFix)])
+              (tell $ collectError $ SameInfixPrecedence (top, topFix) (curr, currFix))
             continueWithChain curr chain
         LT -> continueWithChain curr chain
 

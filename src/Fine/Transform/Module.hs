@@ -7,7 +7,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
-import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectErrors, collectWarnings)
+import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectError, collectErrors, collectWarnings)
 import Fine.Syntax.Common
   ( Bind (Bind),
     Fixities,
@@ -37,7 +37,7 @@ extractCt spec@(VariantSpec var props _ r) = do
   tell (collectErrors $ map RepeatedProp $ repeated props)
   specs <- gets variantSpecs
   if M.member var specs
-    then tell (collectErrors [RepeatedVariant var])
+    then tell (collectError $ RepeatedVariant var)
     else modify (\st -> st {variantSpecs = M.insert var spec specs})
   let props' = map (\prop -> SelfProp prop) props
   let varnt = Variant var props' r
@@ -57,10 +57,10 @@ transformExpr expr = do
 transformDefns :: [P.Defn] -> SW State Errors [Bind () (Closure Expr)]
 transformDefns [] = return []
 transformDefns (P.FixDefn fix@(Fixity _ prec) op : defns) = do
-  unless (0 <= prec && prec < 10) (tell $ collectErrors [InvalidPrecedence 0 10 op]) -- TODO: read from some config
+  unless (0 <= prec && prec < 10) (tell $ collectError $ InvalidPrecedence 0 10 op) -- TODO: read from some config
   fixities' <- gets fixities
   if M.member op fixities'
-    then tell (collectErrors [RepeatedFixity op])
+    then tell (collectError $ RepeatedFixity op)
     else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
   transformDefns defns
 transformDefns (P.DtypeDefn specs : defns) = do
@@ -72,7 +72,7 @@ transformDefns (P.Defn (Bind bder _ v) : defns) = do
   currentFreeVars <- do
     vs <- gets freeVars
     if S.member bder vs
-      then tell (collectErrors [RepeatedVar bder]) >> return vs
+      then tell (collectError $ RepeatedVar bder) >> return vs
       else return (S.insert bder vs)
   let (vFreeVars, fvErrors) = runFreeVars currentFreeVars v'
   tell fvErrors

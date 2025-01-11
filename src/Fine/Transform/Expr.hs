@@ -5,7 +5,7 @@ import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
 import Data.Maybe (mapMaybe)
-import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectErrors, collectWarnings)
+import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectErrors, collectWarning)
 import Fine.Syntax.Common (Fixities, OpChain (..), Prop (..), VariantSpecs, justNamedProp)
 import Fine.Syntax.Expr (Expr (..))
 import qualified Fine.Syntax.ParsedExpr as P
@@ -111,7 +111,7 @@ transform (P.Chain chain) = do
   withReader fixities (shuntingYard chain')
 transform (P.ExtExpr ext) = return (ExtExpr ext)
 transform (P.Debug expr r) = do
-  tell (collectWarnings [DebugKeywordUsage r])
+  tell (collectWarning $ DebugKeywordUsage r)
   expr' <- transform expr
   return (Debug expr' r)
 

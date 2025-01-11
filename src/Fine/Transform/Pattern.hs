@@ -16,6 +16,7 @@ import Fine.Error
         UndefinedVariant
       ),
     Errors,
+    collectError,
     collectErrors,
   )
 import Fine.Syntax.Common
@@ -41,7 +42,7 @@ checkMultipleSpreadProps props =
   case mapMaybe justSpreadProp props of
     [] -> return ()
     [_] -> return ()
-    terms -> tell (collectErrors [MultipleSpreadPatterns $ map getRange terms])
+    terms -> tell (collectError $ MultipleSpreadPatterns $ map getRange terms)
 
 checkRepeatedNamedProps :: [Prop t] -> RW r Errors ()
 checkRepeatedNamedProps props = do
@@ -52,7 +53,7 @@ checkVariant :: Var -> [Prop t] -> RW VariantSpecs Errors ()
 checkVariant tag props = do
   spec <- asks (M.lookup tag)
   case spec of
-    Nothing -> tell (collectErrors [UndefinedVariant tag])
+    Nothing -> tell (collectError $ UndefinedVariant tag)
     Just (VariantSpec _ varntNames _ _) -> do
       let names = S.fromList (mapMaybe (fmap fst . justNamedProp) props)
       let varntNames' = S.fromList varntNames
@@ -70,10 +71,10 @@ transformProp (SpreadProp expr) = do
   case patt of
     (Patt.Capture _) -> return (SpreadProp patt)
     _ -> do
-      tell (collectErrors [InvalidPattern $ getRange expr])
+      tell (collectError $ InvalidPattern $ getRange expr)
       return $ SpreadProp $ errorPattern (getRange expr)
 transformProp (SelfProp name) = do
-  tell (collectErrors [InvalidPattern (getRange name)])
+  tell (collectError $ InvalidPattern (getRange name))
   return (SelfProp name)
 
 transform :: Expr -> RW VariantSpecs Errors Pattern
@@ -101,7 +102,7 @@ transform (Id var) = return (Patt.Capture var)
 transform (Parens expr) = transform expr
 transform expr = do
   let r = getRange expr
-  tell (collectErrors [InvalidPattern r])
+  tell (collectError $ InvalidPattern r)
   return (errorPattern r)
 
 runTransform :: VariantSpecs -> Expr -> (Pattern, Errors)

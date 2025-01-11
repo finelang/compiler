@@ -5,7 +5,9 @@ module Fine.Error
     Warning (..),
     Error (..),
     collectErrors,
+    collectError,
     collectWarnings,
+    collectWarning,
     errorTODO,
     errorUNREACHABLE,
     wrapWarning,
@@ -103,8 +105,14 @@ wrapWarning wrn = [i|#{warningPrefix}#{wrn}|]
 
 type Errors = ([Error], [Warning])
 
+collectError :: Error -> Errors
+collectError err = ([err], [])
+
 collectErrors :: [Error] -> Errors
 collectErrors errs = (errs, [])
+
+collectWarning :: Warning -> Errors
+collectWarning wrn = ([], [wrn])
 
 collectWarnings :: [Warning] -> Errors
 collectWarnings wrns = ([], wrns)
