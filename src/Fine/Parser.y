@@ -27,6 +27,7 @@ import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 
 %token
   ext     { Token ExtTok _ _ }
+  extop   { Token ExtOp _ _ }
   run     { Token Run _ _ }
   else    { Token Else _ _ }
   data    { Token Data _ _ }
@@ -76,6 +77,8 @@ Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
      | ExtExpr let Prefix                 { Defn (Bind $3 () $1) }
      | let Prefix '(' Params ')' '=' Expr { Defn (Bind $2 () (Fun (reverse $4) $7 (getRange ($2, $7)))) }
      | let Prefix Infix Prefix '=' Expr   { Defn (Bind $3 () (Fun [$2, $4] $6 (getRange ($2, $6)))) }
+     | ExtExpr let Prefix Infix Prefix    { Defn (Bind $4 () (Fun [$3, $5] $1 (getRange ($3, $5)))) }
+     | ExtOp let Prefix Infix Prefix      { Defn (Bind $4 () (Fun [$3, $5] (ExtOpApp $1 (Id $3) (Id $5)) (getRange ($3, $5)))) }
      | Fix Infix                          { FixDefn $1 $2 }
      | data '{' Varnts '}'                { DtypeDefn (reverse $3) }
 
@@ -144,6 +147,8 @@ Prop : Prefix '=' Expr  { NamedProp $1 $3 }
      | '=' Prefix       { NamedProp $2 (Id $2) }
 
 Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
+
+ExtOp : extop str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
 
 ExtExpr : Ext { ExtExpr $1 }
 

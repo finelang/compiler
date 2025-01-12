@@ -133,6 +133,10 @@ transform (P.Chain chain) = do
   chain' <- transformChain chain
   withReader fixities (shuntingYard chain')
 transform (P.ExtExpr ext) = return (ExtExpr ext)
+transform (P.ExtOpApp ext l r) = do
+  l' <- transform l
+  r' <- transform r
+  return (ExtOpApp ext l' r')
 transform (P.Debug expr r) = do
   tell (collectWarning $ DebugKeywordUsage r)
   expr' <- transform expr
