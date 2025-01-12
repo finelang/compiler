@@ -14,6 +14,7 @@ import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Fine.Error (errorUNREACHABLE)
+import Fine.Syntax (Closure (Closure), Expr (..), Module (..), Pattern (..), boundVars)
 import Fine.Syntax.Common
   ( Bind (..),
     Ext (Ext),
@@ -22,9 +23,6 @@ import Fine.Syntax.Common
     VariantSpec (variantExtValue),
     varName,
   )
-import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (EntryModule, Module))
-import Fine.Syntax.Pattern (Pattern)
-import qualified Fine.Syntax.Pattern as Patt
 
 class CodeGens t ctx where
   genCode :: t -> Reader ctx Text
@@ -57,23 +55,23 @@ genPatternPropCode (NamedProp name patt) = do
   patt' <- genCode patt
   return [i|#{name}: #{patt'}|]
 genPatternPropCode (SpreadProp patt) = case patt of
-  (Patt.Capture name) -> return [i|...fine$captureObj("#{name}")|]
+  (Capture name) -> return [i|...fine$captureObj("#{name}")|]
   _ -> errorUNREACHABLE
-genPatternPropCode (SelfProp name) = genPatternPropCode (NamedProp name (Patt.Capture name))
+genPatternPropCode (SelfProp name) = genPatternPropCode (NamedProp name (Capture name))
 
 genPatternPropsCode :: [Prop Pattern] -> Reader Ctx Text
 genPatternPropsCode props = T.intercalate ", " <$> mapM genPatternPropCode props
 
 instance CodeGens Pattern Ctx where
   genCode :: Pattern -> Reader Ctx Text
-  genCode (Patt.Int v _) = return (T.pack $ show v)
-  genCode (Patt.Float v _) = return (T.pack $ show v)
-  genCode (Patt.Str s _) = return [i|"#{s}"|]
-  genCode (Patt.Unit _) = return "fine$unit"
-  genCode (Patt.Obj props _) = do
+  genCode (IntPatt v _) = return (T.pack $ show v)
+  genCode (FloatPatt v _) = return (T.pack $ show v)
+  genCode (StrPatt s _) = return [i|"#{s}"|]
+  genCode (UnitPatt _) = return "fine$unit"
+  genCode (ObjPatt props _) = do
     props' <- genPatternPropsCode props
     return [i|({#{props'}})|]
-  genCode (Patt.Variant tag props _) = do
+  genCode (VariantPatt tag props _) = do
     extValue <- asks (M.lookup tag . variantExtValues)
     case extValue of
       Nothing -> do
@@ -84,7 +82,7 @@ instance CodeGens Pattern Ctx where
             then [i|({#{tagged}})|]
             else [i|({#{tagged}, #{props'}})|]
       Just (Ext code _) -> return code
-  genCode (Patt.Tuple fst' snd' rest _) = do
+  genCode (TuplePatt fst' snd' rest _) = do
     fst'' <- genCode fst'
     snd'' <- genCode snd'
     rest' <-
@@ -92,7 +90,7 @@ instance CodeGens Pattern Ctx where
         then return ""
         else mapM genCode rest >>= (return . T.append ", " . T.intercalate ", ")
     return [i|fine$tuple(#{fst''}, #{snd''}#{rest'})|]
-  genCode (Patt.Capture (Var name _)) = return [i|fine$capture("#{name}")|]
+  genCode (Capture (Var name _)) = return [i|fine$capture("#{name}")|]
 
 instance (CodeGens t Ctx) => CodeGens (Prop t) Ctx where
   genCode :: Prop t -> Reader Ctx Text
@@ -112,7 +110,7 @@ genMatchCode (patt, expr) = do
   oldIndent <- asks indentation
   indent <- increaseIndentation
   patt' <- genCode patt
-  expr' <- local (withIndentation indent) (genFunCode True "" (Patt.boundVars patt) expr)
+  expr' <- local (withIndentation indent) (genFunCode True "" (boundVars patt) expr)
   return [i|[\n#{indent}#{patt'},\n#{indent}#{expr'}\n#{oldIndent}]|]
 
 genStmtsCode :: NonEmpty Expr -> Reader Ctx Text
@@ -208,15 +206,15 @@ instance CodeGens (Bind () (Closure Expr)) Ctx where
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
-  genCode (Module bindings _ specs) = do
+  genCode (Module binds _ specs) = do
     let extValues = M.mapMaybe variantExtValue specs
     stmts <-
       local
         (\ctx -> ctx {variantExtValues = M.union extValues (variantExtValues ctx)})
-        (mapM genCode bindings)
+        (mapM genCode binds)
     return (T.intercalate "\n\n" stmts)
-  genCode (EntryModule bindings fixs specs (Closure _ expr _)) = do
-    code <- genCode (Module bindings fixs specs)
+  genCode (EntryModule binds fixs specs (Closure _ expr _)) = do
+    code <- genCode (Module binds fixs specs)
     entry <- genCode expr
     return [i|#{code}\n\n#{entry};|]
 

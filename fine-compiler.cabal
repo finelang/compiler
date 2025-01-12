@@ -33,10 +33,9 @@ library
       Fine.Error
       Fine.Lexer
       Fine.Parser
+      Fine.Syntax
       Fine.Syntax.Common
-      Fine.Syntax.Expr
-      Fine.Syntax.ParsedExpr
-      Fine.Syntax.Pattern
+      Fine.Syntax.Parsed
       Fine.Transform
       Fine.Transform.Expr
       Fine.Transform.FreeVars

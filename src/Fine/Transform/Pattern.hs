@@ -19,6 +19,7 @@ import Fine.Error
     collectError,
     collectErrors,
   )
+import Fine.Syntax (Pattern (..))
 import Fine.Syntax.Common
   ( HasRange,
     Prop (..),
@@ -30,12 +31,10 @@ import Fine.Syntax.Common
     justNamedProp,
     justSpreadProp,
   )
-import Fine.Syntax.ParsedExpr (Expr (..))
-import Fine.Syntax.Pattern (Pattern)
-import qualified Fine.Syntax.Pattern as Patt
+import Fine.Syntax.Parsed (Expr (..))
 
 errorPattern :: Range -> Pattern
-errorPattern = Patt.Unit
+errorPattern = UnitPatt
 
 checkMultipleSpreadProps :: (HasRange t) => [Prop t] -> RW r Errors ()
 checkMultipleSpreadProps props =
@@ -69,7 +68,7 @@ transformProp (NamedProp name expr) = do
 transformProp (SpreadProp expr) = do
   patt <- transform expr
   case patt of
-    (Patt.Capture _) -> return (SpreadProp patt)
+    (Capture _) -> return (SpreadProp patt)
     _ -> do
       tell (collectError $ InvalidPattern $ getRange expr)
       return $ SpreadProp $ errorPattern (getRange expr)
@@ -78,27 +77,27 @@ transformProp (SelfProp name) = do
   return (SelfProp name)
 
 transform :: Expr -> RW VariantSpecs Errors Pattern
-transform (Int v r) = return (Patt.Int v r)
-transform (Float v r) = return (Patt.Float v r)
-transform (Str s r) = return (Patt.Str s r)
-transform (Unit r) = return (Patt.Unit r)
+transform (Int v r) = return (IntPatt v r)
+transform (Float v r) = return (FloatPatt v r)
+transform (Str s r) = return (StrPatt s r)
+transform (Unit r) = return (UnitPatt r)
 transform (Obj props r) = do
   checkRepeatedNamedProps props
   checkMultipleSpreadProps props
   props' <- mapM transformProp props
-  return (Patt.Obj props' r)
+  return (ObjPatt props' r)
 transform (Variant tag props r) = do
   checkRepeatedNamedProps props
   checkMultipleSpreadProps props
   checkVariant tag props
   props' <- mapM transformProp props
-  return (Patt.Variant tag props' r)
+  return (VariantPatt tag props' r)
 transform (Tuple fst' snd' rest r) = do
   fst'' <- transform fst'
   snd'' <- transform snd'
   rest' <- mapM transform rest
-  return (Patt.Tuple fst'' snd'' rest' r)
-transform (Id var) = return (Patt.Capture var)
+  return (TuplePatt fst'' snd'' rest' r)
+transform (Id var) = return (Capture var)
 transform (Parens expr) = transform expr
 transform expr = do
   let r = getRange expr

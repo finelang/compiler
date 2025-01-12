@@ -18,7 +18,7 @@ import Fine.Syntax.Common
     Ext (Ext),
     Prop (..)
   )
-import Fine.Syntax.ParsedExpr (Defn (..), Expr (..), Module (Module))
+import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 }
 
 %name parseTokens

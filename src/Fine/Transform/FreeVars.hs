@@ -15,9 +15,8 @@ import Fine.Error
     collectErrors,
     collectWarnings,
   )
+import Fine.Syntax (Expr (..), boundVars)
 import Fine.Syntax.Common (Prop (..), Var)
-import Fine.Syntax.Expr (Expr (..))
-import Fine.Syntax.Pattern (boundVars)
 
 handleBoundVars :: [Var] -> Writer Errors (Set Var)
 handleBoundVars vars = do

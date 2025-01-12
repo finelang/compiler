@@ -13,8 +13,8 @@ import Fine.Error
     collectWarning,
     errorUNREACHABLE,
   )
+import Fine.Syntax (Expr (..))
 import Fine.Syntax.Common (Assoc (..), Fixities, Fixity (..), HasRange (getRange), OpChain (..), Var)
-import Fine.Syntax.Expr (Expr (..))
 
 type SYStack = ([Expr], [Var])
 

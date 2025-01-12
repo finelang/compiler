@@ -6,10 +6,9 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
 import Data.Maybe (mapMaybe)
 import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectErrors, collectWarning)
+import Fine.Syntax (Expr (..), Pattern)
 import Fine.Syntax.Common (Fixities, OpChain (..), Prop (..), VariantSpecs, justNamedProp)
-import Fine.Syntax.Expr (Expr (..))
-import qualified Fine.Syntax.ParsedExpr as P
-import Fine.Syntax.Pattern (Pattern)
+import qualified Fine.Syntax.Parsed as P
 import qualified Fine.Transform.Pattern as PattT
 import Fine.Transform.ShuntingYard (runSy)
 

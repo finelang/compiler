@@ -1,12 +1,67 @@
-module Fine.Syntax.Expr (Expr (..), Closure (..), Module (..), closureVars) where
+module Fine.Syntax
+  ( Pattern (..),
+    Expr (..),
+    Closure (..),
+    Module (..),
+    boundVars,
+    closureVars,
+  )
+where
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (maybeToList)
 import Data.Text (Text)
-import Fine.Syntax.Common (Bind, Ext, Fixities, HasRange (..), Prop (..), Range, Var (Var), VariantSpecs)
-import Fine.Syntax.Pattern (Pattern)
+import Fine.Syntax.Common
+  ( Bind,
+    Ext,
+    Fixities,
+    HasRange (..),
+    Prop (..),
+    Range,
+    Var (Var),
+    VariantSpecs,
+  )
+
+data Pattern
+  = IntPatt Int Range
+  | FloatPatt Float Range
+  | StrPatt Text Range
+  | UnitPatt Range
+  | ObjPatt [Prop Pattern] Range
+  | VariantPatt Var [Prop Pattern] Range
+  | TuplePatt Pattern Pattern [Pattern] Range
+  | Capture Var
+  deriving (Show)
+
+instance HasRange Pattern where
+  getRange :: Pattern -> Range
+  getRange (IntPatt _ r) = r
+  getRange (FloatPatt _ r) = r
+  getRange (StrPatt _ r) = r
+  getRange (UnitPatt r) = r
+  getRange (ObjPatt _ r) = r
+  getRange (VariantPatt _ _ r) = getRange r
+  getRange (TuplePatt _ _ _ r) = r
+  getRange (Capture (Var _ r)) = r
+
+propBoundVars :: Prop Pattern -> [Var]
+propBoundVars (NamedProp _ patt) = boundVars patt
+propBoundVars (SelfProp name) = [name]
+propBoundVars (SpreadProp patt) = case patt of
+  (Capture name) -> [name]
+  _ -> []
+
+boundVars :: Pattern -> [Var]
+boundVars (IntPatt _ _) = []
+boundVars (FloatPatt _ _) = []
+boundVars (StrPatt _ _) = []
+boundVars (UnitPatt _) = []
+boundVars (ObjPatt props _) = concat (map propBoundVars props)
+boundVars (VariantPatt _ props _) = concat (map propBoundVars props)
+boundVars (TuplePatt fst' snd' rest _) = concat $ map boundVars (fst' : snd' : rest)
+boundVars (Capture var) = [var]
 
 data Expr
   = Int Int Range

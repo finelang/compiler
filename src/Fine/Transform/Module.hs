@@ -8,6 +8,7 @@ import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectError, collectErrors, collectWarnings)
+import Fine.Syntax (Closure (Closure), Expr (..), Module (EntryModule, Module), closureVars)
 import Fine.Syntax.Common
   ( Bind (Bind),
     Fixities,
@@ -19,8 +20,7 @@ import Fine.Syntax.Common
     binder,
     boundValue,
   )
-import Fine.Syntax.Expr (Closure (Closure), Expr (..), Module (EntryModule, Module), closureVars)
-import qualified Fine.Syntax.ParsedExpr as P
+import qualified Fine.Syntax.Parsed as P
 import qualified Fine.Transform.Expr as TE (runTransform)
 import Fine.Transform.FreeVars (runFreeVars)
 

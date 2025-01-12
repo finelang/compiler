@@ -1,4 +1,4 @@
-module Fine.Syntax.ParsedExpr
+module Fine.Syntax.Parsed
   ( Defn (..),
     Expr (..),
     Module (..),
