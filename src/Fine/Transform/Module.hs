@@ -13,7 +13,7 @@ import Fine.Syntax.Common
   ( Bind (Bind),
     Fixities,
     Fixity (Fixity),
-    Prop (SelfProp),
+    Prop (NamedProp),
     Var,
     VariantSpec (VariantSpec),
     VariantSpecs,
@@ -38,7 +38,7 @@ extractCt spec@(VariantSpec var props _ r) = do
   if M.member var specs
     then tell (collectError $ RepeatedVariant var)
     else modify (\st -> st {variantSpecs = M.insert var spec specs})
-  let props' = map (\prop -> SelfProp prop) props
+  let props' = map (\prop -> NamedProp prop (Id prop)) props
   let varnt = Variant var props' r
   let value = if null props then varnt else Fun props varnt r
   let closure = Closure M.empty value Nothing

@@ -1,13 +1,25 @@
 module Fine.Transform.Expr (runTransform) where
 
-import Control.Monad.Trans.RW (RW, ask, runRW, tell, withReader)
+import Control.Monad (when)
+import Control.Monad.Trans.RW (RW, ask, asks, runRW, tell, withReader)
 import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
+import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
-import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectErrors, collectWarning)
+import qualified Data.Set as S
+import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectError, collectErrors, collectWarning)
 import Fine.Syntax (Expr (..), Pattern)
-import Fine.Syntax.Common (Fixities, OpChain (..), Prop (..), VariantSpecs, justNamedProp)
+import Fine.Syntax.Common
+  ( Fixities,
+    OpChain (..),
+    Prop (..),
+    Var,
+    VariantSpec (..),
+    VariantSpecs,
+    justNamedProp,
+    justSpreadProp,
+  )
 import qualified Fine.Syntax.Parsed as P
 import qualified Fine.Transform.Pattern as PattT
 import Fine.Transform.ShuntingYard (runSy)
@@ -31,6 +43,19 @@ transformChain (Operation left op chain) = do
   chain' <- transformChain chain
   return (Operation left' op chain')
 
+checkVariant :: Var -> [Prop t] -> RW VariantSpecs Errors ()
+checkVariant tag props = do
+  spec <- asks (M.lookup tag)
+  case spec of
+    Nothing -> tell (collectError $ UndefinedVariant tag)
+    Just (VariantSpec _ varntNames _ _) -> do
+      let names = S.fromList (mapMaybe (fmap fst . justNamedProp) props)
+      let varntNames' = S.fromList varntNames
+      when
+        (null $ mapMaybe justSpreadProp props)
+        (tell $ collectErrors $ map (RequiredProp tag) $ S.toList $ S.difference varntNames' names)
+      tell (collectErrors $ map (InvalidProp tag) $ S.toList $ S.difference names varntNames')
+
 transformToPatt :: P.Expr -> RW VariantSpecs Errors Pattern
 transformToPatt expr = do
   specs <- ask
@@ -43,7 +68,6 @@ transformProp (NamedProp name expr) = do
   expr' <- transform expr
   return (NamedProp name expr')
 transformProp (SpreadProp expr) = SpreadProp <$> transform expr
-transformProp (SelfProp name) = return (SelfProp name)
 
 transformProps :: [Prop P.Expr] -> RW Ctx Errors [Prop Expr]
 transformProps props = do
@@ -64,7 +88,7 @@ transform (P.Variant tag props r) =
     then return (Id tag)
     else do
       props' <- transformProps props
-      withReader variantSpecs (PattT.checkVariant tag props')
+      withReader variantSpecs (checkVariant tag props')
       return (Variant tag props' r)
 transform (P.Tuple fst' snd' rest r) = do
   fst'' <- transform fst'

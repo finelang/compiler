@@ -1,5 +1,6 @@
 module Fine.Syntax
   ( Pattern (..),
+    PropsPattern (..),
     Expr (..),
     Closure (..),
     Module (..),
@@ -24,13 +25,16 @@ import Fine.Syntax.Common
     VariantSpecs,
   )
 
+data PropsPattern = PropsPattern [(Var, Pattern)] (Maybe Var)
+  deriving (Show)
+
 data Pattern
   = IntPatt Int Range
   | FloatPatt Float Range
   | StrPatt Text Range
   | UnitPatt Range
-  | ObjPatt [Prop Pattern] Range
-  | VariantPatt Var [Prop Pattern] Range
+  | ObjPatt PropsPattern Range
+  | VariantPatt Var PropsPattern Range
   | TuplePatt Pattern Pattern [Pattern] Range
   | Capture Var
   deriving (Show)
@@ -46,20 +50,19 @@ instance HasRange Pattern where
   getRange (TuplePatt _ _ _ r) = r
   getRange (Capture (Var _ r)) = r
 
-propBoundVars :: Prop Pattern -> [Var]
-propBoundVars (NamedProp _ patt) = boundVars patt
-propBoundVars (SelfProp name) = [name]
-propBoundVars (SpreadProp patt) = case patt of
-  (Capture name) -> [name]
-  _ -> []
+propsBoundVars :: PropsPattern -> [Var]
+propsBoundVars (PropsPattern named objCapture) =
+  let fromNamed = concat (map (boundVars . snd) named)
+      fromObjCapture = maybeToList objCapture
+   in fromObjCapture ++ fromNamed
 
 boundVars :: Pattern -> [Var]
 boundVars (IntPatt _ _) = []
 boundVars (FloatPatt _ _) = []
 boundVars (StrPatt _ _) = []
 boundVars (UnitPatt _) = []
-boundVars (ObjPatt props _) = concat (map propBoundVars props)
-boundVars (VariantPatt _ props _) = concat (map propBoundVars props)
+boundVars (ObjPatt props _) = propsBoundVars props
+boundVars (VariantPatt _ props _) = propsBoundVars props
 boundVars (TuplePatt fst' snd' rest _) = concat $ map boundVars (fst' : snd' : rest)
 boundVars (Capture var) = [var]
 

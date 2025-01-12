@@ -41,7 +41,6 @@ unions' = foldl union' M.empty
 propFreeVars :: Prop Expr -> Writer Errors VarOcurrences
 propFreeVars (NamedProp _ expr) = freeVars expr
 propFreeVars (SpreadProp expr) = freeVars expr
-propFreeVars (SelfProp var) = return (singleton' var)
 
 freeVars :: Expr -> Writer Errors VarOcurrences
 freeVars (Int _ _) = return M.empty

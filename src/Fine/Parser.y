@@ -141,7 +141,7 @@ Obj : Obj ',' Prop  { $3 : $1 }
 
 Prop : Prefix '=' Expr  { NamedProp $1 $3 }
      | '...' Expr       { SpreadProp $2 }
-     | '=' Prefix       { SelfProp $2 }
+     | '=' Prefix       { NamedProp $2 (Id $2) }
 
 Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
 
