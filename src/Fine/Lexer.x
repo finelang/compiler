@@ -35,7 +35,6 @@ tokens :-
   $white+                     ;
   "--"\-*[^$symbol].*         ;
   "#external"                 { mkt ExtTok }
-  "#external-op"              { mkt ExtOp }
   "#run"                      { mkt Run }
   "else"                      { mkt Else }
   "data"                      { mkt Data }

@@ -26,7 +26,7 @@ data Expr
   | Parens Expr
   | Block (NonEmpty Expr) Range
   | Chain (OpChain Expr)
-  | ExtExpr Ext
+  | ExtId Ext
   | ExtOpApp Ext Expr Expr
   | Debug Expr Range
   deriving (Show)
@@ -49,7 +49,7 @@ instance HasRange Expr where
   getRange (Parens expr) = getRange expr
   getRange (Block _ r) = r
   getRange (Chain chain) = getRange chain
-  getRange (ExtExpr ext) = getRange ext
+  getRange (ExtId ext) = getRange ext
   getRange (ExtOpApp ext _ _) = getRange ext
   getRange (Debug _ r) = r
 

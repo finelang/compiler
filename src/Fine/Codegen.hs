@@ -185,7 +185,7 @@ instance CodeGens Expr Ctx where
     content <- genStmtsCode exprs
     return [i|(() => #{content})()|]
   genCode (Parens expr) = genCode expr
-  genCode (ExtExpr (Ext code _)) = return code
+  genCode (ExtId (Ext code _)) = return code
   genCode (ExtOpApp (Ext op _) l r) = do
     l' <- genCode l
     r' <- genCode r

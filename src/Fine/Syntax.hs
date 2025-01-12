@@ -82,7 +82,7 @@ data Expr
   | Fun [Var] Expr Range
   | Parens Expr
   | Block (NonEmpty Expr) Range
-  | ExtExpr Ext
+  | ExtId Ext
   | ExtOpApp Ext Expr Expr
   | Debug Expr Range
   deriving (Show)
@@ -104,7 +104,7 @@ instance HasRange Expr where
   getRange (Fun _ _ r) = r
   getRange (Block _ r) = r
   getRange (Parens expr) = getRange expr
-  getRange (ExtExpr ext) = getRange ext
+  getRange (ExtId ext) = getRange ext
   getRange (ExtOpApp ext _ _) = getRange ext
   getRange (Debug _ r) = r
 

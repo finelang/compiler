@@ -72,7 +72,7 @@ freeVars (Fun params body _) = do
   return (M.difference bodyVars params')
 freeVars (Parens expr) = freeVars expr
 freeVars (Block exprs _) = unions' <$> mapM freeVars exprs
-freeVars (ExtExpr _) = return M.empty
+freeVars (ExtId _) = return M.empty
 freeVars (ExtOpApp _ l r) = unions' <$> mapM freeVars [l, r]
 freeVars (Debug expr _) = freeVars expr
 

@@ -132,7 +132,7 @@ transform (P.Block exprs r) = do
 transform (P.Chain chain) = do
   chain' <- transformChain chain
   withReader fixities (shuntingYard chain')
-transform (P.ExtExpr ext) = return (ExtExpr ext)
+transform (P.ExtId ext) = return (ExtId ext)
 transform (P.ExtOpApp ext l r) = do
   l' <- transform l
   r' <- transform r
