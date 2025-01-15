@@ -1,6 +1,6 @@
 module Fine.Transform.Expr (runTransform) where
 
-import Control.Monad (when)
+import Control.Monad (forM_, when)
 import Control.Monad.Trans.RW (RW, ask, asks, runRW, tell, withReader)
 import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -9,7 +9,7 @@ import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectError, collectErrors, collectWarning)
-import Fine.Syntax (Expr (..), Pattern)
+import Fine.Syntax (Expr (..), Pattern, boundVars)
 import Fine.Syntax.Common
   ( Fixities,
     OpChain (..),
@@ -111,6 +111,9 @@ transform (P.Cond cond yes no r) = do
 transform (P.PatternMatch expr matches r) = do
   expr' <- transform expr
   patterns' <- withReader variantSpecs (mapM (transformToPatt . fst) matches)
+  forM_
+    patterns'
+    (tell . collectErrors . map RepeatedVar . repeated . boundVars)
   exprs' <- mapM (transform . snd) matches
   return $ PatternMatch expr' (L.zip patterns' exprs') r
 transform (P.Fun params body r) = do

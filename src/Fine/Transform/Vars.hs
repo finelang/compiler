@@ -2,14 +2,13 @@ module Fine.Transform.Vars (handleVars) where
 
 import Control.Monad (forM_)
 import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
-import Data.List.Extra (repeated)
 import qualified Data.List.NonEmpty as L
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error
-  ( Error (RepeatedVar, UndefinedVar),
+  ( Error (UndefinedVar),
     Errors,
     Warning (UnusedVar),
     collectErrors,
@@ -17,11 +16,6 @@ import Fine.Error
   )
 import Fine.Syntax (Expr (..), boundVars)
 import Fine.Syntax.Common (Prop (..), Var)
-
-handleBoundVars :: [Var] -> Writer Errors (Set Var)
-handleBoundVars vars = do
-  tell (collectErrors $ map RepeatedVar $ repeated vars)
-  return (S.fromList vars)
 
 checkUnusedBoundVars :: Set Var -> Set Var -> Writer Errors ()
 checkUnusedBoundVars free bound =
@@ -59,9 +53,9 @@ freeVars (Access expr _) = freeVars expr
 freeVars (Cond cond yes no _) = unions' <$> mapM freeVars [cond, yes, no]
 freeVars (PatternMatch expr matches _) = do
   exprVars <- freeVars expr
-  let matches' = L.toList matches
-  boundVarsList <- mapM (handleBoundVars . boundVars . fst) matches'
-  freeVarsList <- mapM (freeVars . snd) matches'
+  let (patts, exprs) = unzip (L.toList matches)
+  let boundVarsList = map (S.fromList . boundVars) patts
+  freeVarsList <- mapM freeVars exprs
   forM_ (zip (fmap M.keysSet freeVarsList) boundVarsList) (uncurry checkUnusedBoundVars)
   let freeVarsList' = zipWith M.withoutKeys freeVarsList boundVarsList
   return (unions' $ exprVars : freeVarsList')
