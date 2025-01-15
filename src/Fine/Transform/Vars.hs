@@ -1,4 +1,4 @@
-module Fine.Transform.FreeVars (runFreeVars) where
+module Fine.Transform.Vars (handleVars) where
 
 import Control.Monad (forM_)
 import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
@@ -77,13 +77,13 @@ freeVars (ExtOpApp _ l r) = unions' <$> mapM freeVars [l, r]
 freeVars (Debug expr _) = freeVars expr
 
 undefinedVars :: Set Var -> VarOcurrences -> [Var]
-undefinedVars alreadyFree free =
-  let alreadyFree' = M.fromAscList $ map (\v -> (v, ())) $ S.toAscList alreadyFree
-   in concat $ M.elems $ M.difference free alreadyFree'
+undefinedVars available free =
+  let available' = M.fromAscList $ map (\v -> (v, ())) $ S.toAscList available
+   in concat $ M.elems $ M.difference free available'
 
-runFreeVars :: Set Var -> Expr -> (Set Var, Errors)
-runFreeVars alreadyFree expr =
+handleVars :: Set Var -> Expr -> (Set Var, Errors)
+handleVars available expr =
   let (free, errors) = runWriter (freeVars expr)
-      free' = S.intersection alreadyFree (M.keysSet free)
-      undefined' = undefinedVars alreadyFree free
+      free' = S.intersection available (M.keysSet free)
+      undefined' = undefinedVars available free
    in (free', errors <> collectErrors (map UndefinedVar undefined'))

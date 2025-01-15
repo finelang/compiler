@@ -38,10 +38,9 @@ library
       Fine.Syntax.Parsed
       Fine.Transform
       Fine.Transform.Expr
-      Fine.Transform.FreeVars
-      Fine.Transform.Module
       Fine.Transform.Pattern
       Fine.Transform.ShuntingYard
+      Fine.Transform.Vars
   other-modules:
       Paths_fine_compiler
   autogen-modules:
