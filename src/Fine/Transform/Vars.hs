@@ -36,7 +36,9 @@ propFreeVars :: Prop Expr -> RW AvailableVars [VarStatus] FreeVars
 propFreeVars (NamedProp _ expr) = freeVars expr
 propFreeVars (SpreadProp expr) = freeVars expr
 
--- a version of 'FreeVars.freeVars'
+-- a version of 'Fine.FreeVars.freeVars' that collects:
+-- 1- undefined vars (given the available vars at the moment)
+-- 2- unused vars (calculated with free vars and bound vars)
 freeVars :: Expr -> RW AvailableVars [VarStatus] FreeVars
 freeVars (Int _ _) = return S.empty
 freeVars (Float _ _) = return S.empty
