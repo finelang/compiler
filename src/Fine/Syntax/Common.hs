@@ -3,7 +3,6 @@
 module Fine.Syntax.Common (module Fine.Syntax.Common) where
 
 import Data.Function (on)
-import Data.Map.Strict (Map)
 import Data.String.Interpolate (i)
 import Data.Text (Text, unpack)
 
@@ -67,8 +66,6 @@ instance Show Fixity where
   show :: Fixity -> String
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
 
-type Fixities = Map Var Fixity
-
 data Bind t v = Bind
   { binder :: Var,
     boundType :: t,
@@ -115,8 +112,6 @@ data VariantSpec = VariantSpec
     specRange :: Range
   }
   deriving (Show)
-
-type VariantSpecs = Map Var VariantSpec
 
 data Prop t
   = NamedProp Var t

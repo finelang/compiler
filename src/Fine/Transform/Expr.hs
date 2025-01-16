@@ -5,18 +5,18 @@ import Control.Monad.Trans.RW (RW, ask, asks, runRW, tell, withReader)
 import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectError, collectErrors, collectWarning)
 import Fine.Syntax (Expr (..), Pattern, boundVars)
 import Fine.Syntax.Common
-  ( Fixities,
+  ( Fixity,
     OpChain (..),
     Prop (..),
     Var,
     VariantSpec (..),
-    VariantSpecs,
     justNamedProp,
     justSpreadProp,
   )
@@ -24,17 +24,21 @@ import qualified Fine.Syntax.Parsed as P
 import qualified Fine.Transform.Pattern as PattT
 import Fine.Transform.ShuntingYard (runSy)
 
+type Fixities = Map Var Fixity
+
+type VariantSpecs = Map Var VariantSpec
+
+data Ctx = Ctx
+  { fixities :: Fixities,
+    variantSpecs :: VariantSpecs
+  }
+
 shuntingYard :: OpChain Expr -> RW Fixities Errors Expr
 shuntingYard chain = do
   ctx <- ask
   let (expr, errors) = runSy ctx chain
   tell errors
   return expr
-
-data Ctx = Ctx
-  { fixities :: Fixities,
-    variantSpecs :: VariantSpecs
-  }
 
 transformChain :: OpChain P.Expr -> RW Ctx Errors (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr

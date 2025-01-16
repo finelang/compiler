@@ -11,12 +11,10 @@ import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectError, collec
 import Fine.Syntax (Closure (Closure), Expr (..), Module (EntryModule, Module), closureVars)
 import Fine.Syntax.Common
   ( Bind (Bind),
-    Fixities,
     Fixity (Fixity),
     Prop (NamedProp),
     Var,
     VariantSpec (VariantSpec),
-    VariantSpecs,
     binder,
     boundValue,
   )
@@ -27,8 +25,8 @@ import Fine.Transform.Vars (handleVars)
 data State = State
   { freeVars :: Set Var,
     closures :: Map Var (Closure Expr),
-    fixities :: Fixities,
-    variantSpecs :: VariantSpecs
+    fixities :: Map Var Fixity,
+    variantSpecs :: Map Var VariantSpec
   }
 
 extractCt :: VariantSpec -> SW State Errors (Bind () (Closure Expr))

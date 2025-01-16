@@ -17,12 +17,12 @@ import Data.Text (Text)
 import Fine.Syntax.Common
   ( Bind,
     Ext,
-    Fixities,
+    Fixity,
     HasRange (..),
     Prop (..),
     Range,
     Var (Var),
-    VariantSpecs,
+    VariantSpec,
   )
 
 data PropsPattern = PropsPattern [(Var, Pattern)] (Maybe Var)
@@ -121,13 +121,13 @@ closureVars (Closure env _ bder) = M.keys env ++ maybeToList bder
 data Module
   = Module
       { bindings :: [Bind () (Closure Expr)],
-        fixities :: Fixities,
-        variantSpecs :: VariantSpecs
+        fixities :: Map Var Fixity,
+        variantSpecs :: Map Var VariantSpec
       }
   | EntryModule
       { bindings :: [Bind () (Closure Expr)],
-        fixities :: Fixities,
-        variantSpecs :: VariantSpecs,
+        fixities :: Map Var Fixity,
+        variantSpecs :: Map Var VariantSpec,
         _entryExpr :: Closure Expr
       }
   deriving (Show)
