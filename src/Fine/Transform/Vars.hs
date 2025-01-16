@@ -1,10 +1,9 @@
 module Fine.Transform.Vars (handleVars) where
 
-import Control.Monad (forM_)
-import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
+import Control.Monad (forM_, liftM2)
+import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
 import qualified Data.List.NonEmpty as L
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
+import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error
@@ -17,67 +16,72 @@ import Fine.Error
 import Fine.Syntax (Expr (..), boundVars)
 import Fine.Syntax.Common (Prop (..), Var)
 
-checkUnusedBoundVars :: Set Var -> Set Var -> Writer Errors ()
-checkUnusedBoundVars free bound =
-  tell (collectWarnings $ map UnusedVar $ S.toList $ S.difference bound free)
+type AvailableVars = Set Var
 
-type VarOcurrences = Map Var [Var]
+type FreeVars = Set Var
 
-singleton' :: Var -> VarOcurrences
-singleton' v = M.singleton v [v]
+data VarStatus
+  = Undefined Var
+  | Unused Var
 
-union' :: VarOcurrences -> VarOcurrences -> VarOcurrences
-union' = M.unionWith (++)
+justUndefined :: VarStatus -> Maybe Var
+justUndefined (Undefined var) = Just var
+justUndefined _ = Nothing
 
-unions' :: (Foldable t) => t VarOcurrences -> VarOcurrences
-unions' = foldl union' M.empty
+justUnused :: VarStatus -> Maybe Var
+justUnused (Unused var) = Just var
+justUnused _ = Nothing
 
-propFreeVars :: Prop Expr -> Writer Errors VarOcurrences
+propFreeVars :: Prop Expr -> RW AvailableVars [VarStatus] FreeVars
 propFreeVars (NamedProp _ expr) = freeVars expr
 propFreeVars (SpreadProp expr) = freeVars expr
 
-freeVars :: Expr -> Writer Errors VarOcurrences
-freeVars (Int _ _) = return M.empty
-freeVars (Float _ _) = return M.empty
-freeVars (Str _ _) = return M.empty
-freeVars (Unit _) = return M.empty
-freeVars (Obj props _) = unions' <$> mapM propFreeVars props
-freeVars (Variant _ props _) = unions' <$> mapM propFreeVars props
-freeVars (Tuple fst' snd' rest _) = unions' <$> mapM freeVars (fst' : snd' : rest)
-freeVars (Id var) = return (singleton' var)
-freeVars (App f args _) = do
-  fVars <- freeVars f
-  argVars <- mapM freeVars args
-  return $ unions' (fVars : argVars)
+-- a version of 'FreeVars.freeVars'
+freeVars :: Expr -> RW AvailableVars [VarStatus] FreeVars
+freeVars (Int _ _) = return S.empty
+freeVars (Float _ _) = return S.empty
+freeVars (Str _ _) = return S.empty
+freeVars (Unit _) = return S.empty
+freeVars (Obj props _) = S.unions <$> mapM propFreeVars props
+freeVars (Variant _ props _) = S.unions <$> mapM propFreeVars props
+freeVars (Tuple fst' snd' rest _) = S.unions <$> mapM freeVars (fst' : snd' : rest)
+freeVars (Id var) = do
+  isDefined <- asks (S.member var)
+  if isDefined
+    then return (S.singleton var)
+    else do
+      tell [Undefined var]
+      return S.empty
+freeVars (App f args _) = S.unions <$> mapM freeVars (f : args)
 freeVars (Access expr _) = freeVars expr
-freeVars (Cond cond yes no _) = unions' <$> mapM freeVars [cond, yes, no]
+freeVars (Cond cond yes no _) = S.unions <$> mapM freeVars [cond, yes, no]
 freeVars (PatternMatch expr matches _) = do
   exprVars <- freeVars expr
   let (patts, exprs) = unzip (L.toList matches)
   let boundVarsList = map (S.fromList . boundVars) patts
-  freeVarsList <- mapM freeVars exprs
-  forM_ (zip (fmap M.keysSet freeVarsList) boundVarsList) (uncurry checkUnusedBoundVars)
-  let freeVarsList' = zipWith M.withoutKeys freeVarsList boundVarsList
-  return (unions' $ exprVars : freeVarsList')
+  freeVarsList <-
+    mapM
+      (\(bvs, expr') -> withReader (S.union bvs) (freeVars expr'))
+      (zip boundVarsList exprs)
+  forM_
+    (zipWith S.difference boundVarsList freeVarsList)
+    (tell . map Unused . S.toList)
+  return (S.unions $ exprVars : zipWith S.difference freeVarsList boundVarsList)
 freeVars (Fun params body _) = do
-  let params' = M.fromList $ map (\v -> (v, v)) params
-  bodyVars <- freeVars body
-  tell (collectWarnings $ map UnusedVar $ M.elems $ M.difference params' bodyVars)
-  return (M.difference bodyVars params')
+  let params' = S.fromList params
+  bodyVars <- withReader (S.union params') (freeVars body)
+  tell (map Unused $ S.toList $ S.difference params' bodyVars)
+  return (S.difference bodyVars params')
 freeVars (Parens expr) = freeVars expr
-freeVars (Block exprs _) = unions' <$> mapM freeVars exprs
-freeVars (ExtId _) = return M.empty
-freeVars (ExtOpApp _ l r) = unions' <$> mapM freeVars [l, r]
+freeVars (Block exprs _) = S.unions <$> mapM freeVars exprs
+freeVars (ExtId _) = return S.empty
+freeVars (ExtOpApp _ l r) = liftM2 S.union (freeVars l) (freeVars r)
 freeVars (Debug expr _) = freeVars expr
 
-undefinedVars :: Set Var -> VarOcurrences -> [Var]
-undefinedVars available free =
-  let available' = M.fromAscList $ map (\v -> (v, ())) $ S.toAscList available
-   in concat $ M.elems $ M.difference free available'
-
-handleVars :: Set Var -> Expr -> (Set Var, Errors)
-handleVars available expr =
-  let (free, errors) = runWriter (freeVars expr)
-      free' = S.intersection available (M.keysSet free)
-      undefined' = undefinedVars available free
-   in (free', errors <> collectErrors (map UndefinedVar undefined'))
+handleVars :: AvailableVars -> Expr -> (FreeVars, Errors)
+handleVars vars expr =
+  let (free, statuses) = runRW (freeVars expr) vars
+      errors =
+        (collectErrors $ mapMaybe (fmap UndefinedVar . justUndefined) statuses)
+          <> (collectWarnings $ mapMaybe (fmap UnusedVar . justUnused) statuses)
+   in (free, errors)
