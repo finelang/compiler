@@ -31,6 +31,7 @@ library
       Data.List.NonEmpty.Extra
       Fine.Codegen
       Fine.Error
+      Fine.FreeVars
       Fine.Lexer
       Fine.Parser
       Fine.Syntax
