@@ -6,14 +6,21 @@ module Fine.Syntax.Parsed
 where
 
 import Data.List.NonEmpty (NonEmpty)
-import Data.Text (Text)
-import Fine.Syntax.Common (Bind, Ext, Fixity, HasRange (..), OpChain, Prop (..), Range, Var (Var), VariantSpec)
+import Fine.Syntax.Common
+  ( Bind,
+    Ext,
+    Fixity,
+    HasRange (..),
+    Lit,
+    OpChain,
+    Prop (..),
+    Range,
+    Var (Var),
+    VariantSpec,
+  )
 
 data Expr
-  = Int Int Range
-  | Float Float Range
-  | Str Text Range
-  | Unit Range
+  = Literal Lit Range
   | Obj [Prop Expr] Range
   | Variant Var [Prop Expr] Range
   | Tuple Expr Expr [Expr] Range
@@ -33,10 +40,7 @@ data Expr
 
 instance HasRange Expr where
   getRange :: Expr -> Range
-  getRange (Int _ r) = r
-  getRange (Float _ r) = r
-  getRange (Str _ r) = r
-  getRange (Unit r) = r
+  getRange (Literal _ r) = r
   getRange (Obj _ r) = r
   getRange (Variant _ _ r) = r
   getRange (Tuple _ _ _ r) = r

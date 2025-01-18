@@ -17,7 +17,8 @@ import Fine.Syntax.Common
     VariantSpec (VariantSpec),
     Ext (Ext),
     Prop (..),
-    varName
+    varName,
+    Lit (..)
   )
 import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 }
@@ -29,9 +30,10 @@ import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
 %token
   ext     { Token ExtTok _ _ }
   run     { Token Run _ _ }
-  else    { Token Else _ _ }
   data    { Token Data _ _ }
   debug   { Token DebugTok _ _ }
+  else    { Token Else _ _ }
+  false   { Token FalseTok _ _ }
   if      { Token If _ _ }
   infix   { Token Infix _ _ }
   infixl  { Token Infixl _ _ }
@@ -39,6 +41,7 @@ import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   fn      { Token Fn _ _ }
   let     { Token Let _ _ }
   then    { Token Then _ _ }
+  true    { Token TrueTok _ _ }
   id      { Token IdTok _ _ }
   ct      { Token Ct _ _ }
   str     { Token StrTok _ _ }
@@ -129,8 +132,10 @@ Atom : '(' Args ')'         { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
      | '{' Block '}'        { mkBlock (reverse $2) (getRange ($1, $3)) }
      | Prefix               { Id $1 }
      | '(' op ')'           { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
-     | int                  { Int (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-     | float                { Float (read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | int                  { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | float                { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | false                { Literal (Bool False) (getRange $1) }
+     | true                 { Literal (Bool True) (getRange $1) }
      | str                  { mkStr $1 }
 
 Block : Block ';' Expr  { $3 : $1 }
@@ -156,7 +161,7 @@ mkVar tok = Var (tokenLexeme tok) (getRange tok)
 
 transformStr = T.tail . T.init
 
-mkStr tok = Str (transformStr $ tokenLexeme tok) (getRange tok)
+mkStr tok = Literal (Str $ transformStr $ tokenLexeme tok) (getRange tok)
 
 asNonEmpty (x : xs) = x :| xs
 
@@ -166,7 +171,7 @@ chainToExpr chain = Chain (fromLRChain chain)
 mkBlock [e] _ = e
 mkBlock (e : es) r = Block (e :| es) r
 
-mkGroupExpr [] r = Unit r
+mkGroupExpr [] r = Literal Unit r
 mkGroupExpr [expr] _ = Parens expr
 mkGroupExpr (fst : snd : rest) r = Tuple fst snd rest r
 

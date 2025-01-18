@@ -40,10 +40,7 @@ propFreeVars (SpreadProp expr) = freeVars expr
 -- 1- undefined vars (given the available vars at the moment)
 -- 2- unused vars (calculated with free vars and bound vars)
 freeVars :: Expr -> RW AvailableVars [VarStatus] FreeVars
-freeVars (Int _ _) = return S.empty
-freeVars (Float _ _) = return S.empty
-freeVars (Str _ _) = return S.empty
-freeVars (Unit _) = return S.empty
+freeVars (Literal _ _) = return S.empty
 freeVars (Obj props _) = S.unions <$> mapM propFreeVars props
 freeVars (Variant _ props _) = S.unions <$> mapM propFreeVars props
 freeVars (Tuple fst' snd' rest _) = S.unions <$> mapM freeVars (fst' : snd' : rest)

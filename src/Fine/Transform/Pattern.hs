@@ -20,7 +20,8 @@ import Fine.Error
   )
 import Fine.Syntax (Pattern (..), PropsPattern (PropsPattern))
 import Fine.Syntax.Common
-  ( Prop (..),
+  ( Lit (Unit),
+    Prop (..),
     Range,
     Var,
     VariantSpec (VariantSpec),
@@ -33,7 +34,7 @@ import Fine.Syntax.Parsed (Expr (..))
 type VariantSpecs = Map Var VariantSpec
 
 errorPattern :: Range -> Pattern
-errorPattern = UnitPatt
+errorPattern = LiteralPatt Unit
 
 checkVariant :: Var -> [Prop t] -> RW VariantSpecs Errors ()
 checkVariant tag props = do
@@ -66,10 +67,7 @@ extractObjCapture props = do
       return Nothing
 
 transform :: Expr -> RW VariantSpecs Errors Pattern
-transform (Int v r) = return (IntPatt v r)
-transform (Float v r) = return (FloatPatt v r)
-transform (Str s r) = return (StrPatt s r)
-transform (Unit r) = return (UnitPatt r)
+transform (Literal lit r) = return (LiteralPatt lit r)
 transform (Obj props r) = do
   named <- transformNamedProps props
   objCapture <- extractObjCapture props

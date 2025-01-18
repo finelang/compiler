@@ -17,6 +17,7 @@ import Fine.Syntax (Closure (Closure), Expr (..), Module (..), Pattern (..), Pro
 import Fine.Syntax.Common
   ( Bind (..),
     Ext (Ext),
+    Lit (..),
     Prop (..),
     Var (Var),
     VariantSpec (variantExtValue),
@@ -25,6 +26,15 @@ import Fine.Syntax.Common
 
 class CodeGens t ctx where
   genCode :: t -> Reader ctx Text
+
+instance CodeGens Lit ctx where
+  genCode :: Lit -> Reader ctx Text
+  genCode (Int v) = return (T.pack $ show v)
+  genCode (Float v) = return (T.pack $ show v)
+  genCode (Bool True) = return "true"
+  genCode (Bool False) = return "false"
+  genCode (Str s) = return [i|"#{s}"|]
+  genCode (Unit) = return "undefined"
 
 data Ctx = Ctx
   { indentation :: Text,
@@ -61,10 +71,7 @@ genPropsPatternCode (PropsPattern named objCapture) = do
 
 instance CodeGens Pattern Ctx where
   genCode :: Pattern -> Reader Ctx Text
-  genCode (IntPatt v _) = return (T.pack $ show v)
-  genCode (FloatPatt v _) = return (T.pack $ show v)
-  genCode (StrPatt s _) = return [i|"#{s}"|]
-  genCode (UnitPatt _) = return "fine$unit"
+  genCode (LiteralPatt lit _) = genCode lit
   genCode (ObjPatt props _) = do
     props' <- genPropsPatternCode props
     return [i|({#{props'}})|]
@@ -133,10 +140,7 @@ genFunCode areObjParams name params body = do
 
 instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
-  genCode (Int v _) = return (T.pack $ show v)
-  genCode (Float v _) = return (T.pack $ show v)
-  genCode (Str s _) = return [i|"#{s}"|]
-  genCode (Unit _) = return "fine$unit"
+  genCode (Literal lit _) = genCode lit
   genCode (Obj props _) = do
     props' <- genPropsCode props
     return [i|({#{props'}})|]

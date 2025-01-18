@@ -80,10 +80,7 @@ transformProps props = do
   mapM transformProp props
 
 transform :: P.Expr -> RW Ctx Errors Expr
-transform (P.Int v r) = return (Int v r)
-transform (P.Float v r) = return (Float v r)
-transform (P.Str s r) = return (Str s r)
-transform (P.Unit r) = return (Unit r)
+transform (P.Literal lit r) = return (Literal lit r)
 transform (P.Obj props r) = do
   props' <- transformProps props
   return (Obj props' r)

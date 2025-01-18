@@ -52,10 +52,7 @@ replacePropsPatternBoundVar old new (PropsPattern named optSpread) =
    in PropsPattern named' optSpread'
 
 replaceBoundVar :: Var -> Var -> Pattern -> Pattern
-replaceBoundVar _ _ patt@(IntPatt _ _) = patt
-replaceBoundVar _ _ patt@(FloatPatt _ _) = patt
-replaceBoundVar _ _ patt@(StrPatt _ _) = patt
-replaceBoundVar _ _ patt@(UnitPatt _) = patt
+replaceBoundVar _ _ patt@(LiteralPatt _ _) = patt
 replaceBoundVar old new (ObjPatt props r) =
   ObjPatt (replacePropsPatternBoundVar old new props) r
 replaceBoundVar old new (VariantPatt tag props r) =
@@ -83,10 +80,7 @@ replaceProp x (NamedProp name expr) = NamedProp name <$> replace' x expr
 replaceProp x (SpreadProp expr) = SpreadProp <$> replace' x expr
 
 replace' :: Var -> Expr -> State Substt Expr
-replace' _ expr@(Int _ _) = return expr
-replace' _ expr@(Float _ _) = return expr
-replace' _ expr@(Str _ _) = return expr
-replace' _ expr@(Unit _) = return expr
+replace' _ expr@(Literal _ _) = return expr
 replace' x (Obj props r) = do
   props' <- mapM (replaceProp x) props
   return (Obj props' r)

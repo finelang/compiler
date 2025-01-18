@@ -11,10 +11,7 @@ propFreeVars (NamedProp _ expr) = freeVars expr
 propFreeVars (SpreadProp expr) = freeVars expr
 
 freeVars :: Expr -> Set Var
-freeVars (Int _ _) = S.empty
-freeVars (Float _ _) = S.empty
-freeVars (Str _ _) = S.empty
-freeVars (Unit _) = S.empty
+freeVars (Literal _ _) = S.empty
 freeVars (Obj props _) = S.unions (map propFreeVars props)
 freeVars (Variant _ props _) = S.unions (map propFreeVars props)
 freeVars (Tuple fst' snd' rest _) = S.unions $ map freeVars (fst' : snd' : rest)

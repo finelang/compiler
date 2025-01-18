@@ -36,9 +36,10 @@ tokens :-
   "--"\-*[^$symbol].*         ;
   "#external"                 { mkt ExtTok }
   "#run"                      { mkt Run }
-  "else"                      { mkt Else }
   "data"                      { mkt Data }
   "debug"                     { mkt DebugTok }
+  "else"                      { mkt Else }
+  "false"                     { mkt FalseTok }
   "if"                        { mkt If }
   "infix"                     { mkt Infix }
   "infixl"                    { mkt Infixl }
@@ -46,6 +47,7 @@ tokens :-
   "fn"                        { mkt Fn }
   "let"                       { mkt Let }
   "then"                      { mkt Then }
+  "true"                      { mkt TrueTok }
   [$small][$alpha $digit]*    { mkt IdTok }
   [$large][$alpha $digit]*    { mkt Ct }
   \" @string* \"              { mkt StrTok }
@@ -68,9 +70,10 @@ data TokenType
   = ExtTok
   | ExtOp
   | Run
-  | Else
   | Data
   | DebugTok
+  | Else
+  | FalseTok
   | If
   | Infix
   | Infixl
@@ -78,6 +81,7 @@ data TokenType
   | Fn
   | Let
   | Then
+  | TrueTok
   | IdTok
   | Ct
   | StrTok

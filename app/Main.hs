@@ -22,7 +22,6 @@ readCodeInjections =
   mapM
     TIO.readFile
     [ "src/js/tuple.js",
-      "src/js/unit.js",
       "src/js/match.js",
       "src/js/debug.js"
     ]

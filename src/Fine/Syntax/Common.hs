@@ -51,6 +51,21 @@ instance Show Var where
   show :: Var -> String
   show (Var name _) = unpack name
 
+data Lit
+  = Int Int
+  | Float Float
+  | Bool Bool
+  | Str Text
+  | Unit
+
+instance Show Lit where
+  show :: Lit -> String
+  show (Int x) = show x
+  show (Float x) = show x
+  show (Bool x) = show x
+  show (Str x) = show x
+  show (Unit) = show ()
+
 data Assoc = LeftAssoc | RightAssoc | NonAssoc
   deriving (Eq)
 

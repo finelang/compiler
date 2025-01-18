@@ -13,12 +13,12 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (maybeToList)
-import Data.Text (Text)
 import Fine.Syntax.Common
   ( Bind,
     Ext,
     Fixity,
     HasRange (..),
+    Lit,
     Prop (..),
     Range,
     Var (Var),
@@ -29,10 +29,7 @@ data PropsPattern = PropsPattern [(Var, Pattern)] (Maybe Var)
   deriving (Show)
 
 data Pattern
-  = IntPatt Int Range
-  | FloatPatt Float Range
-  | StrPatt Text Range
-  | UnitPatt Range
+  = LiteralPatt Lit Range
   | ObjPatt PropsPattern Range
   | VariantPatt Var PropsPattern Range
   | TuplePatt Pattern Pattern [Pattern] Range
@@ -41,10 +38,7 @@ data Pattern
 
 instance HasRange Pattern where
   getRange :: Pattern -> Range
-  getRange (IntPatt _ r) = r
-  getRange (FloatPatt _ r) = r
-  getRange (StrPatt _ r) = r
-  getRange (UnitPatt r) = r
+  getRange (LiteralPatt _ r) = r
   getRange (ObjPatt _ r) = r
   getRange (VariantPatt _ _ r) = getRange r
   getRange (TuplePatt _ _ _ r) = r
@@ -57,20 +51,14 @@ propsBoundVars (PropsPattern named objCapture) =
    in fromObjCapture ++ fromNamed
 
 boundVars :: Pattern -> [Var]
-boundVars (IntPatt _ _) = []
-boundVars (FloatPatt _ _) = []
-boundVars (StrPatt _ _) = []
-boundVars (UnitPatt _) = []
+boundVars (LiteralPatt _ _) = []
 boundVars (ObjPatt props _) = propsBoundVars props
 boundVars (VariantPatt _ props _) = propsBoundVars props
 boundVars (TuplePatt fst' snd' rest _) = concat $ map boundVars (fst' : snd' : rest)
 boundVars (Capture var) = [var]
 
 data Expr
-  = Int Int Range
-  | Float Float Range
-  | Str Text Range
-  | Unit Range
+  = Literal Lit Range
   | Obj [Prop Expr] Range
   | Variant Var [Prop Expr] Range
   | Tuple Expr Expr [Expr] Range
@@ -89,10 +77,7 @@ data Expr
 
 instance HasRange Expr where
   getRange :: Expr -> Range
-  getRange (Int _ r) = r
-  getRange (Float _ r) = r
-  getRange (Str _ r) = r
-  getRange (Unit r) = r
+  getRange (Literal _ r) = r
   getRange (Obj _ r) = r
   getRange (Variant _ _ r) = r
   getRange (Tuple _ _ _ r) = r
