@@ -47,7 +47,6 @@ import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
   '->'    { Token Arrow _ _ }
   '='     { Token Eq _ _ }
   '.'     { Token Dot _ _ }
-  '...'   { Token Spread _ _ }
   '|'     { Token Bar _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
@@ -143,7 +142,7 @@ Obj : Obj ',' Prop  { $3 : $1 }
     | {- empty -}   { [] }
 
 Prop : Prefix '=' Expr  { NamedProp $1 $3 }
-     | '...' Expr       { SpreadProp $2 }
+     | '.' '.' '.' Expr { SpreadProp $4 }
      | '=' Prefix       { NamedProp $2 (Id $2) }
 
 Ext : ext Prefix  { Ext (varName $2) (getRange ($1, $2)) }
