@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Control.Monad.Trans.RW
+      Control.Monad.Trans.State.Strict.Extra
       Control.Monad.Trans.SW
       Data.List.Extra
       Data.List.NonEmpty.Extra
@@ -34,6 +35,7 @@ library
       Fine.FreeVars
       Fine.Lexer
       Fine.Parser
+      Fine.Reduce
       Fine.Syntax
       Fine.Syntax.Common
       Fine.Syntax.Parsed
