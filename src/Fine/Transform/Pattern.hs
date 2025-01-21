@@ -18,13 +18,12 @@ import Fine.Error
     collectError,
     collectErrors,
   )
-import Fine.Syntax (Pattern (..), PropsPattern (PropsPattern))
+import Fine.Syntax (Pattern (..), PropsPattern (PropsPattern), VariantSpec (..))
 import Fine.Syntax.Common
   ( Lit (Unit),
     Prop (..),
     Range,
     Var,
-    VariantSpec (VariantSpec),
     getRange,
     justNamedProp,
     justSpreadProp,
@@ -41,7 +40,7 @@ checkVariant tag props = do
   spec <- asks (M.lookup tag)
   case spec of
     Nothing -> tell (collectError $ UndefinedVariant tag)
-    Just (VariantSpec _ varntNames _ _) -> do
+    Just (VariantSpec _ varntNames) -> do
       let names = S.fromList (mapMaybe (fmap fst . justNamedProp) props)
       let varntNames' = S.fromList varntNames
       tell (collectErrors $ map (InvalidProp tag) $ S.toList $ S.difference names varntNames')

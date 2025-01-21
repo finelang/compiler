@@ -16,7 +16,6 @@ import Fine.Syntax.Common
     Prop (..),
     Range,
     Var (Var),
-    VariantSpec,
   )
 
 data Expr
@@ -59,8 +58,8 @@ instance HasRange Expr where
 
 data Defn
   = Defn (Bind () Expr)
+  | CtorDefn Var [Var] (Maybe Ext) Range
   | FixDefn Fixity Var
-  | DtypeDefn [VariantSpec]
   deriving (Show)
 
 data Module = Module

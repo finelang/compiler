@@ -10,13 +10,12 @@ import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectError, collectErrors, collectWarning)
-import Fine.Syntax (Expr (..), Pattern, boundVars)
+import Fine.Syntax (Expr (..), Pattern, VariantSpec (..), boundVars)
 import Fine.Syntax.Common
   ( Fixity,
     OpChain (..),
     Prop (..),
-    Var,
-    VariantSpec (..),
+    Var (Var),
     justNamedProp,
     justSpreadProp,
   )
@@ -30,7 +29,8 @@ type VariantSpecs = Map Var VariantSpec
 
 data Ctx = Ctx
   { fixities :: Fixities,
-    variantSpecs :: VariantSpecs
+    variantSpecs :: VariantSpecs,
+    transformEmptyVariant :: Bool
   }
 
 shuntingYard :: OpChain Expr -> RW Fixities Errors Expr
@@ -52,7 +52,7 @@ checkVariant tag props = do
   spec <- asks (M.lookup tag)
   case spec of
     Nothing -> tell (collectError $ UndefinedVariant tag)
-    Just (VariantSpec _ varntNames _ _) -> do
+    Just (VariantSpec _ varntNames) -> do
       let names = S.fromList (mapMaybe (fmap fst . justNamedProp) props)
       let varntNames' = S.fromList varntNames
       when
@@ -84,9 +84,10 @@ transform (P.Literal lit r) = return (Literal lit r)
 transform (P.Obj props r) = do
   props' <- transformProps props
   return (Obj props' r)
-transform (P.Variant tag props r) =
-  if null props
-    then return (Id tag)
+transform (P.Variant tag@(Var name _) props r) = do
+  tev <- asks transformEmptyVariant
+  if tev && null props
+    then return (Id $ Var name r)
     else do
       props' <- transformProps props
       withReader variantSpecs (checkVariant tag props')
@@ -146,5 +147,5 @@ transform (P.Debug expr r) = do
   expr' <- transform expr
   return (Debug expr' r)
 
-runTransform :: Fixities -> VariantSpecs -> P.Expr -> (Expr, Errors)
-runTransform fixs specs expr = runRW (transform expr) (Ctx fixs specs)
+runTransform :: Fixities -> VariantSpecs -> Bool -> P.Expr -> (Expr, Errors)
+runTransform fixs specs tev expr = runRW (transform expr) (Ctx fixs specs tev)

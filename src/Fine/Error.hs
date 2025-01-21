@@ -34,7 +34,6 @@ data Error
   = UndefinedVar Var
   | RepeatedVar Var
   | RepeatedParam Var
-  | RepeatedVariant Var
   | UndefinedVariant Var
   | RepeatedProp Var
   | RequiredProp Var Var
@@ -53,8 +52,6 @@ instance Show Error where
     [i|Variable #{hl var} is repeated.|]
   show (RepeatedParam var) =
     [i|Parameter #{hl var} is repeated.|]
-  show (RepeatedVariant var) =
-    [i|Variant #{hl var} is repeated.|]
   show (UndefinedVariant var) =
     [i|Variant #{hl var} is not defined.|]
   show (RepeatedProp var) =

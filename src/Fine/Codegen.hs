@@ -20,7 +20,6 @@ import Fine.Syntax.Common
     Lit (..),
     Prop (..),
     Var (Var),
-    VariantSpec (variantExtValue),
     varName,
   )
 
@@ -39,8 +38,7 @@ instance CodeGens Lit ctx where
 data Ctx = Ctx
   { indentation :: Text,
     separator :: Char,
-    symNames :: Map Char Text,
-    variantExtValues :: Map Var Ext
+    symNames :: Map Char Text
   }
 
 withIndentation :: Text -> Ctx -> Ctx
@@ -76,16 +74,12 @@ instance CodeGens Pattern Ctx where
     props' <- genPropsPatternCode props
     return [i|({#{props'}})|]
   genCode (VariantPatt tag props _) = do
-    extValue <- asks (M.lookup tag . variantExtValues)
-    case extValue of
-      Nothing -> do
-        let tagged = [i|$tag: "#{tag}"|] :: Text
-        props' <- genPropsPatternCode props
-        return $
-          if T.null props'
-            then [i|({#{tagged}})|]
-            else [i|({#{tagged}, #{props'}})|]
-      Just (Ext code _) -> return code
+    let tagged = [i|$tag: "#{tag}"|] :: Text
+    props' <- genPropsPatternCode props
+    return $
+      if T.null props'
+        then [i|({#{tagged}})|]
+        else [i|({#{tagged}, #{props'}})|]
   genCode (TuplePatt fst' snd' rest _) = do
     fst'' <- genCode fst'
     snd'' <- genCode snd'
@@ -145,16 +139,12 @@ instance CodeGens Expr Ctx where
     props' <- genPropsCode props
     return [i|({#{props'}})|]
   genCode (Variant tag props _) = do
-    extValue <- asks (M.lookup tag . variantExtValues)
-    case extValue of
-      Nothing -> do
-        let tagged = [i|$tag: "#{tag}"|] :: Text
-        props' <- genPropsCode props
-        return $
-          if null props
-            then [i|({#{tagged}})|]
-            else [i|({#{tagged}, #{props'}})|]
-      Just (Ext code _) -> return code
+    let tagged = [i|$tag: "#{tag}"|] :: Text
+    props' <- genPropsCode props
+    return $
+      if null props
+        then [i|({#{tagged}})|]
+        else [i|({#{tagged}, #{props'}})|]
   genCode (Tuple fst' snd' rest _) = do
     fst'' <- genCode fst'
     snd'' <- genCode snd'
@@ -210,12 +200,8 @@ instance CodeGens (Bind () (Closure Expr)) Ctx where
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
-  genCode (Module binds _ specs) = do
-    let extValues = M.mapMaybe variantExtValue specs
-    stmts <-
-      local
-        (\ctx -> ctx {variantExtValues = M.union extValues (variantExtValues ctx)})
-        (mapM genCode binds)
+  genCode (Module binds _ _) = do
+    stmts <- mapM genCode binds
     return (T.intercalate "\n\n" stmts)
   genCode (EntryModule binds fixs specs (Closure _ expr _)) = do
     code <- genCode (Module binds fixs specs)
@@ -251,7 +237,6 @@ runGenCode codeInjections x =
                     ('@', "$at"),
                     ('~', "$tild"),
                     ('.', "$dot")
-                  ],
-              variantExtValues = M.empty
+                  ]
             }
    in T.intercalate "\n\n" (codeInjections ++ [code]) <> "\n"

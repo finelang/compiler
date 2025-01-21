@@ -14,7 +14,6 @@ import Fine.Syntax.Common
     fromLRChain,
     Fixity(Fixity),
     Assoc(..),
-    VariantSpec (VariantSpec),
     Ext (Ext),
     Prop (..),
     varName,
@@ -72,7 +71,8 @@ CtPrefix : ct { mkVar $1 }
 
 Infix : op  { mkVar $1 }
 
-Defns : Defns Defn  { $2 : $1 }
+Defns : Defns Defn      { $2 : $1 }
+      | Defns DataDefn  { $2 ++ $1 }
       | {- empty -} { [] }
 
 Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
@@ -82,13 +82,14 @@ Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
      | ExtId let Prefix Infix Prefix      { Defn (Bind $4 () (Fun [$3, $5] $1 (getRange ($3, $5)))) }
      | ExtOp let Prefix Infix Prefix      { Defn (Bind $4 () (Fun [$3, $5] (ExtOpApp $1 (Id $3) (Id $5)) (getRange ($3, $5)))) }
      | Fix Infix                          { FixDefn $1 $2 }
-     | data '{' Varnts '}'                { DtypeDefn (reverse $3) }
 
-Varnts : Varnts Varnt { $2 : $1 }
-       | Varnt        { [$1] }
+DataDefn: data '{' Ctors '}'  { reverse $3 }
 
-Varnt : let CtPrefix '{' Params '}' { VariantSpec $2 (reverse $4) Nothing (getRange ($1, $5)) }
-      | Ext let CtPrefix '{' '}'    { VariantSpec $3 [] (Just $1) (getRange ($2, $5)) }
+Ctors : Ctors Ctor  { $2 : $1 }
+      | Ctor        { [$1] }
+
+Ctor : let CtPrefix '{' Params '}'  { CtorDefn $2 (reverse $4) Nothing (getRange ($2, $5)) }
+     | Ext let CtPrefix '{' '}'     { CtorDefn $3 [] (Just $1) (getRange ($3, $5)) }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
@@ -125,18 +126,18 @@ Args : Args ',' Expr  { $3 : $1 }
      | Expr           { [$1] }
      | {- empty -}    { [] }
 
-Atom : '(' Args ')'         { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
-     | '{' Obj '}'          { Obj (reverse $2) (getRange ($1, $3)) }
-     | CtPrefix '{' Obj '}' { Variant $1 (reverse $3) (getRange ($1, $4)) }
-     | CtPrefix             { Id $1 }
-     | '{' Block '}'        { mkBlock (reverse $2) (getRange ($1, $3)) }
-     | Prefix               { Id $1 }
-     | '(' op ')'           { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
-     | int                  { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-     | float                { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-     | false                { Literal (Bool False) (getRange $1) }
-     | true                 { Literal (Bool True) (getRange $1) }
-     | str                  { mkStr $1 }
+Atom : '(' Args ')'           { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
+     | '{' Obj '}'            { Obj (reverse $2) (getRange ($1, $3)) }
+     | CtPrefix '{' Obj '}'   { Variant $1 (reverse $3) (getRange ($1, $4)) }
+     | CtPrefix '(' Args ')'  { App (Id $1) (reverse $3) (getRange ($1, $4)) }
+     | '{' Block '}'          { mkBlock (reverse $2) (getRange ($1, $3)) }
+     | Prefix                 { Id $1 }
+     | '(' op ')'             { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
+     | int                    { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | float                  { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+     | false                  { Literal (Bool False) (getRange $1) }
+     | true                   { Literal (Bool True) (getRange $1) }
+     | str                    { mkStr $1 }
 
 Block : Block ';' Expr  { $3 : $1 }
       | Block ';'       { $1 }

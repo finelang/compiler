@@ -3,6 +3,7 @@ module Fine.Syntax
     PropsPattern (..),
     Expr (..),
     Closure (..),
+    VariantSpec (..),
     Module (..),
     boundVars,
     closureVars,
@@ -22,7 +23,6 @@ import Fine.Syntax.Common
     Prop (..),
     Range,
     Var (Var),
-    VariantSpec,
   )
 
 data PropsPattern = PropsPattern [(Var, Pattern)] (Maybe Var)
@@ -102,6 +102,12 @@ data Closure v = Closure
 
 closureVars :: Closure v -> [Var]
 closureVars (Closure env _ bder) = M.keys env ++ maybeToList bder
+
+data VariantSpec = VariantSpec
+  { variantTag :: Var,
+    variantProps :: [Var]
+  }
+  deriving (Show)
 
 data Module
   = Module

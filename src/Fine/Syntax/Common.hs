@@ -120,14 +120,6 @@ instance HasRange Ext where
   getRange :: Ext -> Range
   getRange (Ext _ r) = r
 
-data VariantSpec = VariantSpec
-  { variantTag :: Var,
-    variantProps :: [Var],
-    variantExtValue :: Maybe Ext,
-    specRange :: Range
-  }
-  deriving (Show)
-
 data Prop t
   = NamedProp Var t
   | SpreadProp t

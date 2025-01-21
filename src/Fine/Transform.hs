@@ -2,19 +2,29 @@ module Fine.Transform (runTransform) where
 
 import Control.Monad (unless)
 import Control.Monad.Trans.SW (SW, gets, modify, runSW, tell)
-import Data.List.Extra (repeated)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
-import Fine.Error (Error (..), Errors, Warning (UnusedVar), collectError, collectErrors, collectWarnings)
-import Fine.Syntax (Closure (Closure), Expr (..), Module (EntryModule, Module), closureVars)
+import Fine.Error
+  ( Error (..),
+    Errors,
+    Warning (UnusedVar),
+    collectError,
+    collectWarnings,
+  )
+import Fine.Syntax
+  ( Closure (Closure),
+    Expr (..),
+    Module (EntryModule, Module),
+    VariantSpec (VariantSpec),
+    closureVars,
+  )
 import Fine.Syntax.Common
-  ( Bind (Bind),
+  ( Bind (..),
     Fixity (Fixity),
     Prop (NamedProp),
     Var,
-    VariantSpec (VariantSpec),
     binder,
     boundValue,
   )
@@ -26,30 +36,34 @@ data State = State
   { freeVars :: Set Var,
     closures :: Map Var (Closure Expr),
     fixities :: Map Var Fixity,
-    variantSpecs :: Map Var VariantSpec
+    variantSpecs :: Map Var VariantSpec,
+    transformEmptyVariant :: Bool
   }
-
-extractCt :: VariantSpec -> SW State Errors (Bind () (Closure Expr))
-extractCt spec@(VariantSpec var props _ r) = do
-  tell (collectErrors $ map RepeatedProp $ repeated props)
-  specs <- gets variantSpecs
-  if M.member var specs
-    then tell (collectError $ RepeatedVariant var)
-    else modify (\st -> st {variantSpecs = M.insert var spec specs})
-  let props' = map (\prop -> NamedProp prop (Id prop)) props
-  let varnt = Variant var props' r
-  let value = if null props then varnt else Fun props varnt r
-  let closure = Closure M.empty value Nothing
-  modify (\st -> st {closures = M.insert var closure (closures st), freeVars = S.insert var (freeVars st)})
-  return (Bind var () closure)
 
 transformExpr :: P.Expr -> SW State Errors Expr
 transformExpr expr = do
   fixs <- gets fixities
   specs <- gets variantSpecs
-  let (expr', transfErrors) = TE.runTransform fixs specs expr
+  tev <- gets transformEmptyVariant
+  let (expr', transfErrors) = TE.runTransform fixs specs tev expr
   tell transfErrors
   return expr'
+
+transformBind :: Bind t P.Expr -> SW State Errors (Bind t (Closure Expr))
+transformBind (Bind bder t v) = do
+  value <- transformExpr v
+  currentFreeVars <- do
+    vs <- gets freeVars
+    if S.member bder vs
+      then tell (collectError $ RepeatedVar bder) >> return vs
+      else return (S.insert bder vs)
+  let (vFreeVars, fvErrors) = handleVars currentFreeVars value
+  tell fvErrors
+  currentEnv <- gets closures
+  let recBder = if S.member bder vFreeVars then Just bder else Nothing
+  let closure = Closure (M.restrictKeys currentEnv vFreeVars) value recBder
+  modify (\st -> st {freeVars = S.union currentFreeVars vFreeVars, closures = M.insert bder closure currentEnv})
+  return (Bind bder t closure)
 
 transformDefns :: [P.Defn] -> SW State Errors [Bind () (Closure Expr)]
 transformDefns [] = return []
@@ -60,26 +74,26 @@ transformDefns (P.FixDefn fix@(Fixity _ prec) op : defns) = do
     then tell (collectError $ RepeatedFixity op)
     else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
   transformDefns defns
-transformDefns (P.DtypeDefn specs : defns) = do
-  ctors <- mapM extractCt specs
-  bs <- transformDefns defns
-  return (ctors ++ bs)
-transformDefns (P.Defn (Bind bder _ v) : defns) = do
-  v' <- transformExpr v
-  currentFreeVars <- do
-    vs <- gets freeVars
-    if S.member bder vs
-      then tell (collectError $ RepeatedVar bder) >> return vs
-      else return (S.insert bder vs)
-  let (vFreeVars, fvErrors) = handleVars currentFreeVars v'
-  tell fvErrors
-  currentEnv <- gets closures
-  let recBder = if S.member bder vFreeVars then Just bder else Nothing
-  let closure = Closure (M.restrictKeys currentEnv vFreeVars) v' recBder
-  let b' = Bind bder () closure
-  modify (\st -> st {freeVars = S.union currentFreeVars vFreeVars, closures = M.insert bder closure currentEnv})
-  bs' <- transformDefns defns
-  return (b' : bs')
+transformDefns (P.Defn bind : defns) = do
+  bind' <- transformBind bind
+  binds <- transformDefns defns
+  return (bind' : binds)
+transformDefns (P.CtorDefn tag props optExt r : defns) = do
+  modify
+    (\st -> st {variantSpecs = M.insert tag (VariantSpec tag props) (variantSpecs st)})
+  let value = case optExt of
+        Just ext -> P.ExtId ext
+        Nothing ->
+          let props' = map (\prop -> NamedProp prop (P.Id prop)) props
+              varnt = P.Variant tag props' r
+           in if null props then varnt else P.Fun props varnt r
+  bind <- do
+    modify (\st -> st {transformEmptyVariant = False})
+    b <- transformBind $ Bind tag () value
+    modify (\st -> st {transformEmptyVariant = True})
+    return b
+  binds <- transformDefns defns
+  return (bind : binds)
 
 transformEntryExpr :: P.Expr -> SW State Errors (Closure Expr)
 transformEntryExpr expr = do
@@ -116,6 +130,6 @@ transform (P.Module defns optExpr) = do
 
 runTransform :: P.Module -> (Either [Error] Module, [Warning])
 runTransform mdule =
-  let st = State S.empty M.empty M.empty M.empty
+  let st = State S.empty M.empty M.empty M.empty True
       (mdule', _, (errors, warnings)) = runSW (transform mdule) st
    in (if null errors then Right mdule' else Left errors, warnings)
