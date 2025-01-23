@@ -13,7 +13,7 @@ import Fine.Error
     collectErrors,
     collectWarnings,
   )
-import Fine.Syntax (Expr (..), boundVars)
+import Fine.Syntax.Abstract (Expr (..), boundVars)
 import Fine.Syntax.Common (Prop (..), Var)
 
 type AvailableVars = Set Var

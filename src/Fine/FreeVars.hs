@@ -3,7 +3,7 @@ module Fine.FreeVars (freeVars) where
 import qualified Data.List.NonEmpty as L
 import Data.Set (Set)
 import qualified Data.Set as S
-import Fine.Syntax (Expr (..), boundVars)
+import Fine.Syntax.Abstract (Expr (..), boundVars)
 import Fine.Syntax.Common (Prop (..), Var)
 
 propFreeVars :: Prop Expr -> Set Var

@@ -13,7 +13,7 @@ import Fine.Error
     collectError,
     collectWarnings,
   )
-import Fine.Syntax
+import Fine.Syntax.Abstract
   ( Closure (Closure),
     Expr (..),
     Module (EntryModule, Module),
@@ -28,7 +28,7 @@ import Fine.Syntax.Common
     binder,
     boundValue,
   )
-import qualified Fine.Syntax.Parsed as P
+import qualified Fine.Syntax.Concrete as C
 import qualified Fine.Transform.Expr as TE (runTransform)
 import Fine.Transform.Vars (handleVars)
 
@@ -40,7 +40,7 @@ data State = State
     transformEmptyVariant :: Bool
   }
 
-transformExpr :: P.Expr -> SW State Errors Expr
+transformExpr :: C.Expr -> SW State Errors Expr
 transformExpr expr = do
   fixs <- gets fixities
   specs <- gets variantSpecs
@@ -49,7 +49,7 @@ transformExpr expr = do
   tell transfErrors
   return expr'
 
-transformBind :: Bind t P.Expr -> SW State Errors (Bind t (Closure Expr))
+transformBind :: Bind t C.Expr -> SW State Errors (Bind t (Closure Expr))
 transformBind (Bind bder t v) = do
   value <- transformExpr v
   currentFreeVars <- do
@@ -65,28 +65,28 @@ transformBind (Bind bder t v) = do
   modify (\st -> st {freeVars = S.union currentFreeVars vFreeVars, closures = M.insert bder closure currentEnv})
   return (Bind bder t closure)
 
-transformDefns :: [P.Defn] -> SW State Errors [Bind () (Closure Expr)]
+transformDefns :: [C.Defn] -> SW State Errors [Bind () (Closure Expr)]
 transformDefns [] = return []
-transformDefns (P.FixDefn fix@(Fixity _ prec) op : defns) = do
+transformDefns (C.FixDefn fix@(Fixity _ prec) op : defns) = do
   unless (0 <= prec && prec < 10) (tell $ collectError $ InvalidPrecedence 0 10 op) -- TODO: read from some config
   fixities' <- gets fixities
   if M.member op fixities'
     then tell (collectError $ RepeatedFixity op)
     else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
   transformDefns defns
-transformDefns (P.Defn bind : defns) = do
+transformDefns (C.Defn bind : defns) = do
   bind' <- transformBind bind
   binds <- transformDefns defns
   return (bind' : binds)
-transformDefns (P.CtorDefn tag props optExt r : defns) = do
+transformDefns (C.CtorDefn tag props optExt r : defns) = do
   modify
     (\st -> st {variantSpecs = M.insert tag (VariantSpec tag props) (variantSpecs st)})
   let value = case optExt of
-        Just ext -> P.ExtId ext
+        Just ext -> C.ExtId ext
         Nothing ->
-          let props' = map (\prop -> NamedProp prop (P.Id prop)) props
-              varnt = P.Variant tag props' r
-           in if null props then varnt else P.Fun props varnt r
+          let props' = map (\prop -> NamedProp prop (C.Id prop)) props
+              varnt = C.Variant tag props' r
+           in if null props then varnt else C.Fun props varnt r
   bind <- do
     modify (\st -> st {transformEmptyVariant = False})
     b <- transformBind $ Bind tag () value
@@ -95,7 +95,7 @@ transformDefns (P.CtorDefn tag props optExt r : defns) = do
   binds <- transformDefns defns
   return (bind : binds)
 
-transformEntryExpr :: P.Expr -> SW State Errors (Closure Expr)
+transformEntryExpr :: C.Expr -> SW State Errors (Closure Expr)
 transformEntryExpr expr = do
   expr' <- transformExpr expr
   exprFreeVars <- do
@@ -117,8 +117,8 @@ checkUnusedTopBinds bs optCl =
       binders = S.fromList $ map binder bs
    in collectWarnings $ map UnusedVar $ S.toList $ S.difference binders used'
 
-transform :: P.Module -> SW State Errors Module
-transform (P.Module defns optExpr) = do
+transform :: C.Module -> SW State Errors Module
+transform (C.Module defns optExpr) = do
   bindings <- transformDefns defns
   optClosure <- mapM transformEntryExpr optExpr
   tell (checkUnusedTopBinds bindings optClosure)
@@ -128,7 +128,7 @@ transform (P.Module defns optExpr) = do
     Nothing -> Module bindings fixities' specs
     Just closure -> EntryModule bindings fixities' specs closure
 
-runTransform :: P.Module -> (Either [Error] Module, [Warning])
+runTransform :: C.Module -> (Either [Error] Module, [Warning])
 runTransform mdule =
   let st = State S.empty M.empty M.empty M.empty True
       (mdule', _, (errors, warnings)) = runSW (transform mdule) st

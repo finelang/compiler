@@ -13,7 +13,7 @@ import qualified Data.Map.Strict as M
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Fine.Syntax (Closure (Closure), Expr (..), Module (..), Pattern (..), PropsPattern (..), boundVars)
+import Fine.Syntax.Abstract (Closure (Closure), Expr (..), Module (..), Pattern (..), PropsPattern (..), boundVars)
 import Fine.Syntax.Common
   ( Bind (..),
     Ext (Ext),

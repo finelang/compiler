@@ -1,4 +1,4 @@
-module Fine.Syntax
+module Fine.Syntax.Abstract
   ( Pattern (..),
     PropsPattern (..),
     Expr (..),

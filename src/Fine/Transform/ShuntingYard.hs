@@ -14,7 +14,7 @@ import Fine.Error
     collectWarning,
     errorUNREACHABLE,
   )
-import Fine.Syntax (Expr (..))
+import Fine.Syntax.Abstract (Expr (..))
 import Fine.Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Var)
 
 type Fixities = Map Var Fixity

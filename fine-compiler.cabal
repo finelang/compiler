@@ -36,9 +36,9 @@ library
       Fine.Lexer
       Fine.Parser
       Fine.Reduce
-      Fine.Syntax
+      Fine.Syntax.Abstract
       Fine.Syntax.Common
-      Fine.Syntax.Parsed
+      Fine.Syntax.Concrete
       Fine.Transform
       Fine.Transform.Expr
       Fine.Transform.Pattern

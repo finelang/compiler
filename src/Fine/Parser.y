@@ -19,7 +19,7 @@ import Fine.Syntax.Common
     varName,
     Lit (..)
   )
-import Fine.Syntax.Parsed (Defn (..), Expr (..), Module (Module))
+import Fine.Syntax.Concrete (Defn (..), Expr (..), Module (Module))
 }
 
 %name parseTokens

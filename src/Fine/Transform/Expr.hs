@@ -10,7 +10,7 @@ import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectError, collectErrors, collectWarning)
-import Fine.Syntax (Expr (..), Pattern, VariantSpec (..), boundVars)
+import Fine.Syntax.Abstract (Expr (..), Pattern, VariantSpec (..), boundVars)
 import Fine.Syntax.Common
   ( Fixity,
     OpChain (..),
@@ -19,8 +19,8 @@ import Fine.Syntax.Common
     justNamedProp,
     justSpreadProp,
   )
-import qualified Fine.Syntax.Parsed as P
-import qualified Fine.Transform.Pattern as PattT
+import qualified Fine.Syntax.Concrete as C
+import qualified Fine.Transform.Pattern as TP
 import Fine.Transform.ShuntingYard (runSy)
 
 type Fixities = Map Var Fixity
@@ -40,7 +40,7 @@ shuntingYard chain = do
   tell errors
   return expr
 
-transformChain :: OpChain P.Expr -> RW Ctx Errors (OpChain Expr)
+transformChain :: OpChain C.Expr -> RW Ctx Errors (OpChain Expr)
 transformChain (Operand expr) = Operand <$> transform expr
 transformChain (Operation left op chain) = do
   left' <- transform left
@@ -60,31 +60,31 @@ checkVariant tag props = do
         (tell $ collectErrors $ map (RequiredProp tag) $ S.toList $ S.difference varntNames' names)
       tell (collectErrors $ map (InvalidProp tag) $ S.toList $ S.difference names varntNames')
 
-transformToPatt :: P.Expr -> RW VariantSpecs Errors Pattern
+transformToPatt :: C.Expr -> RW VariantSpecs Errors Pattern
 transformToPatt expr = do
   specs <- ask
-  let (patt, errors) = PattT.runTransform specs expr
+  let (patt, errors) = TP.runTransform specs expr
   tell errors
   return patt
 
-transformProp :: Prop P.Expr -> RW Ctx Errors (Prop Expr)
+transformProp :: Prop C.Expr -> RW Ctx Errors (Prop Expr)
 transformProp (NamedProp name expr) = do
   expr' <- transform expr
   return (NamedProp name expr')
 transformProp (SpreadProp expr) = SpreadProp <$> transform expr
 
-transformProps :: [Prop P.Expr] -> RW Ctx Errors [Prop Expr]
+transformProps :: [Prop C.Expr] -> RW Ctx Errors [Prop Expr]
 transformProps props = do
   tell
     (collectErrors $ map RepeatedProp $ repeated $ mapMaybe (fmap fst . justNamedProp) props)
   mapM transformProp props
 
-transform :: P.Expr -> RW Ctx Errors Expr
-transform (P.Literal lit r) = return (Literal lit r)
-transform (P.Obj props r) = do
+transform :: C.Expr -> RW Ctx Errors Expr
+transform (C.Literal lit r) = return (Literal lit r)
+transform (C.Obj props r) = do
   props' <- transformProps props
   return (Obj props' r)
-transform (P.Variant tag@(Var name _) props r) = do
+transform (C.Variant tag@(Var name _) props r) = do
   tev <- asks transformEmptyVariant
   if tev && null props
     then return (Id $ Var name r)
@@ -92,25 +92,25 @@ transform (P.Variant tag@(Var name _) props r) = do
       props' <- transformProps props
       withReader variantSpecs (checkVariant tag props')
       return (Variant tag props' r)
-transform (P.Tuple fst' snd' rest r) = do
+transform (C.Tuple fst' snd' rest r) = do
   fst'' <- transform fst'
   snd'' <- transform snd'
   rest' <- mapM transform rest
   return (Tuple fst'' snd'' rest' r)
-transform (P.Id var) = return (Id var)
-transform (P.App f args r) = do
+transform (C.Id var) = return (Id var)
+transform (C.App f args r) = do
   f' <- transform f
   args' <- mapM transform args
   return (App f' args' r)
-transform (P.Access expr prop) = do
+transform (C.Access expr prop) = do
   expr' <- transform expr
   return (Access expr' prop)
-transform (P.Cond cond yes no r) = do
+transform (C.Cond cond yes no r) = do
   cond' <- transform cond
   yes' <- transform yes
   no' <- transform no
   return (Cond cond' yes' no' r)
-transform (P.PatternMatch expr matches r) = do
+transform (C.PatternMatch expr matches r) = do
   expr' <- transform expr
   patterns' <- withReader variantSpecs (mapM (transformToPatt . fst) matches)
   forM_
@@ -118,34 +118,34 @@ transform (P.PatternMatch expr matches r) = do
     (tell . collectErrors . map RepeatedVar . repeated . boundVars)
   exprs' <- mapM (transform . snd) matches
   return $ PatternMatch expr' (L.zip patterns' exprs') r
-transform (P.Fun params body r) = do
+transform (C.Fun params body r) = do
   tell (collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
-transform (P.Parens expr) = do
+transform (C.Parens expr) = do
   expr' <- transform expr
   return $ case expr' of
     Parens _ -> expr'
     Block _ _ -> expr'
     Obj _ _ -> expr'
     _ -> Parens expr'
-transform (P.Block exprs r) = do
+transform (C.Block exprs r) = do
   exprs' <- mapM transform exprs
   return $ case exprs' of
     expr :| [] -> expr
     _ -> Block exprs' r
-transform (P.Chain chain) = do
+transform (C.Chain chain) = do
   chain' <- transformChain chain
   withReader fixities (shuntingYard chain')
-transform (P.ExtId ext) = return (ExtId ext)
-transform (P.ExtOpApp ext l r) = do
+transform (C.ExtId ext) = return (ExtId ext)
+transform (C.ExtOpApp ext l r) = do
   l' <- transform l
   r' <- transform r
   return (ExtOpApp ext l' r')
-transform (P.Debug expr r) = do
+transform (C.Debug expr r) = do
   tell (collectWarning $ DebugKeywordUsage r)
   expr' <- transform expr
   return (Debug expr' r)
 
-runTransform :: Fixities -> VariantSpecs -> Bool -> P.Expr -> (Expr, Errors)
+runTransform :: Fixities -> VariantSpecs -> Bool -> C.Expr -> (Expr, Errors)
 runTransform fixs specs tev expr = runRW (transform expr) (Ctx fixs specs tev)

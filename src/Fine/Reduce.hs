@@ -8,7 +8,7 @@ import qualified Data.Set as S
 import Data.Text (snoc)
 import Fine.Error (errorTODO)
 import Fine.FreeVars (freeVars)
-import Fine.Syntax (Expr (..), Pattern (..), PropsPattern (PropsPattern), boundVars)
+import Fine.Syntax.Abstract (Expr (..), Pattern (..), PropsPattern (PropsPattern), boundVars)
 import Fine.Syntax.Common (Prop (..), Var (Var))
 
 type FreeVars = Set Var

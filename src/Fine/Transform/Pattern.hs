@@ -18,7 +18,7 @@ import Fine.Error
     collectError,
     collectErrors,
   )
-import Fine.Syntax (Pattern (..), PropsPattern (PropsPattern), VariantSpec (..))
+import Fine.Syntax.Abstract (Pattern (..), PropsPattern (PropsPattern), VariantSpec (..))
 import Fine.Syntax.Common
   ( Lit (Unit),
     Prop (..),
@@ -28,7 +28,7 @@ import Fine.Syntax.Common
     justNamedProp,
     justSpreadProp,
   )
-import Fine.Syntax.Parsed (Expr (..))
+import Fine.Syntax.Concrete (Expr (..))
 
 type VariantSpecs = Map Var VariantSpec
 
