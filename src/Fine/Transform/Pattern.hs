@@ -2,7 +2,6 @@ module Fine.Transform.Pattern (runTransform, checkVariant) where
 
 import Control.Monad.Trans.RW (RW, asks, runRW, tell)
 import Data.List.Extra (repeated)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
@@ -18,7 +17,7 @@ import Fine.Error
     collectError,
     collectErrors,
   )
-import Fine.Syntax.Abstract (Pattern (..), PropsPattern (PropsPattern), VariantSpec (..))
+import Fine.Syntax.Abstract (Pattern (..), PropsPattern (PropsPattern))
 import Fine.Syntax.Common
   ( Lit (Unit),
     Prop (..),
@@ -29,8 +28,7 @@ import Fine.Syntax.Common
     justSpreadProp,
   )
 import Fine.Syntax.Concrete (Expr (..))
-
-type VariantSpecs = Map Var VariantSpec
+import Fine.Transform.Common (VariantSpec (VariantSpec), VariantSpecs)
 
 errorPattern :: Range -> Pattern
 errorPattern = LiteralPatt Unit

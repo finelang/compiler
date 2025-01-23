@@ -4,7 +4,6 @@ module Fine.Transform.ShuntingYard (runSy) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RWS.Strict (RWS, asks, get, gets, modify, runRWS, tell)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Fine.Error
   ( Error (SameInfixPrecedence),
@@ -16,8 +15,7 @@ import Fine.Error
   )
 import Fine.Syntax.Abstract (Expr (..))
 import Fine.Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Var)
-
-type Fixities = Map Var Fixity
+import Fine.Transform.Common (Fixities)
 
 type SYStack = ([Expr], [Var])
 

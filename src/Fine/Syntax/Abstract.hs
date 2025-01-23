@@ -3,7 +3,6 @@ module Fine.Syntax.Abstract
     PropsPattern (..),
     Expr (..),
     Closure (..),
-    VariantSpec (..),
     Module (..),
     boundVars,
     closureVars,
@@ -103,22 +102,14 @@ data Closure v = Closure
 closureVars :: Closure v -> [Var]
 closureVars (Closure env _ bder) = M.keys env ++ maybeToList bder
 
-data VariantSpec = VariantSpec
-  { variantTag :: Var,
-    variantProps :: [Var]
-  }
-  deriving (Show)
-
 data Module
   = Module
       { bindings :: [Bind () (Closure Expr)],
-        fixities :: Map Var Fixity,
-        variantSpecs :: Map Var VariantSpec
+        fixities :: Map Var Fixity
       }
   | EntryModule
       { bindings :: [Bind () (Closure Expr)],
         fixities :: Map Var Fixity,
-        variantSpecs :: Map Var VariantSpec,
         _entryExpr :: Closure Expr
       }
   deriving (Show)

@@ -5,27 +5,29 @@ import Control.Monad.Trans.RW (RW, ask, asks, runRW, tell, withReader)
 import Data.List.Extra (repeated)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
-import Fine.Error (Error (..), Errors, Warning (DebugKeywordUsage), collectError, collectErrors, collectWarning)
-import Fine.Syntax.Abstract (Expr (..), Pattern, VariantSpec (..), boundVars)
+import Fine.Error
+  ( Error (..),
+    Errors,
+    Warning (DebugKeywordUsage),
+    collectError,
+    collectErrors,
+    collectWarning,
+  )
+import Fine.Syntax.Abstract (Expr (..), Pattern, boundVars)
 import Fine.Syntax.Common
-  ( Fixity,
-    OpChain (..),
+  ( OpChain (..),
     Prop (..),
     Var (Var),
     justNamedProp,
     justSpreadProp,
   )
 import qualified Fine.Syntax.Concrete as C
+import Fine.Transform.Common (Fixities, VariantSpec (VariantSpec), VariantSpecs)
 import qualified Fine.Transform.Pattern as TP
 import Fine.Transform.ShuntingYard (runSy)
-
-type Fixities = Map Var Fixity
-
-type VariantSpecs = Map Var VariantSpec
 
 data Ctx = Ctx
   { fixities :: Fixities,

@@ -40,6 +40,7 @@ library
       Fine.Syntax.Common
       Fine.Syntax.Concrete
       Fine.Transform
+      Fine.Transform.Common
       Fine.Transform.Expr
       Fine.Transform.Pattern
       Fine.Transform.ShuntingYard

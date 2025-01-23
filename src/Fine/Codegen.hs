@@ -200,11 +200,11 @@ instance CodeGens (Bind () (Closure Expr)) Ctx where
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
-  genCode (Module binds _ _) = do
+  genCode (Module binds _) = do
     stmts <- mapM genCode binds
     return (T.intercalate "\n\n" stmts)
-  genCode (EntryModule binds fixs specs (Closure _ expr _)) = do
-    code <- genCode (Module binds fixs specs)
+  genCode (EntryModule binds fixs (Closure _ expr _)) = do
+    code <- genCode (Module binds fixs)
     entry <- genCode expr
     return [i|#{code}\n\n#{entry};|]
 

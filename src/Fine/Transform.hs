@@ -17,7 +17,6 @@ import Fine.Syntax.Abstract
   ( Closure (Closure),
     Expr (..),
     Module (EntryModule, Module),
-    VariantSpec (VariantSpec),
     closureVars,
   )
 import Fine.Syntax.Common
@@ -29,14 +28,15 @@ import Fine.Syntax.Common
     boundValue,
   )
 import qualified Fine.Syntax.Concrete as C
+import Fine.Transform.Common (Fixities, VariantSpec (VariantSpec), VariantSpecs)
 import qualified Fine.Transform.Expr as TE (runTransform)
 import Fine.Transform.Vars (handleVars)
 
 data State = State
   { freeVars :: Set Var,
     closures :: Map Var (Closure Expr),
-    fixities :: Map Var Fixity,
-    variantSpecs :: Map Var VariantSpec,
+    fixities :: Fixities,
+    variantSpecs :: VariantSpecs,
     transformEmptyVariant :: Bool
   }
 
@@ -123,10 +123,9 @@ transform (C.Module defns optExpr) = do
   optClosure <- mapM transformEntryExpr optExpr
   tell (checkUnusedTopBinds bindings optClosure)
   fixities' <- gets fixities
-  specs <- gets variantSpecs
   return $ case optClosure of
-    Nothing -> Module bindings fixities' specs
-    Just closure -> EntryModule bindings fixities' specs closure
+    Nothing -> Module bindings fixities'
+    Just closure -> EntryModule bindings fixities' closure
 
 runTransform :: C.Module -> (Either [Error] Module, [Warning])
 runTransform mdule =
