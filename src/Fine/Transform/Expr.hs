@@ -31,8 +31,7 @@ import Fine.Transform.ShuntingYard (runSy)
 
 data Ctx = Ctx
   { fixities :: Fixities,
-    variantSpecs :: VariantSpecs,
-    transformEmptyVariant :: Bool
+    variantSpecs :: VariantSpecs
   }
 
 shuntingYard :: OpChain Expr -> RW Fixities Errors Expr
@@ -87,8 +86,7 @@ transform (C.Obj props r) = do
   props' <- transformProps props
   return (Obj props' r)
 transform (C.Variant tag@(Var name _) props r) = do
-  tev <- asks transformEmptyVariant
-  if tev && null props
+  if null props
     then return (Id $ Var name r)
     else do
       props' <- transformProps props
@@ -149,5 +147,5 @@ transform (C.Debug expr r) = do
   expr' <- transform expr
   return (Debug expr' r)
 
-runTransform :: Fixities -> VariantSpecs -> Bool -> C.Expr -> (Expr, Errors)
-runTransform fixs specs tev expr = runRW (transform expr) (Ctx fixs specs tev)
+runTransform :: Fixities -> VariantSpecs -> C.Expr -> (Expr, Errors)
+runTransform fixs specs expr = runRW (transform expr) (Ctx fixs specs)

@@ -1,6 +1,6 @@
 module Fine.Transform (runTransform) where
 
-import Control.Monad (unless)
+import Control.Monad (liftM2, unless)
 import Control.Monad.Trans.SW (SW, gets, modify, runSW, tell)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -36,16 +36,14 @@ data State = State
   { freeVars :: Set Var,
     closures :: Map Var (Closure Expr),
     fixities :: Fixities,
-    variantSpecs :: VariantSpecs,
-    transformEmptyVariant :: Bool
+    variantSpecs :: VariantSpecs
   }
 
 transformExpr :: C.Expr -> SW State Errors Expr
 transformExpr expr = do
   fixs <- gets fixities
   specs <- gets variantSpecs
-  tev <- gets transformEmptyVariant
-  let (expr', transfErrors) = TE.runTransform fixs specs tev expr
+  let (expr', transfErrors) = TE.runTransform fixs specs expr
   tell transfErrors
   return expr'
 
@@ -74,26 +72,25 @@ transformDefns (C.FixDefn fix@(Fixity _ prec) op : defns) = do
     then tell (collectError $ RepeatedFixity op)
     else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
   transformDefns defns
-transformDefns (C.Defn bind : defns) = do
-  bind' <- transformBind bind
-  binds <- transformDefns defns
-  return (bind' : binds)
+transformDefns (C.Defn bind : defns) = liftM2 (:) (transformBind bind) (transformDefns defns)
 transformDefns (C.CtorDefn tag props optExt r : defns) = do
-  modify
-    (\st -> st {variantSpecs = M.insert tag (VariantSpec tag props) (variantSpecs st)})
   let value = case optExt of
-        Just ext -> C.ExtId ext
+        Just ext -> ExtId ext
         Nothing ->
-          let props' = map (\prop -> NamedProp prop (C.Id prop)) props
-              varnt = C.Variant tag props' r
-           in if null props then varnt else C.Fun props varnt r
-  bind <- do
-    modify (\st -> st {transformEmptyVariant = False})
-    b <- transformBind $ Bind tag () value
-    modify (\st -> st {transformEmptyVariant = True})
-    return b
-  binds <- transformDefns defns
-  return (bind : binds)
+          let props' = map (\prop -> NamedProp prop (Id prop)) props
+              varnt = Variant tag props' r
+           in if null props then varnt else Fun props varnt r
+  let closure = Closure M.empty value Nothing
+  let bind = Bind tag () closure
+  modify
+    ( \st ->
+        st
+          { freeVars = S.insert tag (freeVars st),
+            closures = M.insert tag closure (closures st),
+            variantSpecs = M.insert tag (VariantSpec tag props) (variantSpecs st)
+          }
+    )
+  fmap (bind :) (transformDefns defns)
 
 transformEntryExpr :: C.Expr -> SW State Errors (Closure Expr)
 transformEntryExpr expr = do
@@ -129,6 +126,6 @@ transform (C.Module defns optExpr) = do
 
 runTransform :: C.Module -> (Either [Error] Module, [Warning])
 runTransform mdule =
-  let st = State S.empty M.empty M.empty M.empty True
+  let st = State S.empty M.empty M.empty M.empty
       (mdule', _, (errors, warnings)) = runSW (transform mdule) st
    in (if null errors then Right mdule' else Left errors, warnings)
