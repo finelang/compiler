@@ -75,7 +75,7 @@ transformDefns (C.FixDefn fix@(Fixity _ prec) op : defns) = do
 transformDefns (C.Defn bind : defns) = liftM2 (:) (transformBind bind) (transformDefns defns)
 transformDefns (C.CtorDefn tag props optExt r : defns) = do
   let value = case optExt of
-        Just ext -> ExtId ext
+        Just ext -> ExtExpr ext
         Nothing ->
           let props' = map (\prop -> NamedProp prop (Id prop)) props
               varnt = Variant tag props' r

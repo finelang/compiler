@@ -116,12 +116,10 @@ replace' x fun@(Fun params body r) =
       (params', body') <- convert params body
       body'' <- replace' x body'
       return (Fun params' body'' r)
-replace' x (Parens expr) = Parens <$> replace' x expr
 replace' x (Block exprs r) = do
   exprs' <- mapM (replace' x) exprs
   return (Block exprs' r)
-replace' _ expr@(ExtId _) = return expr
-replace' x (ExtOpApp ext l r) = ExtOpApp ext <$> replace' x l <*> replace' x r
+replace' _ expr@(ExtExpr _) = return expr
 replace' x (Debug expr r) = do
   expr' <- replace' x expr
   return (Debug expr' r)

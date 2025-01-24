@@ -1,6 +1,6 @@
 module Fine.Transform.Vars (handleVars) where
 
-import Control.Monad (forM_, liftM2)
+import Control.Monad (forM_)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
 import qualified Data.List.NonEmpty as L
 import Data.Maybe (mapMaybe)
@@ -71,10 +71,8 @@ freeVars (Fun params body _) = do
   bodyVars <- withReader (S.union params') (freeVars body)
   tell (map Unused $ S.toList $ S.difference params' bodyVars)
   return (S.difference bodyVars params')
-freeVars (Parens expr) = freeVars expr
 freeVars (Block exprs _) = S.unions <$> mapM freeVars exprs
-freeVars (ExtId _) = return S.empty
-freeVars (ExtOpApp _ l r) = liftM2 S.union (freeVars l) (freeVars r)
+freeVars (ExtExpr _) = return S.empty
 freeVars (Debug expr _) = freeVars expr
 
 handleVars :: AvailableVars -> Expr -> (FreeVars, Errors)

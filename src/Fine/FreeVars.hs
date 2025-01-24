@@ -25,8 +25,6 @@ freeVars (PatternMatch expr matches _) =
       freeVarsList = map freeVars exprs
    in S.unions (freeVars expr : zipWith S.difference freeVarsList boundVarsList)
 freeVars (Fun params body _) = S.difference (freeVars body) (S.fromList params)
-freeVars (Parens expr) = freeVars expr
 freeVars (Block exprs _) = S.unions (fmap freeVars exprs)
-freeVars (ExtId _) = S.empty
-freeVars (ExtOpApp _ l r) = S.union (freeVars l) (freeVars r)
+freeVars (ExtExpr _) = S.empty
 freeVars (Debug expr _) = freeVars expr

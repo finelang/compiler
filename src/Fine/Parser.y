@@ -76,11 +76,10 @@ Defns : Defns Defn      { $2 : $1 }
       | {- empty -} { [] }
 
 Defn : let Prefix '=' Expr                { Defn (Bind $2 () $4) }
-     | ExtId let Prefix                   { Defn (Bind $3 () $1) }
+     | ExtExpr let Prefix                 { Defn (Bind $3 () $1) }
      | let Prefix '(' Params ')' '=' Expr { Defn (Bind $2 () (Fun (reverse $4) $7 (getRange ($2, $7)))) }
      | let Prefix Infix Prefix '=' Expr   { Defn (Bind $3 () (Fun [$2, $4] $6 (getRange ($2, $6)))) }
-     | ExtId let Prefix Infix Prefix      { Defn (Bind $4 () (Fun [$3, $5] $1 (getRange ($3, $5)))) }
-     | ExtOp let Prefix Infix Prefix      { Defn (Bind $4 () (Fun [$3, $5] (ExtOpApp $1 (Id $3) (Id $5)) (getRange ($3, $5)))) }
+     | ExtExpr let Prefix Infix Prefix    { Defn (Bind $4 () (Fun [$3, $5] $1 (getRange ($3, $5)))) }
      | Fix Infix                          { FixDefn $1 $2 }
 
 DataDefn: data '{' Ctors '}'  { reverse $3 }
@@ -151,11 +150,9 @@ Prop : Prefix '=' Expr  { NamedProp $1 $3 }
      | '.' '.' '.' Expr { SpreadProp $4 }
      | '=' Prefix       { NamedProp $2 (Id $2) }
 
-Ext : ext Prefix  { Ext (varName $2) (getRange ($1, $2)) }
+Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
 
-ExtOp : ext Infix { Ext (varName $2) (getRange ($1, $2)) }
-
-ExtId : Ext { ExtId $1 }
+ExtExpr : Ext { ExtExpr $1 }
 
 {
 mkVar tok = Var (tokenLexeme tok) (getRange tok)

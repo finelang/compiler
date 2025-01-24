@@ -122,13 +122,7 @@ transform (C.Fun params body r) = do
   tell (collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
-transform (C.Parens expr) = do
-  expr' <- transform expr
-  return $ case expr' of
-    Parens _ -> expr'
-    Block _ _ -> expr'
-    Obj _ _ -> expr'
-    _ -> Parens expr'
+transform (C.Parens expr) = transform expr
 transform (C.Block exprs r) = do
   exprs' <- mapM transform exprs
   return $ case exprs' of
@@ -137,11 +131,7 @@ transform (C.Block exprs r) = do
 transform (C.Chain chain) = do
   chain' <- transformChain chain
   withReader fixities (shuntingYard chain')
-transform (C.ExtId ext) = return (ExtId ext)
-transform (C.ExtOpApp ext l r) = do
-  l' <- transform l
-  r' <- transform r
-  return (ExtOpApp ext l' r')
+transform (C.ExtExpr ext) = return (ExtExpr ext)
 transform (C.Debug expr r) = do
   tell (collectWarning $ DebugKeywordUsage r)
   expr' <- transform expr

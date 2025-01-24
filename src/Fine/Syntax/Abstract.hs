@@ -67,10 +67,8 @@ data Expr
   | PatternMatch Expr (NonEmpty (Pattern, Expr)) Range
   | Cond Expr Expr Expr Range
   | Fun [Var] Expr Range
-  | Parens Expr
   | Block (NonEmpty Expr) Range
-  | ExtId Ext
-  | ExtOpApp Ext Expr Expr
+  | ExtExpr Ext
   | Debug Expr Range
   deriving (Show)
 
@@ -87,9 +85,7 @@ instance HasRange Expr where
   getRange (PatternMatch _ _ r) = r
   getRange (Fun _ _ r) = r
   getRange (Block _ r) = r
-  getRange (Parens expr) = getRange expr
-  getRange (ExtId ext) = getRange ext
-  getRange (ExtOpApp ext _ _) = getRange ext
+  getRange (ExtExpr ext) = getRange ext
   getRange (Debug _ r) = r
 
 data Closure v = Closure
