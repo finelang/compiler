@@ -86,12 +86,12 @@ transform (C.Obj props r) = do
   props' <- transformProps props
   return (Obj props' r)
 transform (C.Variant tag@(Var name _) props r) = do
-  if null props
-    then return (Id $ Var name r)
-    else do
-      props' <- transformProps props
-      withReader variantSpecs (checkVariant tag props')
-      return (Variant tag props' r)
+  props' <- transformProps props
+  withReader variantSpecs (checkVariant tag props')
+  return $
+    if null props'
+      then Id (Var name r)
+      else Variant tag props' r
 transform (C.Tuple fst' snd' rest r) = do
   fst'' <- transform fst'
   snd'' <- transform snd'

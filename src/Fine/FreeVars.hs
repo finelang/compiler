@@ -13,7 +13,7 @@ propFreeVars (SpreadProp expr) = freeVars expr
 freeVars :: Expr -> Set Var
 freeVars (Literal _ _) = S.empty
 freeVars (Obj props _) = S.unions (map propFreeVars props)
-freeVars (Variant _ props _) = S.unions (map propFreeVars props)
+freeVars (Variant tag props _) = S.insert tag $ S.unions (map propFreeVars props)
 freeVars (Tuple fst' snd' rest _) = S.unions $ map freeVars (fst' : snd' : rest)
 freeVars (Id var) = S.singleton var
 freeVars (App f args _) = S.unions $ map freeVars (f : args)

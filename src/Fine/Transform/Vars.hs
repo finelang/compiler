@@ -42,7 +42,9 @@ propFreeVars (SpreadProp expr) = freeVars expr
 freeVars :: Expr -> RW AvailableVars [VarStatus] FreeVars
 freeVars (Literal _ _) = return S.empty
 freeVars (Obj props _) = S.unions <$> mapM propFreeVars props
-freeVars (Variant _ props _) = S.unions <$> mapM propFreeVars props
+freeVars (Variant tag props _) = do
+  vars <- mapM propFreeVars props
+  return (S.insert tag $ S.unions vars)
 freeVars (Tuple fst' snd' rest _) = S.unions <$> mapM freeVars (fst' : snd' : rest)
 freeVars (Id var) = do
   isDefined <- asks (S.member var)
