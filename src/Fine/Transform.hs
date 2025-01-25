@@ -4,6 +4,7 @@ import Control.Monad (liftM2, unless)
 import Control.Monad.Trans.SW (SW, gets, modify, runSW, tell)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Maybe (isNothing, mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error
@@ -18,6 +19,7 @@ import Fine.Syntax.Abstract
     Expr (..),
     Module (EntryModule, Module),
     closureVars,
+    justClosed,
   )
 import Fine.Syntax.Common
   ( Bind (..),
@@ -33,8 +35,8 @@ import qualified Fine.Transform.Expr as TE (runTransform)
 import Fine.Transform.Vars (handleVars)
 
 data State = State
-  { freeVars :: Set Var,
-    closures :: Map Var (Closure Expr),
+  { vars :: Set Var,
+    env :: Map Var Expr,
     fixities :: Fixities,
     variantSpecs :: VariantSpecs
   }
@@ -47,23 +49,27 @@ transformExpr expr = do
   tell transfErrors
   return expr'
 
-transformBind :: Bind t C.Expr -> SW State Errors (Bind t (Closure Expr))
+transformBind :: Bind t C.Expr -> SW State Errors (Bind t Expr)
 transformBind (Bind bder t v) = do
   value <- transformExpr v
   currentFreeVars <- do
-    vs <- gets freeVars
+    vs <- gets vars
     if S.member bder vs
       then tell (collectError $ RepeatedVar bder) >> return vs
       else return (S.insert bder vs)
   let (vFreeVars, fvErrors) = handleVars currentFreeVars value
   tell fvErrors
-  currentEnv <- gets closures
-  let recBder = if S.member bder vFreeVars then Just bder else Nothing
-  let closure = Closure (M.restrictKeys currentEnv vFreeVars) value recBder
-  modify (\st -> st {freeVars = S.union currentFreeVars vFreeVars, closures = M.insert bder closure currentEnv})
-  return (Bind bder t closure)
+  currentEnv <- gets env
+  let selfBinder = if S.member bder vFreeVars then Just bder else Nothing
+  let valueEnv = M.restrictKeys currentEnv vFreeVars
+  let value' =
+        if isNothing selfBinder && M.null valueEnv
+          then value
+          else Closed (Closure (M.restrictKeys currentEnv vFreeVars) value selfBinder)
+  modify (\st -> st {vars = S.union currentFreeVars vFreeVars, env = M.insert bder value' currentEnv})
+  return (Bind bder t value')
 
-transformDefns :: [C.Defn] -> SW State Errors [Bind () (Closure Expr)]
+transformDefns :: [C.Defn] -> SW State Errors [Bind () Expr]
 transformDefns [] = return []
 transformDefns (C.FixDefn fix@(Fixity _ prec) op : defns) = do
   unless (0 <= prec && prec < 10) (tell $ collectError $ InvalidPrecedence 0 10 op) -- TODO: read from some config
@@ -80,36 +86,38 @@ transformDefns (C.CtorDefn tag props optExt r : defns) = do
           let props' = map (\prop -> NamedProp prop (Id prop)) props
               varnt = Variant tag props' r
            in if null props then varnt else Fun props varnt r
-  let closure = Closure M.empty value Nothing
-  let bind = Bind tag () closure
   modify
     ( \st ->
         st
-          { freeVars = S.insert tag (freeVars st),
-            closures = M.insert tag closure (closures st),
+          { vars = S.insert tag (vars st),
+            env = M.insert tag value (env st),
             variantSpecs = M.insert tag (VariantSpec tag props) (variantSpecs st)
           }
     )
-  fmap (bind :) (transformDefns defns)
+  fmap (Bind tag () value :) (transformDefns defns)
 
-transformEntryExpr :: C.Expr -> SW State Errors (Closure Expr)
+transformEntryExpr :: C.Expr -> SW State Errors Expr
 transformEntryExpr expr = do
   expr' <- transformExpr expr
   exprFreeVars <- do
-    currentFreeVars <- gets freeVars
+    currentFreeVars <- gets vars
     let (fvs, errors) = handleVars currentFreeVars expr'
     tell errors
     return fvs
-  closure <- do
-    currentEnv <- gets closures
-    return (Closure (M.restrictKeys currentEnv exprFreeVars) expr' Nothing)
-  return closure
+  expr'' <- do
+    currentEnv <- gets env
+    let exprEnv = M.restrictKeys currentEnv exprFreeVars
+    return $
+      if M.null exprEnv
+        then expr'
+        else Closed ((Closure exprEnv expr' Nothing))
+  return expr''
 
-checkUnusedTopBinds :: [Bind () (Closure v)] -> Maybe (Closure v) -> Errors
-checkUnusedTopBinds bs optCl =
-  let used = S.fromList $ concat $ map (closureVars . boundValue) bs
-      used' = case optCl of
-        Just (Closure env _ _) -> S.union used (M.keysSet env)
+checkUnusedTopBinds :: [Bind () Expr] -> Maybe Expr -> Errors
+checkUnusedTopBinds bs optExpr =
+  let used = S.unions $ mapMaybe (fmap closureVars . justClosed . boundValue) bs
+      used' = case optExpr >>= (fmap closureVars . justClosed) of
+        Just more -> S.union used more
         _ -> used
       binders = S.fromList $ map binder bs
    in collectWarnings $ map UnusedVar $ S.toList $ S.difference binders used'
@@ -117,12 +125,12 @@ checkUnusedTopBinds bs optCl =
 transform :: C.Module -> SW State Errors Module
 transform (C.Module defns optExpr) = do
   bindings <- transformDefns defns
-  optClosure <- mapM transformEntryExpr optExpr
-  tell (checkUnusedTopBinds bindings optClosure)
+  optExpr' <- mapM transformEntryExpr optExpr
+  tell (checkUnusedTopBinds bindings optExpr')
   fixities' <- gets fixities
-  return $ case optClosure of
+  return $ case optExpr' of
     Nothing -> Module bindings fixities'
-    Just closure -> EntryModule bindings fixities' closure
+    Just expr -> EntryModule bindings fixities' expr
 
 runTransform :: C.Module -> (Either [Error] Module, [Warning])
 runTransform mdule =

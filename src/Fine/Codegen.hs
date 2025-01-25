@@ -182,10 +182,11 @@ instance CodeGens Expr Ctx where
   genCode (Debug expr _) = do
     expr' <- genCode expr
     return [i|fine$debug(#{expr'})|]
+  genCode (Closed (Closure _ expr _)) = genCode expr
 
-instance CodeGens (Bind () (Closure Expr)) Ctx where
-  genCode :: Bind () (Closure Expr) -> Reader Ctx Text
-  genCode (Bind (Var name _) _ (Closure _ expr _)) = do
+instance CodeGens (Bind () Expr) Ctx where
+  genCode :: Bind () Expr -> Reader Ctx Text
+  genCode (Bind (Var name _) _ expr) = do
     name' <- withReaderT symNames (sanitize name)
     case expr of
       Fun params body _ -> genFunCode False name' params body
@@ -198,7 +199,7 @@ instance CodeGens Module Ctx where
   genCode (Module binds _) = do
     stmts <- mapM genCode binds
     return (T.intercalate "\n\n" stmts)
-  genCode (EntryModule binds fixs (Closure _ expr _)) = do
+  genCode (EntryModule binds fixs expr) = do
     code <- genCode (Module binds fixs)
     entry <- genCode expr
     return [i|#{code}\n\n#{entry};|]

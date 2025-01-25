@@ -6,6 +6,7 @@ module Fine.Syntax.Abstract
     Module (..),
     boundVars,
     closureVars,
+    justClosed,
   )
 where
 
@@ -13,6 +14,8 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (maybeToList)
+import Data.Set (Set)
+import qualified Data.Set as S
 import Fine.Syntax.Common
   ( Bind,
     Ext,
@@ -56,6 +59,23 @@ boundVars (VariantPatt _ props _) = propsBoundVars props
 boundVars (TuplePatt fst' snd' rest _) = concat $ map boundVars (fst' : snd' : rest)
 boundVars (Capture var) = [var]
 
+data Closure v = Closure
+  { closureEnv :: Map Var v,
+    closureValue :: v,
+    _self :: Maybe Var
+  }
+  deriving (Show)
+
+closureVars :: Closure v -> Set Var
+closureVars (Closure env _ self) =
+  case (M.keysSet env, self) of
+    (vars, Nothing) -> vars
+    (vars, Just another) -> S.insert another vars
+
+instance (HasRange v) => HasRange (Closure v) where
+  getRange :: Closure v -> Range
+  getRange (Closure _ x _) = getRange x
+
 data Expr
   = Literal Lit Range
   | Obj [Prop Expr] Range
@@ -70,6 +90,7 @@ data Expr
   | Block (NonEmpty Expr) Range
   | ExtExpr Ext
   | Debug Expr Range
+  | Closed (Closure Expr)
   deriving (Show)
 
 instance HasRange Expr where
@@ -87,25 +108,20 @@ instance HasRange Expr where
   getRange (Block _ r) = r
   getRange (ExtExpr ext) = getRange ext
   getRange (Debug _ r) = r
+  getRange (Closed cl) = getRange cl
 
-data Closure v = Closure
-  { closureEnv :: Map Var (Closure v),
-    closureValue :: v,
-    recBinder :: Maybe Var
-  }
-  deriving (Show)
-
-closureVars :: Closure v -> [Var]
-closureVars (Closure env _ bder) = M.keys env ++ maybeToList bder
+justClosed :: Expr -> Maybe (Closure Expr)
+justClosed (Closed cl) = Just cl
+justClosed _ = Nothing
 
 data Module
   = Module
-      { bindings :: [Bind () (Closure Expr)],
+      { bindings :: [Bind () Expr],
         fixities :: Map Var Fixity
       }
   | EntryModule
-      { bindings :: [Bind () (Closure Expr)],
+      { bindings :: [Bind () Expr],
         fixities :: Map Var Fixity,
-        _entryExpr :: Closure Expr
+        _entryExpr :: Expr
       }
   deriving (Show)

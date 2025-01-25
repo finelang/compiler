@@ -28,3 +28,4 @@ freeVars (Fun params body _) = S.difference (freeVars body) (S.fromList params)
 freeVars (Block exprs _) = S.unions (fmap freeVars exprs)
 freeVars (ExtExpr _) = S.empty
 freeVars (Debug expr _) = freeVars expr
+freeVars (Closed _) = S.empty

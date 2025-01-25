@@ -76,6 +76,7 @@ freeVars (Fun params body _) = do
 freeVars (Block exprs _) = S.unions <$> mapM freeVars exprs
 freeVars (ExtExpr _) = return S.empty
 freeVars (Debug expr _) = freeVars expr
+freeVars (Closed _) = return S.empty
 
 handleVars :: AvailableVars -> Expr -> (FreeVars, Errors)
 handleVars vars expr =

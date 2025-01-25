@@ -123,6 +123,7 @@ replace' _ expr@(ExtExpr _) = return expr
 replace' x (Debug expr r) = do
   expr' <- replace' x expr
   return (Debug expr' r)
+replace' _ expr@(Closed _) = return expr
 
 replace :: Var -> Expr -> Expr -> Expr
 replace var with_ in_ = fst $ runState (replace' var in_) (Substt with_ Nothing)
