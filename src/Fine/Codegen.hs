@@ -113,7 +113,7 @@ instance CodeGens Expr Ctx where
       if null rest
         then return ""
         else mapM genCode rest >>= (return . T.append ", " . T.intercalate ", ")
-    return [i|fine$tuple(#{fst''}, #{snd''}#{rest'})|]
+    return [i|[#{fst''}, #{snd''}#{rest'}]|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
