@@ -46,6 +46,7 @@ tokens :-
   "infixr"                    { mkt Infixr }
   "fn"                        { mkt Fn }
   "let"                       { mkt Let }
+  "match"                     { mkt Match }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
   [$alpha][$alpha $digit]*    { mkt IdTok }
@@ -55,7 +56,6 @@ tokens :-
   "->"                        { mkt Arrow }
   "="                         { mkt Eq }
   "."                         { mkt Dot }
-  "|"                         { mkt Bar }
   "("                         { mkt Opar } 
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
@@ -79,6 +79,7 @@ data TokenType
   | Infixr
   | Fn
   | Let
+  | Match
   | Then
   | TrueTok
   | IdTok
@@ -88,7 +89,6 @@ data TokenType
   | Arrow
   | Eq
   | Dot
-  | Bar
   | Opar
   | Cpar
   | Obrace
