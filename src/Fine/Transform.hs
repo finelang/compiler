@@ -79,13 +79,11 @@ transformDefns (C.FixDefn fix@(Fixity _ prec) op : defns) = do
     else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
   transformDefns defns
 transformDefns (C.Defn bind : defns) = liftM2 (:) (transformBind bind) (transformDefns defns)
-transformDefns (C.CtorDefn tag props optExt r : defns) = do
-  let value = case optExt of
-        Just ext -> ExtExpr ext
-        Nothing ->
-          let props' = map (\prop -> NamedProp prop (Id prop)) props
-              varnt = Variant tag props' r
-           in if null props then varnt else Fun props varnt r
+transformDefns (C.CtorDefn tag props r : defns) = do
+  let value =
+        let props' = map (\prop -> NamedProp prop (Id prop)) props
+            varnt = Variant tag props' r
+         in if null props then varnt else Fun props varnt r
   modify
     ( \st ->
         st

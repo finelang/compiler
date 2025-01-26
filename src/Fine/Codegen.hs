@@ -1,8 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE QuasiQuotes #-}
-
 module Fine.Codegen (runGenCode) where
 
 import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
@@ -13,11 +8,17 @@ import qualified Data.Map.Strict as M
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Fine.Syntax.Abstract (Closure (Closure), Expr (..), Module (..), Pattern (..), PropsPattern (..), boundVars)
+import Fine.Codegen.Lit (genLitCode)
+import Fine.Codegen.Pattern (extractCondsAndBinds)
+import Fine.Syntax.Abstract
+  ( Closure (Closure),
+    Expr (..),
+    Module (..),
+    Pattern (..),
+  )
 import Fine.Syntax.Common
   ( Bind (..),
     Ext (Ext),
-    Lit (..),
     Prop (..),
     Var (Var),
     varName,
@@ -25,15 +26,6 @@ import Fine.Syntax.Common
 
 class CodeGens t ctx where
   genCode :: t -> Reader ctx Text
-
-instance CodeGens Lit ctx where
-  genCode :: Lit -> Reader ctx Text
-  genCode (Int v) = return (T.pack $ show v)
-  genCode (Float v) = return (T.pack $ show v)
-  genCode (Bool True) = return "true"
-  genCode (Bool False) = return "false"
-  genCode (Str s) = return [i|"#{s}"|]
-  genCode (Unit) = return "undefined"
 
 data Ctx = Ctx
   { indentation :: Text,
@@ -57,39 +49,6 @@ sanitize name = do
   where
     go names ch = M.findWithDefault (T.singleton ch) ch names
 
-genPropsPatternCode :: PropsPattern -> Reader Ctx Text
-genPropsPatternCode (PropsPattern named objCapture) = do
-  let (names, patts) = unzip named
-  patts' <- mapM genCode patts
-  let named' = zipWith (\n p -> [i|#{n}: #{p}|] :: Text) names patts'
-  let objCapture' = case objCapture of
-        Just name -> [[i|...fine$captureObj("#{name}")|] :: Text]
-        Nothing -> []
-  return $ T.intercalate ", " (objCapture' ++ named')
-
-instance CodeGens Pattern Ctx where
-  genCode :: Pattern -> Reader Ctx Text
-  genCode (LiteralPatt lit _) = genCode lit
-  genCode (ObjPatt props _) = do
-    props' <- genPropsPatternCode props
-    return [i|({#{props'}})|]
-  genCode (VariantPatt tag props _) = do
-    let tagged = [i|$tag: "#{tag}"|] :: Text
-    props' <- genPropsPatternCode props
-    return $
-      if T.null props'
-        then [i|({#{tagged}})|]
-        else [i|({#{tagged}, #{props'}})|]
-  genCode (TuplePatt fst' snd' rest _) = do
-    fst'' <- genCode fst'
-    snd'' <- genCode snd'
-    rest' <-
-      if null rest
-        then return ""
-        else mapM genCode rest >>= (return . T.append ", " . T.intercalate ", ")
-    return [i|fine$tuple(#{fst''}, #{snd''}#{rest'})|]
-  genCode (Capture (Var name _)) = return [i|fine$capture("#{name}")|]
-
 instance (CodeGens t Ctx) => CodeGens (Prop t) Ctx where
   genCode :: Prop t -> Reader Ctx Text
   genCode (NamedProp name value) = do
@@ -102,13 +61,15 @@ instance (CodeGens t Ctx) => CodeGens (Prop t) Ctx where
 genPropsCode :: (CodeGens t Ctx) => [Prop t] -> Reader Ctx Text
 genPropsCode props = T.intercalate ", " <$> mapM genCode props
 
-genMatchCode :: (Pattern, Expr) -> Reader Ctx Text
-genMatchCode (patt, expr) = do
+genMatchCode :: Text -> (Pattern, Expr) -> Reader Ctx Text
+genMatchCode name (patt, expr) = do
   oldIndent <- asks indentation
   indent <- increaseIndentation
-  patt' <- genCode patt
-  expr' <- local (withIndentation indent) (genFunCode True "" (boundVars patt) expr)
-  return [i|[\n#{indent}#{patt'},\n#{indent}#{expr'}\n#{oldIndent}]|]
+  let (conds, binds) = extractCondsAndBinds name patt
+  let cond = if null conds then "true" else T.intercalate " && " conds
+  let binds' = T.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|]) binds
+  expr' <- local (withIndentation indent) (genCode expr)
+  return [i|if (#{cond}) {\n#{binds'}#{indent}return #{expr'};\n#{oldIndent}}|]
 
 genStmtsCode :: NonEmpty Expr -> Reader Ctx Text
 genStmtsCode exprs = do
@@ -134,7 +95,7 @@ genFunCode areObjParams name params body = do
 
 instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
-  genCode (Literal lit _) = genCode lit
+  genCode (Literal lit _) = return (genLitCode lit)
   genCode (Obj props _) = do
     props' <- genPropsCode props
     return [i|({#{props'}})|]
@@ -170,10 +131,10 @@ instance CodeGens Expr Ctx where
     oldIndent <- asks indentation
     indent <- increaseIndentation
     expr' <- local (withIndentation indent) (genCode expr)
-    matches' <-
-      T.intercalate [i|,\n#{indent}|]
-        <$> local (withIndentation indent) (mapM genMatchCode $ toList matches)
-    return [i|fine$match(\n#{indent}#{expr'},\n#{indent}#{matches'}\n#{oldIndent})|]
+    let name = "obj"
+    matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ toList matches)
+    let matches'' = T.intercalate [i|\n#{indent}|] matches'
+    return [i|((#{name}) => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
   genCode (Fun params body _) = genFunCode False "" params body
   genCode (Block exprs _) = do
     content <- genStmtsCode exprs

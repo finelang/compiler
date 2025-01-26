@@ -1,5 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module Fine.Syntax.Common (module Fine.Syntax.Common) where
 
 import Data.Function (on)

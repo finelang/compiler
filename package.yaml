@@ -43,6 +43,10 @@ default-extensions:
 - InstanceSigs
 - StrictData
 - OverloadedStrings
+- MultiParamTypeClasses
+- FlexibleContexts
+- FlexibleInstances
+- QuasiQuotes
 
 library:
   source-dirs: src

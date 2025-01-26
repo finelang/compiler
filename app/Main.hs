@@ -22,8 +22,8 @@ readCodeInjections =
   mapM
     TIO.readFile
     [ "src/js/tuple.js",
-      "src/js/match.js",
-      "src/js/debug.js"
+      "src/js/debug.js",
+      "src/js/obj.js"
     ]
 
 main :: IO ()

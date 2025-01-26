@@ -31,6 +31,8 @@ library
       Data.List.Extra
       Data.List.NonEmpty.Extra
       Fine.Codegen
+      Fine.Codegen.Lit
+      Fine.Codegen.Pattern
       Fine.Error
       Fine.FreeVars
       Fine.Lexer
@@ -55,6 +57,10 @@ library
       InstanceSigs
       StrictData
       OverloadedStrings
+      MultiParamTypeClasses
+      FlexibleContexts
+      FlexibleInstances
+      QuasiQuotes
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       array
@@ -78,6 +84,10 @@ executable fine-compiler-exe
       InstanceSigs
       StrictData
       OverloadedStrings
+      MultiParamTypeClasses
+      FlexibleContexts
+      FlexibleInstances
+      QuasiQuotes
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
@@ -103,6 +113,10 @@ test-suite fine-compiler-test
       InstanceSigs
       StrictData
       OverloadedStrings
+      MultiParamTypeClasses
+      FlexibleContexts
+      FlexibleInstances
+      QuasiQuotes
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array

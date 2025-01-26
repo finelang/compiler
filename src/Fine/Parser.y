@@ -84,8 +84,7 @@ DataDefn: data '{' Ctors '}'  { reverse $3 }
 Ctors : Ctors Ctor  { $2 : $1 }
       | Ctor        { [$1] }
 
-Ctor : let Prefix '{' Params '}'  { CtorDefn $2 (reverse $4) Nothing (getRange ($2, $5)) }
-     | Ext let Prefix '{' '}'     { CtorDefn $3 [] (Just $1) (getRange ($3, $5)) }
+Ctor : let Prefix '{' Params '}'  { CtorDefn $2 (reverse $4) (getRange ($2, $5)) }
 
 Fix : Assoc int { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 

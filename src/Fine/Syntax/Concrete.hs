@@ -56,7 +56,7 @@ instance HasRange Expr where
 
 data Defn
   = Defn (Bind () Expr)
-  | CtorDefn Var [Var] (Maybe Ext) Range
+  | CtorDefn Var [Var] Range
   | FixDefn Fixity Var
   deriving (Show)
 
