@@ -91,12 +91,11 @@ Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
       | infixr  { RightAssoc }
 
-Expr : fn '(' Params ')' '->' Expr      { Fun (reverse $3) $6 (getRange ($1, $6)) }
-     | fn '(' Params ')' '{' Block '}'  { Fun (reverse $3) (mkBlock $6 (getRange ($5, $7))) (getRange ($1, $7)) }
-     | if Expr then Expr else Expr      { Cond $2 $4 $6 (getRange ($1, $6)) }
-     | match Group '{' Matches '}'      { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
-     | debug Expr                       { Debug $2 (getRange ($1, $2)) }
-     | Chain                            { chainToExpr $1 }
+Expr : fn '(' Params ')' Expr       { Fun (reverse $3) $5 (getRange ($1, $5)) }
+     | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
+     | match Group '{' Matches '}'  { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
+     | debug Expr                   { Debug $2 (getRange ($1, $2)) }
+     | Chain                        { chainToExpr $1 }
 
 Matches : Matches ';' Match { $3 : $1 }
         | Match             { [$1] }
