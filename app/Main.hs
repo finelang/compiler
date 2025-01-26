@@ -17,23 +17,17 @@ getPaths = do
     (x : y : _) -> return (x, y)
     _ -> error "Not enough arguments."
 
-readCodeInjections :: IO [Text]
-readCodeInjections =
-  mapM
-    TIO.readFile
-    [ "src/js/tuple.js",
-      "src/js/debug.js",
-      "src/js/obj.js"
-    ]
+readCodeInjection :: IO Text
+readCodeInjection = TIO.readFile "src/runtime.js"
 
 main :: IO ()
 main = do
   (inFilePath, outFilePath) <- getPaths
   code <- TIO.readFile inFilePath
-  codeInjections <- readCodeInjections
+  codeInjection <- readCodeInjection
   let parsed = parseTokens $ lexText code
   let (result, warnings) = runTransform parsed
   forM_ warnings (putStrLn . wrapWarning)
   case result of
     Left errors -> forM_ errors (putStrLn . wrapError)
-    Right mdule -> print mdule >> TIO.writeFile outFilePath (runGenCode codeInjections mdule)
+    Right mdule -> print mdule >> TIO.writeFile outFilePath (runGenCode codeInjection mdule)

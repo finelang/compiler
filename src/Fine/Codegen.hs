@@ -165,8 +165,8 @@ instance CodeGens Module Ctx where
     entry <- genCode expr
     return [i|#{code}\n\n#{entry};|]
 
-runGenCode :: (CodeGens t Ctx) => [Text] -> t -> Text
-runGenCode codeInjections x =
+runGenCode :: (CodeGens t Ctx) => Text -> t -> Text
+runGenCode codeInjection x =
   let code =
         runReader
           (genCode x)
@@ -196,4 +196,4 @@ runGenCode codeInjections x =
                     ('.', "$dot")
                   ]
             }
-   in T.intercalate "\n\n" (codeInjections ++ [code]) <> "\n"
+   in T.intercalate "\n\n" [codeInjection, code] <> "\n"
