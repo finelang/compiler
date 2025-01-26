@@ -29,7 +29,6 @@ library
       Control.Monad.Trans.State.Strict.Extra
       Control.Monad.Trans.SW
       Data.List.Extra
-      Data.List.NonEmpty.Extra
       Fine.Codegen
       Fine.Codegen.Lit
       Fine.Codegen.Pattern

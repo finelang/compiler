@@ -1,6 +1,7 @@
 module Fine.Syntax.Abstract
   ( Pattern (..),
     PropsPattern (..),
+    Block (..),
     Expr (..),
     Closure (..),
     Module (..),
@@ -76,6 +77,12 @@ instance (HasRange v) => HasRange (Closure v) where
   getRange :: Closure v -> Range
   getRange (Closure _ x _) = getRange x
 
+data Block
+  = Return Expr
+  | Do Expr Block
+  | Let Var () Expr Block
+  deriving (Show)
+
 data Expr
   = Literal Lit Range
   | Obj [Prop Expr] Range
@@ -87,7 +94,7 @@ data Expr
   | PatternMatch Expr (NonEmpty (Pattern, Expr)) Range
   | Cond Expr Expr Expr Range
   | Fun [Var] Expr Range
-  | Block (NonEmpty Expr) Range
+  | Block Block Range
   | ExtExpr Ext
   | Debug Expr Range
   | Closed (Closure Expr)

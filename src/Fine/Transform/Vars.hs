@@ -13,7 +13,7 @@ import Fine.Error
     collectErrors,
     collectWarnings,
   )
-import Fine.Syntax.Abstract (Expr (..), boundVars)
+import Fine.Syntax.Abstract (Block (..), Expr (..), boundVars)
 import Fine.Syntax.Common (Prop (..), Var)
 
 type AvailableVars = Set Var
@@ -35,6 +35,18 @@ justUnused _ = Nothing
 propFreeVars :: Prop Expr -> RW AvailableVars [VarStatus] FreeVars
 propFreeVars (NamedProp _ expr) = freeVars expr
 propFreeVars (SpreadProp expr) = freeVars expr
+
+blockFreeVars :: Block -> RW AvailableVars [VarStatus] FreeVars
+blockFreeVars (Return expr) = freeVars expr
+blockFreeVars (Do expr block) = S.union <$> freeVars expr <*> blockFreeVars block
+blockFreeVars (Let bound _ expr block) = do
+  exprVars <- freeVars expr
+  blockVars <- withReader (S.insert bound) (blockFreeVars block)
+  if S.member bound blockVars
+    then return (S.union exprVars $ S.delete bound blockVars)
+    else do
+      tell [Unused bound]
+      return (S.union exprVars blockVars)
 
 -- a version of 'Fine.FreeVars.freeVars' that collects:
 -- 1- undefined vars (given the available vars at the moment)
@@ -73,7 +85,7 @@ freeVars (Fun params body _) = do
   bodyVars <- withReader (S.union params') (freeVars body)
   tell (map Unused $ S.toList $ S.difference params' bodyVars)
   return (S.difference bodyVars params')
-freeVars (Block exprs _) = S.unions <$> mapM freeVars exprs
+freeVars (Block block _) = blockFreeVars block
 freeVars (ExtExpr _) = return S.empty
 freeVars (Debug expr _) = freeVars expr
 freeVars (Closed _) = return S.empty

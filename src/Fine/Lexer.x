@@ -45,7 +45,7 @@ tokens :-
   "infixl"                    { mkt Infixl }
   "infixr"                    { mkt Infixr }
   "fn"                        { mkt Fn }
-  "let"                       { mkt Let }
+  "let"                       { mkt LetTok }
   "match"                     { mkt Match }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
@@ -78,7 +78,7 @@ data TokenType
   | Infixl
   | Infixr
   | Fn
-  | Let
+  | LetTok
   | Match
   | Then
   | TrueTok

@@ -8,7 +8,13 @@ import qualified Data.Set as S
 import Data.Text (snoc)
 import Fine.Error (errorTODO)
 import Fine.FreeVars (freeVars)
-import Fine.Syntax.Abstract (Expr (..), Pattern (..), PropsPattern (PropsPattern), boundVars)
+import Fine.Syntax.Abstract
+  ( Block (..),
+    Expr (..),
+    Pattern (..),
+    PropsPattern (PropsPattern),
+    boundVars,
+  )
 import Fine.Syntax.Common (Prop (..), Var (Var))
 
 type FreeVars = Set Var
@@ -79,6 +85,11 @@ replaceProp :: Var -> Prop Expr -> State Substt (Prop Expr)
 replaceProp x (NamedProp name expr) = NamedProp name <$> replace' x expr
 replaceProp x (SpreadProp expr) = SpreadProp <$> replace' x expr
 
+replaceBlock :: Var -> Block -> State Substt Block
+replaceBlock x (Return expr) = Return <$> replace' x expr
+replaceBlock x (Do expr block) = Do <$> replace' x expr <*> replaceBlock x block
+replaceBlock _ (Let _ _ _ _) = errorTODO
+
 replace' :: Var -> Expr -> State Substt Expr
 replace' _ expr@(Literal _ _) = return expr
 replace' x (Obj props r) = do
@@ -116,9 +127,9 @@ replace' x fun@(Fun params body r) =
       (params', body') <- convert params body
       body'' <- replace' x body'
       return (Fun params' body'' r)
-replace' x (Block exprs r) = do
-  exprs' <- mapM (replace' x) exprs
-  return (Block exprs' r)
+replace' x (Block block r) = do
+  block' <- replaceBlock x block
+  return (Block block' r)
 replace' _ expr@(ExtExpr _) = return expr
 replace' x (Debug expr r) = do
   expr' <- replace' x expr

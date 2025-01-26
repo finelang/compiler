@@ -3,7 +3,6 @@ module Fine.Transform.Expr (runTransform) where
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.RW (RW, ask, asks, runRW, tell, withReader)
 import Data.List.Extra (repeated)
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as L
 import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
@@ -16,7 +15,7 @@ import Fine.Error
     collectErrors,
     collectWarning,
   )
-import Fine.Syntax.Abstract (Expr (..), Pattern, boundVars)
+import Fine.Syntax.Abstract (Block (..), Expr (..), Pattern, boundVars)
 import Fine.Syntax.Common
   ( OpChain (..),
     Prop (..),
@@ -80,6 +79,13 @@ transformProps props = do
     (collectErrors $ map RepeatedProp $ repeated $ mapMaybe (fmap fst . justNamedProp) props)
   mapM transformProp props
 
+transformBlock :: [C.Stmt] -> C.Expr -> RW Ctx Errors Block
+transformBlock [] expr = Return <$> transform expr
+transformBlock (C.Do action : stmts) expr =
+  Do <$> transform action <*> transformBlock stmts expr
+transformBlock (C.Let bound _ val : stmts) expr =
+  Let bound () <$> transform val <*> transformBlock stmts expr
+
 transform :: C.Expr -> RW Ctx Errors Expr
 transform (C.Literal lit r) = return (Literal lit r)
 transform (C.Obj props r) = do
@@ -123,11 +129,9 @@ transform (C.Fun params body r) = do
   body' <- transform body
   return (Fun params body' r)
 transform (C.Parens expr) = transform expr
-transform (C.Block exprs r) = do
-  exprs' <- mapM transform exprs
-  return $ case exprs' of
-    expr :| [] -> expr
-    _ -> Block exprs' r
+transform (C.Block stmts expr r) = do
+  block <- transformBlock stmts expr
+  return (Block block r)
 transform (C.Chain chain) = do
   chain' <- transformChain chain
   withReader fixities (shuntingYard chain')

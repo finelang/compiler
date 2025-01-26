@@ -19,7 +19,7 @@ import Fine.Syntax.Common
     varName,
     Lit (..)
   )
-import Fine.Syntax.Concrete (Defn (..), Expr (..), Module (Module))
+import Fine.Syntax.Concrete (Defn (..), Stmt (..), Expr (..), Module (Module))
 }
 
 %name parseTokens
@@ -38,7 +38,7 @@ import Fine.Syntax.Concrete (Defn (..), Expr (..), Module (Module))
   infixl  { Token Infixl _ _ }
   infixr  { Token Infixr _ _ }
   fn      { Token Fn _ _ }
-  let     { Token Let _ _ }
+  let     { Token LetTok _ _ }
   match   { Token Match _ _ }
   then    { Token Then _ _ }
   true    { Token TrueTok _ _ }
@@ -92,14 +92,13 @@ Assoc : infix   { NonAssoc }
       | infixr  { RightAssoc }
 
 Expr : fn '(' Params ')' '->' Expr      { Fun (reverse $3) $6 (getRange ($1, $6)) }
-     | fn '(' Params ')' '{' Block '}'  { Fun (reverse $3) (mkBlock (reverse $6) (getRange ($5, $7))) (getRange ($1, $7)) }
+     | fn '(' Params ')' '{' Block '}'  { Fun (reverse $3) (mkBlock $6 (getRange ($5, $7))) (getRange ($1, $7)) }
      | if Expr then Expr else Expr      { Cond $2 $4 $6 (getRange ($1, $6)) }
      | match Group '{' Matches '}'      { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
      | debug Expr                       { Debug $2 (getRange ($1, $2)) }
      | Chain                            { chainToExpr $1 }
 
 Matches : Matches ';' Match { $3 : $1 }
-        | Matches ';'       { $1 }
         | Match             { [$1] }
 
 Match : Atom '->' Expr  { ($1, $3) }
@@ -122,7 +121,7 @@ Args : Args ',' Expr  { $3 : $1 }
 Atom : Group              { $1 }
      | '{' Obj '}'        { Obj (reverse $2) (getRange ($1, $3)) }
      | Prefix '{' Obj '}' { Variant $1 (reverse $3) (getRange ($1, $4)) }
-     | '{' Block '}'      { mkBlock (reverse $2) (getRange ($1, $3)) }
+     | '{' Block '}'      { mkBlock $2 (getRange ($1, $3)) }
      | Prefix             { Id $1 }
      | '(' op ')'         { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
      | int                { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
@@ -133,9 +132,14 @@ Atom : Group              { $1 }
 
 Group: '(' Args ')' { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
 
-Block : Block ';' Expr  { $3 : $1 }
-      | Block ';'       { $1 }
-      | Expr            { [$1] }
+Block : Stmts ';' Expr  { (reverse $1, $3) }
+      | Expr            { ([], $1) }
+
+Stmts : Stmts ';' Stmt  { $3 : $1 }
+Stmts : Stmt            { [$1] }
+
+Stmt: Expr                { Do $1 }
+    | let Prefix '=' Expr { Let $2 () $4 }
 
 Obj : Obj ',' Prop  { $3 : $1 }
     | Prop          { [$1] }
@@ -161,8 +165,8 @@ asNonEmpty (x : xs) = x :| xs
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)
 
-mkBlock [e] _ = e
-mkBlock (e : es) r = Block (e :| es) r
+mkBlock ([], expr) _ = expr
+mkBlock (stmts, expr) r = Block stmts expr r
 
 mkGroupExpr [] r = Literal Unit r
 mkGroupExpr [expr] _ = Parens expr
