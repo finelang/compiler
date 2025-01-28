@@ -49,6 +49,7 @@ import Fine.Syntax.Concrete (Defn (..), Stmt (..), Expr (..), Module (Module))
   '->'    { Token Arrow _ _ }
   '='     { Token Eq _ _ }
   '.'     { Token Dot _ _ }
+  '#'     { Token Htag _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
   '{'     { Token Obrace _ _ }
@@ -118,7 +119,7 @@ Args : Args ',' Expr  { $3 : $1 }
      | {- empty -}    { [] }
 
 Atom : Group              { $1 }
-     | '{' Obj '}'        { Obj (reverse $2) (getRange ($1, $3)) }
+     | '#' '{' Obj '}'    { Obj (reverse $3) (getRange ($1, $4)) }
      | Prefix '{' Obj '}' { Variant $1 (reverse $3) (getRange ($1, $4)) }
      | '{' Block '}'      { mkBlock $2 (getRange ($1, $3)) }
      | Prefix             { Id $1 }
@@ -146,7 +147,7 @@ Obj : Obj ',' Prop  { $3 : $1 }
 
 Prop : Prefix '=' Expr  { NamedProp $1 $3 }
      | '.' '.' '.' Expr { SpreadProp $4 }
-     | '=' Prefix       { NamedProp $2 (Id $2) }
+     | Prefix           { NamedProp $1 (Id $1) }
 
 Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
 

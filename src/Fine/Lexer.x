@@ -56,6 +56,7 @@ tokens :-
   "->"                        { mkt Arrow }
   "="                         { mkt Eq }
   "."                         { mkt Dot }
+  "#"                         { mkt Htag }
   "("                         { mkt Opar } 
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
@@ -89,6 +90,7 @@ data TokenType
   | Arrow
   | Eq
   | Dot
+  | Htag
   | Opar
   | Cpar
   | Obrace
