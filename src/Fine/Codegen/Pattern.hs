@@ -1,5 +1,6 @@
 module Fine.Codegen.Pattern (extractCondsAndBinds) where
 
+import Data.List.NonEmpty (toList)
 import Data.Maybe (mapMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
@@ -39,11 +40,11 @@ fromPattern (ObjPatt props _) = fromPropsPattern props
 fromPattern (VariantPatt (Var name _) props _) =
   let fromTag = Continue (PropTo "$tag") (End $ Equals $ Str name)
    in fromTag : fromPropsPattern props
-fromPattern (TuplePatt fst' snd' rest _) =
+fromPattern (TuplePatt patts _) =
   concat $
     zipWith
       (\patt ix -> map (Continue $ IndexTo ix) (fromPattern patt))
-      (fst' : snd' : rest)
+      (toList patts)
       [(0 :: Int) ..]
 fromPattern (Capture var) = [End $ As var]
 

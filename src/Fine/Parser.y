@@ -92,11 +92,11 @@ Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
       | infixr  { RightAssoc }
 
-Expr : fn '(' Params ')' Expr       { Fun (reverse $3) $5 (getRange ($1, $5)) }
-     | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
-     | match Group '{' Matches '}'  { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
-     | debug Expr                   { Debug $2 (getRange ($1, $2)) }
-     | Chain                        { chainToExpr $1 }
+Expr : fn '(' Params ')' Expr             { Fun (reverse $3) $5 (getRange ($1, $5)) }
+     | if Expr then Expr else Expr        { Cond $2 $4 $6 (getRange ($1, $6)) }
+     | match '(' Expr ')' '{' Matches '}' { PatternMatch $3 (asNonEmpty $ reverse $6) (getRange ($1, $7)) }
+     | debug Expr                         { Debug $2 (getRange ($1, $2)) }
+     | Chain                              { chainToExpr $1 }
 
 Matches : Matches ';' Match { $3 : $1 }
         | Match             { [$1] }
@@ -118,7 +118,11 @@ Args : Args ',' Expr  { $3 : $1 }
      | Expr           { [$1] }
      | {- empty -}    { [] }
 
-Atom : Group              { $1 }
+Exprs : Exprs ',' Expr  { $3 : $1 }
+      | Expr            { [$1] }
+
+Atom : '(' Expr ')'       { Parens $2 }
+     | '#' '(' Exprs ')'  { Tuple (asNonEmpty $ reverse $3) (getRange ($1, $4)) }
      | '#' '{' Obj '}'    { Obj (reverse $3) (getRange ($1, $4)) }
      | Prefix '{' Obj '}' { Variant $1 (reverse $3) (getRange ($1, $4)) }
      | '{' Block '}'      { mkBlock $2 (getRange ($1, $3)) }
@@ -129,8 +133,7 @@ Atom : Group              { $1 }
      | false              { Literal (Bool False) (getRange $1) }
      | true               { Literal (Bool True) (getRange $1) }
      | str                { mkStr $1 }
-
-Group: '(' Args ')' { mkGroupExpr (reverse $2) (getRange ($1, $3)) }
+     | '(' ')'            { Literal Unit (getRange ($1, $2)) }
 
 Block : Stmts ';' Expr  { (reverse $1, $3) }
       | Expr            { ([], $1) }
@@ -167,10 +170,6 @@ chainToExpr chain = Chain (fromLRChain chain)
 
 mkBlock ([], expr) _ = expr
 mkBlock (stmts, expr) r = Block stmts expr r
-
-mkGroupExpr [] r = Literal Unit r
-mkGroupExpr [expr] _ = Parens expr
-mkGroupExpr (fst : snd : rest) r = Tuple fst snd rest r
 
 parseError tokens = error . show . head $ tokens
 }

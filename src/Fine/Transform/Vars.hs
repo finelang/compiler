@@ -57,7 +57,7 @@ freeVars (Obj props _) = S.unions <$> mapM propFreeVars props
 freeVars (Variant tag props _) = do
   vars <- mapM propFreeVars props
   return (S.insert tag $ S.unions vars)
-freeVars (Tuple fst' snd' rest _) = S.unions <$> mapM freeVars (fst' : snd' : rest)
+freeVars (Tuple exprs _) = S.unions <$> mapM freeVars exprs
 freeVars (Id var) = do
   isDefined <- asks (S.member var)
   if isDefined

@@ -35,7 +35,7 @@ data Pattern
   = LiteralPatt Lit Range
   | ObjPatt PropsPattern Range
   | VariantPatt Var PropsPattern Range
-  | TuplePatt Pattern Pattern [Pattern] Range
+  | TuplePatt (NonEmpty Pattern) Range
   | Capture Var
   deriving (Show)
 
@@ -44,7 +44,7 @@ instance HasRange Pattern where
   getRange (LiteralPatt _ r) = r
   getRange (ObjPatt _ r) = r
   getRange (VariantPatt _ _ r) = getRange r
-  getRange (TuplePatt _ _ _ r) = r
+  getRange (TuplePatt _ r) = r
   getRange (Capture (Var _ r)) = r
 
 propsBoundVars :: PropsPattern -> [Var]
@@ -57,7 +57,7 @@ boundVars :: Pattern -> [Var]
 boundVars (LiteralPatt _ _) = []
 boundVars (ObjPatt props _) = propsBoundVars props
 boundVars (VariantPatt _ props _) = propsBoundVars props
-boundVars (TuplePatt fst' snd' rest _) = concat $ map boundVars (fst' : snd' : rest)
+boundVars (TuplePatt patts _) = concat $ fmap boundVars patts
 boundVars (Capture var) = [var]
 
 data Closure v = Closure
@@ -87,7 +87,7 @@ data Expr
   = Literal Lit Range
   | Obj [Prop Expr] Range
   | Variant Var [Prop Expr] Range
-  | Tuple Expr Expr [Expr] Range
+  | Tuple (NonEmpty Expr) Range
   | Id Var
   | App Expr [Expr] Range
   | Access Expr Var
@@ -105,7 +105,7 @@ instance HasRange Expr where
   getRange (Literal _ r) = r
   getRange (Obj _ r) = r
   getRange (Variant _ _ r) = r
-  getRange (Tuple _ _ _ r) = r
+  getRange (Tuple _ r) = r
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
   getRange (Access expr prop) = getRange (expr, prop)

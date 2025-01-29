@@ -123,14 +123,9 @@ instance CodeGens Expr Ctx where
       if null props
         then [i|({#{tagged}})|]
         else [i|({#{tagged}, #{props'}})|]
-  genCode (Tuple fst' snd' rest _) = do
-    fst'' <- genCode fst'
-    snd'' <- genCode snd'
-    rest' <-
-      if null rest
-        then return ""
-        else mapM genCode rest >>= (return . T.append ", " . T.intercalate ", ")
-    return [i|[#{fst''}, #{snd''}#{rest'}]|]
+  genCode (Tuple exprs _) = do
+    exprs' <- fmap (T.intercalate ", ") (mapM genCode $ toList exprs)
+    return [i|[#{exprs'}]|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f

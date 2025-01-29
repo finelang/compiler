@@ -98,11 +98,9 @@ transform (C.Variant tag@(Var name _) props r) = do
     if null props'
       then Id (Var name r)
       else Variant tag props' r
-transform (C.Tuple fst' snd' rest r) = do
-  fst'' <- transform fst'
-  snd'' <- transform snd'
-  rest' <- mapM transform rest
-  return (Tuple fst'' snd'' rest' r)
+transform (C.Tuple exprs r) = do
+  exprs' <- mapM transform exprs
+  return (Tuple exprs' r)
 transform (C.Id var) = return (Id var)
 transform (C.App f args r) = do
   f' <- transform f

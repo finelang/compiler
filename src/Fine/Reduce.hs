@@ -63,12 +63,8 @@ replaceBoundVar old new (ObjPatt props r) =
   ObjPatt (replacePropsPatternBoundVar old new props) r
 replaceBoundVar old new (VariantPatt tag props r) =
   VariantPatt tag (replacePropsPatternBoundVar old new props) r
-replaceBoundVar old new (TuplePatt fst' snd' rest r) =
-  TuplePatt
-    (replaceBoundVar old new fst')
-    (replaceBoundVar old new snd')
-    (map (replaceBoundVar old new) rest)
-    r
+replaceBoundVar old new (TuplePatt patts r) =
+  TuplePatt (fmap (replaceBoundVar old new) patts) r
 replaceBoundVar old new patt@(Capture var) =
   if var == old then Capture new else patt
 
@@ -98,11 +94,9 @@ replace' x (Obj props r) = do
 replace' x (Variant tag props r) = do
   props' <- mapM (replaceProp x) props
   return (Variant tag props' r)
-replace' x (Tuple fst' snd' rest r) = do
-  fst'' <- replace' x fst'
-  snd'' <- replace' x snd'
-  rest' <- mapM (replace' x) rest
-  return (Tuple fst'' snd'' rest' r)
+replace' x (Tuple exprs r) = do
+  exprs' <- mapM (replace' x) exprs
+  return (Tuple exprs' r)
 replace' x expr@(Id var) = if var == x then gets substt else return expr
 replace' x (App f args r) = do
   f' <- replace' x f

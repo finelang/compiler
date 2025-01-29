@@ -22,7 +22,7 @@ data Expr
   = Literal Lit Range
   | Obj [Prop Expr] Range
   | Variant Var [Prop Expr] Range
-  | Tuple Expr Expr [Expr] Range
+  | Tuple (NonEmpty Expr) Range
   | Id Var
   | App Expr [Expr] Range
   | Access Expr Var
@@ -41,7 +41,7 @@ instance HasRange Expr where
   getRange (Literal _ r) = r
   getRange (Obj _ r) = r
   getRange (Variant _ _ r) = r
-  getRange (Tuple _ _ _ r) = r
+  getRange (Tuple _ r) = r
   getRange (Id (Var _ r)) = r
   getRange (App _ _ r) = r
   getRange (Access expr prop) = getRange (expr, prop)

@@ -74,11 +74,9 @@ transform (Variant tag props r) = do
   named <- transformNamedProps props
   objCapture <- extractObjCapture props
   return (VariantPatt tag (PropsPattern named objCapture) r)
-transform (Tuple fst' snd' rest r) = do
-  fst'' <- transform fst'
-  snd'' <- transform snd'
-  rest' <- mapM transform rest
-  return (TuplePatt fst'' snd'' rest' r)
+transform (Tuple exprs r) = do
+  patts <- mapM transform exprs
+  return (TuplePatt patts r)
 transform (Id var) = return (Capture var)
 transform (Parens expr) = transform expr
 transform expr = do
