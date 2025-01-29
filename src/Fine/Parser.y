@@ -121,7 +121,7 @@ Args : Args ',' Expr  { $3 : $1 }
 Exprs : Exprs ',' Expr  { $3 : $1 }
       | Expr            { [$1] }
 
-Atom : '(' Expr ')'       { Parens $2 }
+Atom : '(' Expr ')'       { $2 }
      | '#' '(' Exprs ')'  { Tuple (asNonEmpty $ reverse $3) (getRange ($1, $4)) }
      | '#' '{' Obj '}'    { Obj (reverse $3) (getRange ($1, $4)) }
      | Prefix '{' Obj '}' { Variant $1 (reverse $3) (getRange ($1, $4)) }

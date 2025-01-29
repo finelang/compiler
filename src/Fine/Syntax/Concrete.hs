@@ -29,7 +29,6 @@ data Expr
   | Cond Expr Expr Expr Range
   | PatternMatch Expr (NonEmpty (Expr, Expr)) Range
   | Fun [Var] Expr Range
-  | Parens Expr
   | Block [Stmt] Expr Range
   | Chain (OpChain Expr)
   | ExtExpr Ext
@@ -48,7 +47,6 @@ instance HasRange Expr where
   getRange (Cond _ _ _ r) = r
   getRange (PatternMatch _ _ r) = r
   getRange (Fun _ _ r) = r
-  getRange (Parens expr) = getRange expr
   getRange (Block _ _ r) = r
   getRange (Chain chain) = getRange chain
   getRange (ExtExpr ext) = getRange ext

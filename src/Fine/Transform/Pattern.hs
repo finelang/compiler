@@ -78,7 +78,6 @@ transform (Tuple exprs r) = do
   patts <- mapM transform exprs
   return (TuplePatt patts r)
 transform (Id var) = return (Capture var)
-transform (Parens expr) = transform expr
 transform expr = do
   let r = getRange expr
   tell (collectError $ InvalidPattern r)

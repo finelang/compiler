@@ -126,7 +126,6 @@ transform (C.Fun params body r) = do
   tell (collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
-transform (C.Parens expr) = transform expr
 transform (C.Block stmts expr r) = do
   block <- transformBlock stmts expr
   return (Block block r)
