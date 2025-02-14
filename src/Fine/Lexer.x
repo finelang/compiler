@@ -51,12 +51,12 @@ tokens :-
   "true"                      { mkt TrueTok }
   [$alpha][$alpha $digit]*    { mkt IdTok }
   \" @string* \"              { mkt StrTok }
-  "-"? @decimal               { mkt IntTok }
+  @decimal                    { mkt Nat }
+  "-" @decimal                { mkt NonNat }
   "-"? @decimal "." @decimal  { mkt FloatTok }
   "->"                        { mkt Arrow }
   "="                         { mkt Eq }
   "."                         { mkt Dot }
-  "#"                         { mkt Htag }
   "("                         { mkt Opar } 
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
@@ -85,12 +85,12 @@ data TokenType
   | TrueTok
   | IdTok
   | StrTok
-  | IntTok
+  | Nat
+  | NonNat
   | FloatTok
   | Arrow
   | Eq
   | Dot
-  | Htag
   | Opar
   | Cpar
   | Obrace

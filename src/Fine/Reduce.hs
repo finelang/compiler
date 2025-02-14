@@ -2,6 +2,8 @@ module Fine.Reduce (reduce, replace) where
 
 import Control.Monad.Trans.State.Strict (State, gets, modify, runState)
 import Control.Monad.Trans.State.Strict.Extra (withTempState)
+import Data.List.Extra (toNonEmptyPARTIAL)
+import Data.List.NonEmpty (toList)
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -12,10 +14,9 @@ import Fine.Syntax.Abstract
   ( Block (..),
     Expr (..),
     Pattern (..),
-    PropsPattern (PropsPattern),
     boundVars,
   )
-import Fine.Syntax.Common (Prop (..), Var (Var))
+import Fine.Syntax.Common (Var (Var))
 
 type FreeVars = Set Var
 
@@ -51,22 +52,13 @@ convert vars expr = go vars [] expr
           expr'' <- withTempState (const $ Substt (Id bv') Nothing) (replace' bv expr')
           go bvs (bv' : bvs') expr''
 
-replacePropsPatternBoundVar :: Var -> Var -> PropsPattern -> PropsPattern
-replacePropsPatternBoundVar old new (PropsPattern named optSpread) =
-  let named' = map (fmap $ replaceBoundVar old new) named
-      optSpread' = fmap (\var -> if var == old then new else var) optSpread
-   in PropsPattern named' optSpread'
-
 replaceBoundVar :: Var -> Var -> Pattern -> Pattern
-replaceBoundVar _ _ patt@(LiteralPatt _ _) = patt
-replaceBoundVar old new (ObjPatt props r) =
-  ObjPatt (replacePropsPatternBoundVar old new props) r
-replaceBoundVar old new (VariantPatt tag props r) =
-  VariantPatt tag (replacePropsPatternBoundVar old new props) r
-replaceBoundVar old new (TuplePatt patts r) =
-  TuplePatt (fmap (replaceBoundVar old new) patts) r
-replaceBoundVar old new patt@(Capture var) =
-  if var == old then Capture new else patt
+replaceBoundVar old new patt = case patt of
+  LiteralP _ _ -> patt
+  DataP tag patts r -> DataP tag (map (replaceBoundVar old new) patts) r
+  RecordP props r -> RecordP ((fmap . fmap) (replaceBoundVar old new) props) r
+  TupleP patts r -> TupleP (fmap (replaceBoundVar old new) patts) r
+  Capture var -> if var == old then Capture new else patt
 
 replaceMatch :: Var -> (Pattern, Expr) -> State Substt (Pattern, Expr)
 replaceMatch x (patt, expr) = do
@@ -77,10 +69,6 @@ replaceMatch x (patt, expr) = do
   expr'' <- replace' x expr'
   return (patt', expr'')
 
-replaceProp :: Var -> Prop Expr -> State Substt (Prop Expr)
-replaceProp x (NamedProp name expr) = NamedProp name <$> replace' x expr
-replaceProp x (SpreadProp expr) = SpreadProp <$> replace' x expr
-
 replaceBlock :: Var -> Block -> State Substt Block
 replaceBlock x (Return expr) = Return <$> replace' x expr
 replaceBlock x (Do expr block) = Do <$> replace' x expr <*> replaceBlock x block
@@ -88,12 +76,12 @@ replaceBlock _ (Let _ _ _ _) = errorTODO
 
 replace' :: Var -> Expr -> State Substt Expr
 replace' _ expr@(Literal _ _) = return expr
-replace' x (Obj props r) = do
-  props' <- mapM (replaceProp x) props
-  return (Obj props' r)
-replace' x (Variant tag props r) = do
-  props' <- mapM (replaceProp x) props
-  return (Variant tag props' r)
+replace' x (Data tag exprs r) = do
+  exprs' <- mapM (replace' x) exprs
+  return (Data tag exprs' r)
+replace' x (Record props r) = do
+  props' <- (mapM . mapM) (replace' x) props
+  return (Record props' r)
 replace' x (Tuple exprs r) = do
   exprs' <- mapM (replace' x) exprs
   return (Tuple exprs' r)
@@ -105,6 +93,9 @@ replace' x (App f args r) = do
 replace' x (Access expr r) = do
   expr' <- replace' x expr
   return (Access expr' r)
+replace' x (Index expr ix r) = do
+  expr' <- replace' x expr
+  return (Index expr' ix r)
 replace' x (Cond cond yes no r) = do
   cond' <- replace' x cond
   yes' <- replace' x yes
@@ -118,9 +109,9 @@ replace' x fun@(Fun params body r) =
   if x `elem` params
     then return fun
     else do
-      (params', body') <- convert params body
+      (params', body') <- convert (toList params) body
       body'' <- replace' x body'
-      return (Fun params' body'' r)
+      return (Fun (toNonEmptyPARTIAL params') body'' r)
 replace' x (Block block r) = do
   block' <- replaceBlock x block
   return (Block block' r)
@@ -128,10 +119,10 @@ replace' _ expr@(ExtExpr _) = return expr
 replace' x (Debug expr r) = do
   expr' <- replace' x expr
   return (Debug expr' r)
-replace' _ expr@(Closed _) = return expr
+replace' _ expr@(Closure _ _ _) = return expr
 
 replace :: Var -> Expr -> Expr -> Expr
-replace var with_ in_ = fst $ runState (replace' var in_) (Substt with_ Nothing)
+replace var with in_ = fst $ runState (replace' var in_) (Substt with Nothing)
 
 reduce :: a
 reduce = errorTODO

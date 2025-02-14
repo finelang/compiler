@@ -1,18 +1,17 @@
 module Fine.Codegen.Pattern (extractCondsAndBinds) where
 
-import Data.List.NonEmpty (toList)
+import Data.List.NonEmpty2 (toList)
 import Data.Maybe (mapMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Fine.Codegen.Lit (genLitCode)
-import Fine.Syntax.Abstract (Pattern (..), PropsPattern (PropsPattern))
+import Fine.Syntax.Abstract (Pattern (..))
 import Fine.Syntax.Common (Lit (Str), Var (Var))
 
 data PathEnd
   = Equals Lit
   | As Var
-  | AsExcept Var [Var]
 
 data PathPiece
   = PropTo Text
@@ -22,30 +21,24 @@ data PatternPath
   = End PathEnd
   | Continue PathPiece PatternPath
 
-fromPropsPattern :: PropsPattern -> [PatternPath]
-fromPropsPattern (PropsPattern named optSpread) =
-  let fromNamed =
-        concat $
-          map
-            (\(Var name _, patt) -> map (Continue $ PropTo name) (fromPattern patt))
-            named
-      fromSpread = case optSpread of
-        Nothing -> []
-        Just var -> [End $ AsExcept var (map fst named)]
-   in fromSpread ++ fromNamed
-
-fromPattern :: Pattern -> [PatternPath]
-fromPattern (LiteralPatt lit _) = [End $ Equals lit]
-fromPattern (ObjPatt props _) = fromPropsPattern props
-fromPattern (VariantPatt (Var name _) props _) =
-  let fromTag = Continue (PropTo "$tag") (End $ Equals $ Str name)
-   in fromTag : fromPropsPattern props
-fromPattern (TuplePatt patts _) =
+indexedPaths :: [Pattern] -> [PatternPath]
+indexedPaths patts =
   concat $
     zipWith
       (\patt ix -> map (Continue $ IndexTo ix) (fromPattern patt))
-      (toList patts)
+      patts
       [(0 :: Int) ..]
+
+fromPattern :: Pattern -> [PatternPath]
+fromPattern (LiteralP lit _) = [End $ Equals lit]
+fromPattern (DataP (Var name _) patts _) =
+  let fromTag = Continue (PropTo "$tag") (End $ Equals $ Str name)
+   in fromTag : indexedPaths patts
+fromPattern (RecordP props _) =
+  foldMap
+    (\(Var name _, patt) -> map (Continue $ PropTo name) (fromPattern patt))
+    props
+fromPattern (TupleP patts _) = indexedPaths (toList patts)
 fromPattern (Capture var) = [End $ As var]
 
 fromPatternPath :: PatternPath -> ([PathPiece], PathEnd)
@@ -77,11 +70,8 @@ genCode :: Text -> [PathPiece] -> PathEnd -> CodeType Text
 genCode name pieces ct =
   let pathCode = genPathCode name pieces
    in case ct of
-        (Equals lit) -> Cond [i|#{pathCode} === #{genLitCode lit}|]
-        (As var) -> Bind [i|const #{var} = #{pathCode}|]
-        (AsExcept var excluded) ->
-          let excluded' = T.intercalate ", " (map (\prop -> [i|"#{prop}"|]) excluded)
-           in Bind [i|const #{var} = fine$withoutProps(#{pathCode}, [#{excluded'}])|]
+        Equals lit -> Cond [i|#{pathCode} === #{genLitCode lit}|]
+        As var -> Bind [i|const #{var} = #{pathCode}|]
 
 extractCondsAndBinds :: Text -> Pattern -> ([Text], [Text])
 extractCondsAndBinds name patt =

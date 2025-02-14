@@ -117,16 +117,3 @@ data Ext = Ext Text Range
 instance HasRange Ext where
   getRange :: Ext -> Range
   getRange (Ext _ r) = r
-
-data Prop t
-  = NamedProp Var t
-  | SpreadProp t
-  deriving (Show)
-
-justSpreadProp :: Prop t -> Maybe t
-justSpreadProp (SpreadProp expr) = Just expr
-justSpreadProp _ = Nothing
-
-justNamedProp :: Prop t -> Maybe (Var, t)
-justNamedProp (NamedProp name value) = Just (name, value)
-justNamedProp _ = Nothing

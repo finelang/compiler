@@ -1,7 +1,8 @@
 module Fine.Codegen (runGenCode) where
 
 import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
-import Data.List.NonEmpty (toList)
+import qualified Data.List.NonEmpty as L
+import qualified Data.List.NonEmpty2 as L2
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.String.Interpolate (i)
@@ -11,7 +12,6 @@ import Fine.Codegen.Lit (genLitCode)
 import Fine.Codegen.Pattern (extractCondsAndBinds)
 import Fine.Syntax.Abstract
   ( Block (..),
-    Closure (Closure),
     Expr (..),
     Module (..),
     Pattern (..),
@@ -19,7 +19,6 @@ import Fine.Syntax.Abstract
 import Fine.Syntax.Common
   ( Bind (..),
     Ext (Ext),
-    Prop (..),
     Var (Var),
     varName,
   )
@@ -49,17 +48,17 @@ sanitize name = do
   where
     go names ch = M.findWithDefault (T.singleton ch) ch names
 
-instance (CodeGens t Ctx) => CodeGens (Prop t) Ctx where
-  genCode :: Prop t -> Reader Ctx Text
-  genCode (NamedProp name value) = do
+instance (CodeGens t Ctx, Show n) => CodeGens ((n, t)) Ctx where
+  genCode :: (n, t) -> Reader Ctx Text
+  genCode (name, value) = do
     value' <- genCode value
     return [i|#{name}: #{value'}|]
-  genCode (SpreadProp value) = do
-    value' <- genCode value
-    return [i|...#{value'}|]
 
-genPropsCode :: (CodeGens t Ctx) => [Prop t] -> Reader Ctx Text
+genPropsCode :: (CodeGens t Ctx, Show n) => [(n, t)] -> Reader Ctx Text
 genPropsCode props = T.intercalate ", " <$> mapM genCode props
+
+genIndexed :: (CodeGens t Ctx) => [t] -> Reader Ctx Text
+genIndexed values = genPropsCode (zip [(0 :: Int) ..] values)
 
 genMatchCode :: Text -> (Pattern, Expr) -> Reader Ctx Text
 genMatchCode name (patt, expr) = do
@@ -113,27 +112,30 @@ genFunCode areObjParams params body = do
 instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
   genCode (Literal lit _) = return (genLitCode lit)
-  genCode (Obj props _) = do
-    props' <- genPropsCode props
-    return [i|({#{props'}})|]
-  genCode (Variant tag props _) = do
+  genCode (Data tag exprs _) = do
     let tagged = [i|$tag: "#{tag}"|] :: Text
-    props' <- genPropsCode props
+    exprs' <- genIndexed exprs
     return $
-      if null props
+      if null exprs
         then [i|({#{tagged}})|]
-        else [i|({#{tagged}, #{props'}})|]
+        else [i|({#{tagged}, #{exprs'}})|]
+  genCode (Record props _) = do
+    props' <- genPropsCode (L.toList props)
+    return [i|({#{props'}})|]
   genCode (Tuple exprs _) = do
-    exprs' <- fmap (T.intercalate ", ") (mapM genCode $ toList exprs)
-    return [i|[#{exprs'}]|]
+    exprs' <- genIndexed (L2.toList exprs)
+    return [i|({#{exprs'}})|]
   genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
-    args' <- (T.intercalate ", ") <$> mapM genCode args
+    args' <- (T.intercalate ", ") <$> mapM genCode (L.toList args)
     return [i|#{f'}(#{args'})|]
   genCode (Access expr (Var prop _)) = do
     expr' <- genCode expr
     return [i|#{expr'}.#{prop}|]
+  genCode (Index expr ix _) = do
+    expr' <- genCode expr
+    return [i|#{expr'}[#{ix}]|]
   genCode (Cond cond yes no _) = do
     cond' <- genCode cond
     yes' <- genCode yes
@@ -144,10 +146,10 @@ instance CodeGens Expr Ctx where
     indent <- increaseIndentation
     expr' <- local (withIndentation indent) (genCode expr)
     let name = "obj"
-    matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ toList matches)
+    matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ L.toList matches)
     let matches'' = T.intercalate [i|\n#{indent}|] matches'
     return [i|((#{name}) => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
-  genCode (Fun params body _) = genFunCode False params body
+  genCode (Fun params body _) = genFunCode False (L.toList params) body
   genCode (Block block _) = do
     content <- genStmtsCode block
     indent <- asks indentation
@@ -156,7 +158,7 @@ instance CodeGens Expr Ctx where
   genCode (Debug expr _) = do
     expr' <- genCode expr
     return [i|fine$debug(#{expr'})|]
-  genCode (Closed (Closure _ expr _)) = genCode expr
+  genCode (Closure _ expr _) = genCode expr
 
 instance CodeGens (Bind () Expr) Ctx where
   genCode :: Bind () Expr -> Reader Ctx Text
