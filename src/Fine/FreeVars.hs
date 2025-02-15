@@ -9,6 +9,7 @@ import Fine.Syntax.Common (Id)
 blockFreeVars :: Block -> Set Id
 blockFreeVars (Return expr) = freeVars expr
 blockFreeVars (Do expr block) = S.union (freeVars expr) (blockFreeVars block)
+blockFreeVars (Debug expr block) = S.union (freeVars expr) (blockFreeVars block)
 blockFreeVars (Let bound _ expr block) =
   S.union (freeVars expr) (S.delete bound $ blockFreeVars block)
 
@@ -39,5 +40,4 @@ freeVars (PatternMatch expr matches _) =
 freeVars (Fun params body _) = S.difference (freeVars body) (S.fromList $ toList params)
 freeVars (Block block _) = blockFreeVars block
 freeVars (ExtExpr _) = S.empty
-freeVars (Debug expr _) = freeVars expr
 freeVars (Closure _ _ _) = S.empty

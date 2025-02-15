@@ -100,10 +100,10 @@ Expr : fn '(' Params ')' Expr       { Fun $3 $5 (getRange ($1, $5)) }
      | fn '(' ')' Expr              { Fun (Id "_" (getRange ($2, $3)) :| []) $4 (getRange ($1, $4)) }
      | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
      | match Expr '{' Matches '}'   { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
-     | debug Expr                   { Debug $2 (getRange ($1, $2)) }
      | Chain                        { chainToExpr $1 }
 
 Matches : Matches ';' Match { $3 : $1 }
+        | Matches ';'       { $1 }
         | Match             { [$1] }
 
 Match : App '->' Expr { ($1, $3) }
@@ -141,9 +141,10 @@ Block : Stmts ';' Expr  { (reverse $1, $3) }
       | Expr            { ([], $1) }
 
 Stmts : Stmts ';' Stmt  { $3 : $1 }
-Stmts : Stmt            { [$1] }
+      | Stmt            { [$1] }
 
 Stmt : Expr                 { Do $1 }
+     | debug Expr           { Debug $2 }
      | let Prefix '=' Expr  { Let $2 () $4 }
 
 Obj : Props { asNonEmpty (reverse $1) }

@@ -72,6 +72,7 @@ replaceMatch x (patt, expr) = do
 replaceBlock :: Id -> Block -> State Substt Block
 replaceBlock x (Return expr) = Return <$> replace' x expr
 replaceBlock x (Do expr block) = Do <$> replace' x expr <*> replaceBlock x block
+replaceBlock x (Debug expr block) = Debug <$> replace' x expr <*> replaceBlock x block
 replaceBlock _ (Let _ _ _ _) = errorTODO
 
 replace' :: Id -> Expr -> State Substt Expr
@@ -116,9 +117,6 @@ replace' x (Block block r) = do
   block' <- replaceBlock x block
   return (Block block' r)
 replace' _ expr@(ExtExpr _) = return expr
-replace' x (Debug expr r) = do
-  expr' <- replace' x expr
-  return (Debug expr' r)
 replace' _ expr@(Closure _ _ _) = return expr
 
 replace :: Id -> Expr -> Expr -> Expr

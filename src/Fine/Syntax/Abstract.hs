@@ -46,6 +46,7 @@ boundVars (Capture idn) = [idn]
 data Block
   = Return Expr
   | Do Expr Block
+  | Debug Expr Block
   | Let Id () Expr Block
   deriving (Show)
 
@@ -63,7 +64,6 @@ data Expr
   | Fun (NonEmpty Id) Expr Range
   | Block Block Range
   | ExtExpr Ext
-  | Debug Expr Range
   | Closure (Map Id Expr) Expr (Maybe Id)
   deriving (Show)
 
@@ -82,7 +82,6 @@ instance HasRange Expr where
   getRange (Fun _ _ r) = r
   getRange (Block _ r) = r
   getRange (ExtExpr ext) = getRange ext
-  getRange (Debug _ r) = r
   getRange (Closure _ expr _) = getRange expr
 
 data Bind t v = Bind

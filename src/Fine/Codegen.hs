@@ -5,6 +5,7 @@ import qualified Data.List.NonEmpty as L
 import qualified Data.List.NonEmpty2 as L2
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Maybe (maybeToList)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -85,6 +86,11 @@ genBlockCode (Do stmt block) = do
   block' <- genBlockCode block
   indent <- asks indentation
   return [i|#{indent}#{stmt'};\n#{block'}|]
+genBlockCode (Debug expr block) = do
+  expr' <- genCode expr
+  block' <- genBlockCode block
+  indent <- asks indentation
+  return [i|#{indent}console.debug(#{expr'});\n#{block'}|]
 genBlockCode (Let bound () expr block) = do
   expr' <- genCode expr
   block' <- genBlockCode block
@@ -155,9 +161,6 @@ instance CodeGens Expr Ctx where
     indent <- asks indentation
     return [i|(() => {\n#{content}#{indent}})()|]
   genCode (ExtExpr (Ext code _)) = return code
-  genCode (Debug expr _) = do
-    expr' <- genCode expr
-    return [i|fine$debug(#{expr'})|]
   genCode (Closure _ expr _) = genCode expr
 
 instance CodeGens (Bind () Expr) Ctx where
@@ -177,8 +180,8 @@ instance CodeGens Module Ctx where
     entry <- genCode expr
     return [i|#{code}\n\n#{entry};|]
 
-runGenCode :: (CodeGens t Ctx) => Text -> t -> Text
-runGenCode codeInjection x =
+runGenCode :: (CodeGens t Ctx) => (Maybe Text) -> t -> Text
+runGenCode extraCode x =
   let code =
         runReader
           (genCode x)
@@ -208,4 +211,4 @@ runGenCode codeInjection x =
                     ('.', "$dot")
                   ]
             }
-   in T.intercalate "\n\n" [codeInjection, code] <> "\n"
+   in T.intercalate "\n\n" (maybeToList extraCode ++ [code]) <> "\n"

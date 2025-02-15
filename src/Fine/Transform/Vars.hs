@@ -35,6 +35,7 @@ justUnused _ = Nothing
 blockFreeVars :: Block -> RW AvailableVars [VarStatus] FreeVars
 blockFreeVars (Return expr) = freeVars expr
 blockFreeVars (Do expr block) = S.union <$> freeVars expr <*> blockFreeVars block
+blockFreeVars (Debug expr block) = S.union <$> freeVars expr <*> blockFreeVars block
 blockFreeVars (Let bound _ expr block) = do
   exprVars <- freeVars expr
   blockVars <- withReader (S.insert bound) (blockFreeVars block)
@@ -97,7 +98,6 @@ freeVars (Fun params body _) = do
   return (S.difference bodyVars params')
 freeVars (Block block _) = blockFreeVars block
 freeVars (ExtExpr _) = return S.empty
-freeVars (Debug expr _) = freeVars expr
 freeVars (Closure _ _ _) = return S.empty
 
 handleVars :: AvailableVars -> Expr -> (FreeVars, Errors)

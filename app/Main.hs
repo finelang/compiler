@@ -17,8 +17,8 @@ getPaths = do
     (x : y : _) -> return (x, y)
     _ -> error "Not enough arguments."
 
-readCodeInjection :: IO Text
-readCodeInjection = TIO.readFile "src/runtime.js"
+readCodeInjection :: IO (Maybe Text)
+readCodeInjection = return Nothing -- Just <$> TIO.readFile "src/runtime.js"
 
 main :: IO ()
 main = do
