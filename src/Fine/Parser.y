@@ -7,8 +7,7 @@ import Data.List.NonEmpty2 (NonEmpty2 (NonEmpty2))
 import qualified Data.Text as T
 import Fine.Lexer (Token (..), TokenType (..))
 import Fine.Syntax.Common
-  ( Bind (..),
-    Id (Id),
+  ( Id (Id),
     HasRange (getRange),
     Range (..),
     OpChain' (..),
@@ -77,10 +76,10 @@ Defns : Defns Defn      { $2 : $1 }
       | Defns DataDefn  { $2 ++ $1 }
       | {- empty -}     { [] }
 
-Defn : let Prefix '=' Expr              { Defn (Bind $2 () $4) }
-     | ExtExpr let Prefix               { Defn (Bind $3 () $1) }
-     | let Prefix Infix Prefix '=' Expr { Defn (Bind $3 () (Fun ($2 :| [$4]) $6 (getRange ($2, $6)))) }
-     | ExtExpr let Prefix Infix Prefix  { Defn (Bind $4 () (Fun ($3 :| [$5]) $1 (getRange ($3, $5)))) }
+Defn : let Prefix '=' Expr              { Defn $2 $4 }
+     | ExtExpr let Prefix               { Defn $3 $1 }
+     | let Prefix Infix Prefix '=' Expr { Defn $3 (Fun ($2 :| [$4]) $6 (getRange ($2, $6))) }
+     | ExtExpr let Prefix Infix Prefix  { Defn $4 (Fun ($3 :| [$5]) $1 (getRange ($3, $5))) }
      | Fix Infix                        { FixDefn $1 $2 }
 
 DataDefn: data '{' Ctors '}'  { reverse $3 }

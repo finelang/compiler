@@ -79,13 +79,6 @@ instance Show Fixity where
   show :: Fixity -> String
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
 
-data Bind t v = Bind
-  { binder :: Id,
-    boundType :: t,
-    boundValue :: v
-  }
-  deriving (Show)
-
 -- left-recursive operation chain to leverage left-recursive parsing
 data OpChain' t
   = Operand' t

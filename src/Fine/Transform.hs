@@ -1,11 +1,11 @@
 module Fine.Transform (runTransform) where
 
-import Control.Monad (liftM2, unless)
+import Control.Monad (unless)
 import Control.Monad.Trans.SW (SW, gets, modify, runSW, tell)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (isNothing)
+import Data.Maybe (catMaybes, isNothing)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error
@@ -16,16 +16,11 @@ import Fine.Error
     collectWarnings,
   )
 import Fine.Syntax.Abstract
-  ( Expr (..),
+  ( Bind (..),
+    Expr (..),
     Module (EntryModule, Module),
   )
-import Fine.Syntax.Common
-  ( Bind (..),
-    Fixity (Fixity),
-    Id,
-    binder,
-    boundValue,
-  )
+import Fine.Syntax.Common (Fixity (Fixity), Id)
 import qualified Fine.Syntax.Concrete as C
 import Fine.Transform.Common (CtBinders, Fixities)
 import qualified Fine.Transform.Expr as TE (runTransform)
@@ -46,8 +41,15 @@ transformExpr expr = do
   tell transfErrors
   return expr'
 
-transformBind :: Bind t C.Expr -> SW State Errors (Bind t Expr)
-transformBind (Bind bder t v) = do
+transformDefn :: C.Defn -> SW State Errors (Maybe (Bind () Expr))
+transformDefn (C.FixDefn fix@(Fixity _ prec) op) = do
+  unless (0 <= prec && prec < 10) (tell $ collectError $ InvalidPrecedence 0 10 op) -- TODO: read from some config
+  fixities' <- gets fixities
+  if M.member op fixities'
+    then tell (collectError $ RepeatedFixity op)
+    else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
+  return Nothing
+transformDefn (C.Defn bder v) = do
   value <- transformExpr v
   currentFreeVars <- do
     vs <- gets vars
@@ -64,19 +66,8 @@ transformBind (Bind bder t v) = do
           then value
           else Closure (M.restrictKeys currentEnv vFreeVars) value selfBinder
   modify (\st -> st {vars = S.union currentFreeVars vFreeVars, env = M.insert bder value' currentEnv})
-  return (Bind bder t value')
-
-transformDefns :: [C.Defn] -> SW State Errors [Bind () Expr]
-transformDefns [] = return []
-transformDefns (C.FixDefn fix@(Fixity _ prec) op : defns) = do
-  unless (0 <= prec && prec < 10) (tell $ collectError $ InvalidPrecedence 0 10 op) -- TODO: read from some config
-  fixities' <- gets fixities
-  if M.member op fixities'
-    then tell (collectError $ RepeatedFixity op)
-    else modify (\ctx -> ctx {fixities = M.insert op fix fixities'})
-  transformDefns defns
-transformDefns (C.Defn bind : defns) = liftM2 (:) (transformBind bind) (transformDefns defns)
-transformDefns (C.CtorDefn tag params r : defns) = do
+  return (Just $ Bind bder () value')
+transformDefn (C.CtorDefn tag params r) = do
   let value =
         let exprs = map Var params
             data' = Data tag exprs r
@@ -91,7 +82,7 @@ transformDefns (C.CtorDefn tag params r : defns) = do
             ctBinders = S.insert tag (ctBinders st)
           }
     )
-  fmap (Bind tag () value :) (transformDefns defns)
+  return (Just $ Bind tag () value)
 
 transformEntryExpr :: C.Expr -> SW State Errors Expr
 transformEntryExpr expr = do
@@ -129,7 +120,7 @@ checkUnusedTopBinds bs optExpr =
 
 transform :: C.Module -> SW State Errors Module
 transform (C.Module defns optExpr) = do
-  bindings <- transformDefns defns
+  bindings <- fmap catMaybes (mapM transformDefn defns)
   optExpr' <- mapM transformEntryExpr optExpr
   tell (checkUnusedTopBinds bindings optExpr')
   fixities' <- gets fixities

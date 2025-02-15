@@ -3,8 +3,7 @@ module Fine.Syntax.Concrete (module Fine.Syntax.Concrete) where
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty2 (NonEmpty2)
 import Fine.Syntax.Common
-  ( Bind,
-    Ext,
+  ( Ext,
     Fixity,
     HasRange (..),
     Id,
@@ -53,7 +52,7 @@ instance HasRange Expr where
   getRange (Debug _ r) = r
 
 data Defn
-  = Defn (Bind () Expr)
+  = Defn Id Expr
   | CtorDefn Id [Id] Range
   | FixDefn Fixity Id
   deriving (Show)

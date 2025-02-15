@@ -11,14 +11,14 @@ import qualified Data.Text as T
 import Fine.Codegen.Lit (genLitCode)
 import Fine.Codegen.Pattern (extractCondsAndBinds)
 import Fine.Syntax.Abstract
-  ( Block (..),
+  ( Bind (..),
+    Block (..),
     Expr (..),
     Module (..),
     Pattern (..),
   )
 import Fine.Syntax.Common
-  ( Bind (..),
-    Ext (Ext),
+  ( Ext (Ext),
     Id (Id),
     idName,
   )
