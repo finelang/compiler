@@ -52,8 +52,8 @@ transformBlock (C.Do action : stmts) expr =
 transformBlock (C.Debug action : stmts) expr = do
   tell (collectWarning $ DebugKeywordUsage $ getRange action)
   Debug <$> transform action <*> transformBlock stmts expr
-transformBlock (C.Let bound _ val : stmts) expr =
-  Let bound () <$> transform val <*> transformBlock stmts expr
+transformBlock (C.Let isMut bound _ val : stmts) expr =
+  Let isMut bound () <$> transform val <*> transformBlock stmts expr
 
 transform :: C.Expr -> RW Ctx Errors Expr
 transform (C.Literal lit r) = return (Literal lit r)
@@ -64,6 +64,7 @@ transform (C.Tuple exprs r) = do
   exprs' <- mapM transform exprs
   return (Tuple exprs' r)
 transform (C.Var var) = return (Var var)
+transform (C.Mut var expr) = Mut var <$> transform expr
 transform (C.App f args r) = do
   f' <- transform f
   args' <- mapM transform args

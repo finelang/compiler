@@ -47,6 +47,7 @@ tokens :-
   "fn"                        { mkt Fn }
   "let"                       { mkt LetTok }
   "match"                     { mkt Match }
+  "mut"                       { mkt MutTok }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
   [$alpha][$alpha $digit]*    { mkt IdTok }
@@ -55,6 +56,7 @@ tokens :-
   "-" @decimal                { mkt NonNat }
   "-"? @decimal "." @decimal  { mkt FloatTok }
   "->"                        { mkt Arrow }
+  "<-"                        { mkt RArrow }
   "="                         { mkt Eq }
   "."                         { mkt Dot }
   "("                         { mkt Opar } 
@@ -81,6 +83,7 @@ data TokenType
   | Fn
   | LetTok
   | Match
+  | MutTok
   | Then
   | TrueTok
   | IdTok
@@ -89,6 +92,7 @@ data TokenType
   | NonNat
   | FloatTok
   | Arrow
+  | RArrow
   | Eq
   | Dot
   | Opar

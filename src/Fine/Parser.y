@@ -38,6 +38,7 @@ import Fine.Syntax.Concrete (Defn (..), Stmt (..), Expr (..), Module (Module))
   fn      { Token Fn _ _ }
   let     { Token LetTok _ _ }
   match   { Token Match _ _ }
+  mut     { Token MutTok _ _ }
   then    { Token Then _ _ }
   true    { Token TrueTok _ _ }
   id      { Token IdTok _ _ }
@@ -46,6 +47,7 @@ import Fine.Syntax.Concrete (Defn (..), Stmt (..), Expr (..), Module (Module))
   nonnat  { Token NonNat _ _ }
   float   { Token FloatTok _ _ }
   '->'    { Token Arrow _ _ }
+  '<-'    { Token RArrow _ _ }
   '='     { Token Eq _ _ }
   '.'     { Token Dot _ _ }
   '('     { Token Opar _ _ }
@@ -99,6 +101,7 @@ Assoc : infix   { NonAssoc }
 Expr : fn '(' Params ')' Expr       { Fun $3 $5 (getRange ($1, $5)) }
      | fn '(' ')' Expr              { Fun (Id "_" (getRange ($2, $3)) :| []) $4 (getRange ($1, $4)) }
      | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
+     | Prefix '<-' Expr             { Mut $1 $3 }
      | match Expr '{' Matches '}'   { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
      | Chain                        { chainToExpr $1 }
 
@@ -143,9 +146,12 @@ Block : Stmts ';' Expr  { (reverse $1, $3) }
 Stmts : Stmts ';' Stmt  { $3 : $1 }
       | Stmt            { [$1] }
 
-Stmt : Expr                 { Do $1 }
-     | debug Expr           { Debug $2 }
-     | let Prefix '=' Expr  { Let $2 () $4 }
+Stmt : Expr                     { Do $1 }
+     | debug Expr               { Debug $2 }
+     | let Mut Prefix '=' Expr  { Let $2 $3 () $5 }
+
+Mut : mut         { True }
+    | {- empty -} { False }
 
 Obj : Props { asNonEmpty (reverse $1) }
 

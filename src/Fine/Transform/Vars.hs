@@ -32,11 +32,20 @@ justUnused :: VarStatus -> Maybe Id
 justUnused (Unused var) = Just var
 justUnused _ = Nothing
 
+chechDefined :: Id -> RW AvailableVars [VarStatus] FreeVars
+chechDefined var = do
+  isDefined <- asks (S.member var)
+  if isDefined
+    then return (S.singleton var)
+    else do
+      tell [Undefined var]
+      return S.empty
+
 blockFreeVars :: Block -> RW AvailableVars [VarStatus] FreeVars
 blockFreeVars (Return expr) = freeVars expr
 blockFreeVars (Do expr block) = S.union <$> freeVars expr <*> blockFreeVars block
 blockFreeVars (Debug expr block) = S.union <$> freeVars expr <*> blockFreeVars block
-blockFreeVars (Let bound _ expr block) = do
+blockFreeVars (Let _ bound _ expr block) = do
   exprVars <- freeVars expr
   blockVars <- withReader (S.insert bound) (blockFreeVars block)
   if S.member bound blockVars
@@ -65,13 +74,8 @@ freeVars (Literal _ _) = return S.empty
 freeVars (Data _ exprs _) = S.unions <$> mapM freeVars exprs
 freeVars (Record props _) = S.unions <$> mapM (freeVars . snd) props
 freeVars (Tuple exprs _) = S.unions <$> mapM freeVars exprs
-freeVars (Var var) = do
-  isDefined <- asks (S.member var)
-  if isDefined
-    then return (S.singleton var)
-    else do
-      tell [Undefined var]
-      return S.empty
+freeVars (Var var) = chechDefined var
+freeVars (Mut var expr) = S.union <$> chechDefined var <*> freeVars expr
 freeVars (App f args _) = S.unions <$> mapM freeVars (cons f args)
 freeVars (Access expr _) = freeVars expr
 freeVars (Index expr _ _) = freeVars expr

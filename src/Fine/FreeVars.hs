@@ -10,7 +10,7 @@ blockFreeVars :: Block -> Set Id
 blockFreeVars (Return expr) = freeVars expr
 blockFreeVars (Do expr block) = S.union (freeVars expr) (blockFreeVars block)
 blockFreeVars (Debug expr block) = S.union (freeVars expr) (blockFreeVars block)
-blockFreeVars (Let bound _ expr block) =
+blockFreeVars (Let _ bound _ expr block) =
   S.union (freeVars expr) (S.delete bound $ blockFreeVars block)
 
 patternFreeVars :: Pattern -> Set Id
@@ -26,6 +26,7 @@ freeVars (Data _ exprs _) = foldMap freeVars exprs
 freeVars (Record props _) = foldMap (freeVars . snd) props
 freeVars (Tuple exprs _) = foldMap freeVars exprs
 freeVars (Var var) = S.singleton var
+freeVars (Mut var expr) = S.insert var (freeVars expr)
 freeVars (App f args _) = S.union (freeVars f) (foldMap freeVars args)
 freeVars (Access expr _) = freeVars expr
 freeVars (Index expr _ _) = freeVars expr

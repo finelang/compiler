@@ -91,11 +91,12 @@ genBlockCode (Debug expr block) = do
   block' <- genBlockCode block
   indent <- asks indentation
   return [i|#{indent}console.debug(#{expr'});\n#{block'}|]
-genBlockCode (Let bound () expr block) = do
+genBlockCode (Let isMut bound () expr block) = do
+  let keyword = if isMut then "let" else "const" :: Text
   expr' <- genCode expr
   block' <- genBlockCode block
   indent <- asks indentation
-  return [i|#{indent}const #{bound} = #{expr'};\n#{block'}|]
+  return [i|#{indent}#{keyword} #{bound} = #{expr'};\n#{block'}|]
 
 genStmtsCode :: Block -> Reader Ctx Text
 genStmtsCode block = do
@@ -132,6 +133,10 @@ instance CodeGens Expr Ctx where
     exprs' <- genIndexed (L2.toList exprs)
     return [i|({#{exprs'}})|]
   genCode (Var (Id name _)) = withReaderT symNames (sanitize name)
+  genCode (Mut (Id name _) expr) = do
+    name' <- withReaderT symNames (sanitize name)
+    expr' <- genCode expr
+    return [i|(#{name'} = #{expr'})|]
   genCode (App f args _) = do
     f' <- genCode f
     args' <- (T.intercalate ", ") <$> mapM genCode (L.toList args)

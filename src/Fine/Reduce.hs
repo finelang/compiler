@@ -73,7 +73,7 @@ replaceBlock :: Id -> Block -> State Substt Block
 replaceBlock x (Return expr) = Return <$> replace' x expr
 replaceBlock x (Do expr block) = Do <$> replace' x expr <*> replaceBlock x block
 replaceBlock x (Debug expr block) = Debug <$> replace' x expr <*> replaceBlock x block
-replaceBlock _ (Let _ _ _ _) = errorTODO
+replaceBlock _ (Let _ _ _ _ _) = errorTODO
 
 replace' :: Id -> Expr -> State Substt Expr
 replace' _ expr@(Literal _ _) = return expr
@@ -87,6 +87,7 @@ replace' x (Tuple exprs r) = do
   exprs' <- mapM (replace' x) exprs
   return (Tuple exprs' r)
 replace' x expr@(Var var) = if var == x then gets substt else return expr
+replace' _ (Mut _ _) = errorTODO
 replace' x (App f args r) = do
   f' <- replace' x f
   args' <- mapM (replace' x) args

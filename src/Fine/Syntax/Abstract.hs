@@ -47,7 +47,7 @@ data Block
   = Return Expr
   | Do Expr Block
   | Debug Expr Block
-  | Let Id () Expr Block
+  | Let Bool Id () Expr Block
   deriving (Show)
 
 data Expr
@@ -56,6 +56,7 @@ data Expr
   | Record (NonEmpty (Id, Expr)) Range
   | Tuple (NonEmpty2 Expr) Range
   | Var Id
+  | Mut Id Expr
   | App Expr (NonEmpty Expr) Range
   | Access Expr Id
   | Index Expr Int Range
@@ -74,6 +75,7 @@ instance HasRange Expr where
   getRange (Record _ r) = r
   getRange (Tuple _ r) = r
   getRange (Var var) = getRange var
+  getRange (Mut var expr) = getRange (var, expr)
   getRange (App _ _ r) = r
   getRange (Access expr prop) = getRange (expr, prop)
   getRange (Index _ _ r) = r
