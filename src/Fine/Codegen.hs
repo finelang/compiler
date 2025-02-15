@@ -86,11 +86,6 @@ genBlockCode (Do stmt block) = do
   block' <- genBlockCode block
   indent <- asks indentation
   return [i|#{indent}#{stmt'};\n#{block'}|]
-genBlockCode (Debug expr block) = do
-  expr' <- genCode expr
-  block' <- genBlockCode block
-  indent <- asks indentation
-  return [i|#{indent}console.debug(#{expr'});\n#{block'}|]
 genBlockCode (Let isMut bound () expr block) = do
   let keyword = if isMut then "let" else "const" :: Text
   expr' <- genCode expr
@@ -167,6 +162,9 @@ instance CodeGens Expr Ctx where
     return [i|(() => {\n#{content}#{indent}})()|]
   genCode (ExtExpr (Ext code _)) = return code
   genCode (Closure _ expr _) = genCode expr
+  genCode (Debug expr _) = do
+    expr' <- genCode expr
+    return [i|console.debug(#{expr'})|]
 
 instance CodeGens (Bind () Expr) Ctx where
   genCode :: Bind () Expr -> Reader Ctx Text

@@ -37,7 +37,6 @@ library
       Fine.FreeVars
       Fine.Lexer
       Fine.Parser
-      Fine.Reduce
       Fine.Syntax.Abstract
       Fine.Syntax.Common
       Fine.Syntax.Concrete

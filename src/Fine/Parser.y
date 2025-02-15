@@ -25,10 +25,10 @@ import Fine.Syntax.Concrete (Defn (..), Stmt (..), Expr (..), Module (Module))
 %error { parseError }
 
 %token
+  debug   { Token DebugTok _ _ }
   ext     { Token ExtTok _ _ }
   run     { Token Run _ _ }
   data    { Token Data _ _ }
-  debug   { Token DebugTok _ _ }
   else    { Token Else _ _ }
   false   { Token FalseTok _ _ }
   if      { Token If _ _ }
@@ -102,6 +102,7 @@ Expr : fn '(' Params ')' Expr       { Fun $3 $5 (getRange ($1, $5)) }
      | fn '(' ')' Expr              { Fun (Id "_" (getRange ($2, $3)) :| []) $4 (getRange ($1, $4)) }
      | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
      | Prefix '<-' Expr             { Mut $1 $3 }
+     | debug Expr                   { Debug $2 (getRange ($1, $2)) }
      | match Expr '{' Matches '}'   { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
      | Chain                        { chainToExpr $1 }
 
@@ -147,7 +148,6 @@ Stmts : Stmts ';' Stmt  { $3 : $1 }
       | Stmt            { [$1] }
 
 Stmt : Expr                     { Do $1 }
-     | debug Expr               { Debug $2 }
      | let Mut Prefix '=' Expr  { Let $2 $3 () $5 }
 
 Mut : mut         { True }

@@ -34,10 +34,10 @@ tokens :-
 
   $white+                     ;
   "--"\-*[^$symbol].*         ;
+  "#debug"                    { mkt DebugTok }
   "#external"                 { mkt ExtTok }
   "#run"                      { mkt Run }
   "data"                      { mkt Data }
-  "debug"                     { mkt DebugTok }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
   "if"                        { mkt If }
@@ -69,11 +69,11 @@ tokens :-
 
 {
 data TokenType
-  = ExtTok
+  = DebugTok
+  | ExtTok
   | ExtOp
   | Run
   | Data
-  | DebugTok
   | Else
   | FalseTok
   | If

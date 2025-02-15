@@ -14,7 +14,6 @@ import Fine.Syntax.Common
 
 data Stmt
   = Do Expr
-  | Debug Expr
   | Let Bool Id () Expr
   deriving (Show)
 
@@ -33,6 +32,7 @@ data Expr
   | Block [Stmt] Expr Range
   | Chain (OpChain Expr)
   | ExtExpr Ext
+  | Debug Expr Range
   deriving (Show)
 
 instance HasRange Expr where
@@ -51,6 +51,7 @@ instance HasRange Expr where
   getRange (Block _ _ r) = r
   getRange (Chain chain) = getRange chain
   getRange (ExtExpr ext) = getRange ext
+  getRange (Debug _ r) = r
 
 data Defn
   = Defn Id Expr
