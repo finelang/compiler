@@ -19,8 +19,8 @@ import Fine.Syntax.Abstract
 import Fine.Syntax.Common
   ( Bind (..),
     Ext (Ext),
-    Var (Var),
-    varName,
+    Id (Id),
+    idName,
   )
 
 class CodeGens t ctx where
@@ -96,9 +96,9 @@ genStmtsCode block = do
   indent <- increaseIndentation
   local (withIndentation indent) (genBlockCode block)
 
-genFunCode :: Bool -> [Var] -> Expr -> Reader Ctx Text
+genFunCode :: Bool -> [Id] -> Expr -> Reader Ctx Text
 genFunCode areObjParams params body = do
-  let params' = T.intercalate ", " (map varName params)
+  let params' = T.intercalate ", " (map idName params)
   let params'' = if areObjParams then [i|{#{params'}}|] else params'
   case body of
     Block block _ -> do
@@ -125,12 +125,12 @@ instance CodeGens Expr Ctx where
   genCode (Tuple exprs _) = do
     exprs' <- genIndexed (L2.toList exprs)
     return [i|({#{exprs'}})|]
-  genCode (Id (Var name _)) = withReaderT symNames (sanitize name)
+  genCode (Var (Id name _)) = withReaderT symNames (sanitize name)
   genCode (App f args _) = do
     f' <- genCode f
     args' <- (T.intercalate ", ") <$> mapM genCode (L.toList args)
     return [i|#{f'}(#{args'})|]
-  genCode (Access expr (Var prop _)) = do
+  genCode (Access expr (Id prop _)) = do
     expr' <- genCode expr
     return [i|#{expr'}.#{prop}|]
   genCode (Index expr ix _) = do
@@ -162,7 +162,7 @@ instance CodeGens Expr Ctx where
 
 instance CodeGens (Bind () Expr) Ctx where
   genCode :: Bind () Expr -> Reader Ctx Text
-  genCode (Bind (Var name _) _ expr) = do
+  genCode (Bind (Id name _) _ expr) = do
     name' <- withReaderT symNames (sanitize name)
     expr' <- genCode expr
     return [i|const #{name'} = #{expr'};|]

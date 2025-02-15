@@ -22,7 +22,7 @@ import Fine.Syntax.Abstract
 import Fine.Syntax.Common
   ( Bind (..),
     Fixity (Fixity),
-    Var,
+    Id,
     binder,
     boundValue,
   )
@@ -32,8 +32,8 @@ import qualified Fine.Transform.Expr as TE (runTransform)
 import Fine.Transform.Vars (handleVars)
 
 data State = State
-  { vars :: Set Var,
-    env :: Map Var Expr,
+  { vars :: Set Id,
+    env :: Map Id Expr,
     fixities :: Fixities,
     ctBinders :: CtBinders
   }
@@ -78,7 +78,7 @@ transformDefns (C.FixDefn fix@(Fixity _ prec) op : defns) = do
 transformDefns (C.Defn bind : defns) = liftM2 (:) (transformBind bind) (transformDefns defns)
 transformDefns (C.CtorDefn tag params r : defns) = do
   let value =
-        let exprs = map Id params
+        let exprs = map Var params
             data' = Data tag exprs r
          in case params of
               [] -> data'
@@ -110,7 +110,7 @@ transformEntryExpr expr = do
         else Closure exprEnv expr' Nothing
   return expr''
 
-closureVars :: Expr -> Set Var
+closureVars :: Expr -> Set Id
 closureVars (Closure clEnv _ self) =
   let clVars = M.keysSet clEnv
    in case self of

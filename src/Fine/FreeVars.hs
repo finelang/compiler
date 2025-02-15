@@ -4,27 +4,27 @@ import Data.List.NonEmpty (toList)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Syntax.Abstract (Block (..), Expr (..), Pattern (..), boundVars)
-import Fine.Syntax.Common (Var)
+import Fine.Syntax.Common (Id)
 
-blockFreeVars :: Block -> Set Var
+blockFreeVars :: Block -> Set Id
 blockFreeVars (Return expr) = freeVars expr
 blockFreeVars (Do expr block) = S.union (freeVars expr) (blockFreeVars block)
 blockFreeVars (Let bound _ expr block) =
   S.union (freeVars expr) (S.delete bound $ blockFreeVars block)
 
-patternFreeVars :: Pattern -> Set Var
+patternFreeVars :: Pattern -> Set Id
 patternFreeVars (LiteralP _ _) = S.empty
 patternFreeVars (DataP tag patts _) = S.insert tag (foldMap patternFreeVars patts)
 patternFreeVars (RecordP props _) = foldMap (patternFreeVars . snd) props
 patternFreeVars (TupleP patts _) = foldMap patternFreeVars patts
 patternFreeVars (Capture _) = S.empty
 
-freeVars :: Expr -> Set Var
+freeVars :: Expr -> Set Id
 freeVars (Literal _ _) = S.empty
 freeVars (Data _ exprs _) = foldMap freeVars exprs
 freeVars (Record props _) = foldMap (freeVars . snd) props
 freeVars (Tuple exprs _) = foldMap freeVars exprs
-freeVars (Id var) = S.singleton var
+freeVars (Var var) = S.singleton var
 freeVars (App f args _) = S.union (freeVars f) (foldMap freeVars args)
 freeVars (Access expr _) = freeVars expr
 freeVars (Index expr _ _) = freeVars expr

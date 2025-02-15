@@ -14,21 +14,21 @@ import Fine.Error
     collectWarnings,
   )
 import Fine.Syntax.Abstract (Block (..), Expr (..), Pattern (..), boundVars)
-import Fine.Syntax.Common (Var)
+import Fine.Syntax.Common (Id)
 
-type AvailableVars = Set Var
+type AvailableVars = Set Id
 
-type FreeVars = Set Var
+type FreeVars = Set Id
 
 data VarStatus
-  = Undefined Var
-  | Unused Var
+  = Undefined Id
+  | Unused Id
 
-justUndefined :: VarStatus -> Maybe Var
+justUndefined :: VarStatus -> Maybe Id
 justUndefined (Undefined var) = Just var
 justUndefined _ = Nothing
 
-justUnused :: VarStatus -> Maybe Var
+justUnused :: VarStatus -> Maybe Id
 justUnused (Unused var) = Just var
 justUnused _ = Nothing
 
@@ -64,7 +64,7 @@ freeVars (Literal _ _) = return S.empty
 freeVars (Data _ exprs _) = S.unions <$> mapM freeVars exprs
 freeVars (Record props _) = S.unions <$> mapM (freeVars . snd) props
 freeVars (Tuple exprs _) = S.unions <$> mapM freeVars exprs
-freeVars (Id var) = do
+freeVars (Var var) = do
   isDefined <- asks (S.member var)
   if isDefined
     then return (S.singleton var)

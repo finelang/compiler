@@ -22,12 +22,12 @@ transform (Record props r) = do
 transform (Tuple exprs r) = do
   patts <- mapM transform exprs
   return (TupleP patts r)
-transform (Id var) = do
+transform (Var var) = do
   isCt <- asks (S.member var)
   if isCt
     then return (DataP var [] (getRange var))
     else return (Capture var)
-transform app@(App (Id var) args r) = do
+transform app@(App (Var var) args r) = do
   isCt <- asks (S.member var)
   if isCt
     then do

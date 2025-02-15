@@ -15,15 +15,15 @@ import Fine.Error
     errorUNREACHABLE,
   )
 import Fine.Syntax.Abstract (Expr (..))
-import Fine.Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), OpChain (..), Var)
+import Fine.Syntax.Common (Assoc (..), Fixity (..), HasRange (getRange), Id, OpChain (..))
 import Fine.Transform.Common (Fixities)
 
-type SYStack = ([Expr], [Var])
+type SYStack = ([Expr], [Id])
 
 defaultFixity :: Fixity
 defaultFixity = Fixity LeftAssoc 9
 
-findFixity :: Var -> RWS Fixities Errors s Fixity
+findFixity :: Id -> RWS Fixities Errors s Fixity
 findFixity var = do
   maybeFix <- asks (M.lookup var)
   case maybeFix of
@@ -32,34 +32,34 @@ findFixity var = do
       tell (collectWarning $ MissingFixity var defaultFixity)
       return defaultFixity
 
-operatorStack :: SYStack -> [Var]
+operatorStack :: SYStack -> [Id]
 operatorStack (_, ops) = ops
 
 modifyOperands :: (Monoid w) => ([Expr] -> [Expr]) -> RWS r w SYStack ()
 modifyOperands f = modify $ \(opns, ops) -> (f opns, ops)
 
-modifyOperators :: (Monoid w) => ([Var] -> [Var]) -> RWS r w SYStack ()
+modifyOperators :: (Monoid w) => ([Id] -> [Id]) -> RWS r w SYStack ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
-mkTopApp :: [Expr] -> Var -> [Expr]
-mkTopApp (right : left : rest) var = App (Id var) (left :| [right]) (getRange (left, right)) : rest
+mkTopApp :: [Expr] -> Id -> [Expr]
+mkTopApp (right : left : rest) var = App (Var var) (left :| [right]) (getRange (left, right)) : rest
 mkTopApp _ _ = errorUNREACHABLE
 
-consume :: [Expr] -> [Var] -> [Expr]
+consume :: [Expr] -> [Id] -> [Expr]
 consume = foldl mkTopApp
 
-continueWithCurr :: Var -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+continueWithCurr :: Id -> OpChain Expr -> RWS Fixities Errors SYStack Expr
 continueWithCurr curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
   modifyOperands (`mkTopApp` top) -- create app
   sy' curr chain
 
-continueWithChain :: Var -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+continueWithChain :: Id -> OpChain Expr -> RWS Fixities Errors SYStack Expr
 continueWithChain curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
-sy' :: Var -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+sy' :: Id -> OpChain Expr -> RWS Fixities Errors SYStack Expr
 sy' curr chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators

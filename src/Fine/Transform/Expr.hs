@@ -60,7 +60,7 @@ transform (C.Record props r) = do
 transform (C.Tuple exprs r) = do
   exprs' <- mapM transform exprs
   return (Tuple exprs' r)
-transform (C.Id var) = return (Id var)
+transform (C.Var var) = return (Var var)
 transform (C.App f args r) = do
   f' <- transform f
   args' <- mapM transform args

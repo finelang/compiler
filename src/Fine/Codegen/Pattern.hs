@@ -7,11 +7,11 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Fine.Codegen.Lit (genLitCode)
 import Fine.Syntax.Abstract (Pattern (..))
-import Fine.Syntax.Common (Lit (Str), Var (Var))
+import Fine.Syntax.Common (Id (Id), Lit (Str))
 
 data PathEnd
   = Equals Lit
-  | As Var
+  | As Id
 
 data PathPiece
   = PropTo Text
@@ -31,12 +31,12 @@ indexedPaths patts =
 
 fromPattern :: Pattern -> [PatternPath]
 fromPattern (LiteralP lit _) = [End $ Equals lit]
-fromPattern (DataP (Var name _) patts _) =
+fromPattern (DataP (Id name _) patts _) =
   let fromTag = Continue (PropTo "$tag") (End $ Equals $ Str name)
    in fromTag : indexedPaths patts
 fromPattern (RecordP props _) =
   foldMap
-    (\(Var name _, patt) -> map (Continue $ PropTo name) (fromPattern patt))
+    (\(Id name _, patt) -> map (Continue $ PropTo name) (fromPattern patt))
     props
 fromPattern (TupleP patts _) = indexedPaths (toList patts)
 fromPattern (Capture var) = [End $ As var]

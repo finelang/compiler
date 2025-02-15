@@ -15,7 +15,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax.Common (Fixity, Range, Var)
+import Fine.Syntax.Common (Fixity, Id, Range)
 import GHC.Stack (HasCallStack)
 import String.ANSI (red, yellow)
 
@@ -29,16 +29,16 @@ hl :: (Show a) => a -> Text
 hl x = [i|'#{show x}'|]
 
 data Error
-  = UndefinedVar Var
-  | RepeatedVar Var
-  | RepeatedParam Var
-  | UndefinedVariant Var
-  | RepeatedProp Var
-  | RequiredProp Var Var
-  | InvalidProp Var Var
-  | InvalidPrecedence Int Int Var
-  | RepeatedFixity Var
-  | SameInfixPrecedence (Var, Fixity) (Var, Fixity)
+  = UndefinedVar Id
+  | RepeatedVar Id
+  | RepeatedParam Id
+  | UndefinedVariant Id
+  | RepeatedProp Id
+  | RequiredProp Id Id
+  | InvalidProp Id Id
+  | InvalidPrecedence Int Int Id
+  | RepeatedFixity Id
+  | SameInfixPrecedence (Id, Fixity) (Id, Fixity)
   | InvalidPattern Range
   | MultipleSpreadPatterns [Range]
 
@@ -76,9 +76,9 @@ wrapError :: Error -> String
 wrapError err = [i|#{errorPrefix}#{err}|]
 
 data Warning
-  = UnusedVar Var
-  | MissingFixity Var Fixity
-  | UnusedFixity Var
+  = UnusedVar Id
+  | MissingFixity Id Fixity
+  | UnusedFixity Id
   | DebugKeywordUsage Range
 
 instance Show Warning where

@@ -31,23 +31,23 @@ instance (HasRange p, HasRange q) => HasRange (p, q) where
         (Range _ _ _ ei ec el) = getRange r
      in Range si sc sl ei ec el
 
-data Var = Var {varName :: Text, varRange :: Range}
+data Id = Id {idName :: Text, idRange :: Range}
 
-instance Eq Var where
-  (==) :: Var -> Var -> Bool
-  (==) = (==) `on` varName
+instance Eq Id where
+  (==) :: Id -> Id -> Bool
+  (==) = (==) `on` idName
 
-instance Ord Var where
-  compare :: Var -> Var -> Ordering
-  compare = compare `on` varName
+instance Ord Id where
+  compare :: Id -> Id -> Ordering
+  compare = compare `on` idName
 
-instance HasRange Var where
-  getRange :: Var -> Range
-  getRange = varRange
+instance HasRange Id where
+  getRange :: Id -> Range
+  getRange = idRange
 
-instance Show Var where
-  show :: Var -> String
-  show (Var name _) = unpack name
+instance Show Id where
+  show :: Id -> String
+  show (Id name _) = unpack name
 
 data Lit
   = Int Int
@@ -80,7 +80,7 @@ instance Show Fixity where
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
 
 data Bind t v = Bind
-  { binder :: Var,
+  { binder :: Id,
     boundType :: t,
     boundValue :: v
   }
@@ -89,16 +89,16 @@ data Bind t v = Bind
 -- left-recursive operation chain to leverage left-recursive parsing
 data OpChain' t
   = Operand' t
-  | Operation' (OpChain' t) Var t
+  | Operation' (OpChain' t) Id t
   deriving (Show)
 
 -- right-recursive operation chain for shunting yard algorithm
 data OpChain t
   = Operand t
-  | Operation t Var (OpChain t)
+  | Operation t Id (OpChain t)
   deriving (Show)
 
-extendChain :: OpChain t -> Var -> t -> OpChain t
+extendChain :: OpChain t -> Id -> t -> OpChain t
 extendChain (Operand left) op right = Operation left op (Operand right)
 extendChain (Operation left firstOp chain) op right = Operation left firstOp (extendChain chain op right)
 

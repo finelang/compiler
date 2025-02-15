@@ -7,28 +7,28 @@ import Fine.Syntax.Common
     Ext,
     Fixity,
     HasRange (..),
+    Id,
     Lit,
     OpChain,
     Range,
-    Var,
   )
 
 data Stmt
   = Do Expr
-  | Let Var () Expr
+  | Let Id () Expr
   deriving (Show)
 
 data Expr
   = Literal Lit Range
-  | Record (NonEmpty (Var, Expr)) Range
+  | Record (NonEmpty (Id, Expr)) Range
   | Tuple (NonEmpty2 Expr) Range
-  | Id Var
+  | Var Id
   | App Expr (NonEmpty Expr) Range
-  | Access Expr Var
+  | Access Expr Id
   | Index Expr Int Range
   | Cond Expr Expr Expr Range
   | PatternMatch Expr (NonEmpty (Expr, Expr)) Range
-  | Fun (NonEmpty Var) Expr Range
+  | Fun (NonEmpty Id) Expr Range
   | Block [Stmt] Expr Range
   | Chain (OpChain Expr)
   | ExtExpr Ext
@@ -40,7 +40,7 @@ instance HasRange Expr where
   getRange (Literal _ r) = r
   getRange (Record _ r) = r
   getRange (Tuple _ r) = r
-  getRange (Id var) = getRange var
+  getRange (Var var) = getRange var
   getRange (App _ _ r) = r
   getRange (Access expr prop) = getRange (expr, prop)
   getRange (Index _ _ r) = r
@@ -54,8 +54,8 @@ instance HasRange Expr where
 
 data Defn
   = Defn (Bind () Expr)
-  | CtorDefn Var [Var] Range
-  | FixDefn Fixity Var
+  | CtorDefn Id [Id] Range
+  | FixDefn Fixity Id
   deriving (Show)
 
 data Module = Module

@@ -8,7 +8,7 @@ import qualified Data.Text as T
 import Fine.Lexer (Token (..), TokenType (..))
 import Fine.Syntax.Common
   ( Bind (..),
-    Var (Var),
+    Id (Id),
     HasRange (getRange),
     Range (..),
     OpChain' (..),
@@ -64,9 +64,9 @@ Module : Defns Entry  { Module (reverse $1) $2 }
 Entry : run Expr    { Just $2 }
       | {- empty -} { Nothing }
 
-Prefix : id { mkVar $1 }
+Prefix : id { mkIdn $1 }
 
-Infix : op  { mkVar $1 }
+Infix : op  { mkIdn $1 }
 
 Params_ : Params_ ',' Prefix  { $3 : $1 }
         | Prefix              { [$1] }
@@ -98,7 +98,7 @@ Assoc : infix   { NonAssoc }
       | infixr  { RightAssoc }
 
 Expr : fn '(' Params ')' Expr       { Fun $3 $5 (getRange ($1, $5)) }
-     | fn '(' ')' Expr              { Fun (Var "_" (getRange ($2, $3)) :| []) $4 (getRange ($1, $4)) }
+     | fn '(' ')' Expr              { Fun (Id "_" (getRange ($2, $3)) :| []) $4 (getRange ($1, $4)) }
      | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
      | match Expr '{' Matches '}'   { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
      | debug Expr                   { Debug $2 (getRange ($1, $2)) }
@@ -127,8 +127,8 @@ Atom : '(' Args ')'   { mkGroup $2 (getRange ($1, $3)) }
      | '(' ')'        { Literal Unit (getRange ($1, $2)) }
      | '{' Obj '}'    { Record $2 (getRange ($1, $3)) }
      | '{' Block '}'  { mkBlock $2 (getRange ($1, $3)) }
-     | Prefix         { Id $1 }
-     | '(' op ')'     { Id $ Var (tokenLexeme $2) (getRange ($1, $3)) }
+     | Prefix         { Var $1 }
+     | '(' op ')'     { Var $ Id (tokenLexeme $2) (getRange ($1, $3)) }
      | Int            { $1 }
      | float          { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
      | false          { Literal (Bool False) (getRange $1) }
@@ -153,14 +153,14 @@ Props : Props ',' Prop  { $3 : $1 }
       | Prop            { [$1] }
 
 Prop : Prefix '=' Expr  { ($1, $3) }
-     | '=' Prefix       { ($2, Id $2) }
+     | '=' Prefix       { ($2, Var $2) }
 
 Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
 
 ExtExpr : Ext { ExtExpr $1 }
 
 {
-mkVar tok = Var (tokenLexeme tok) (getRange tok)
+mkIdn tok = Id (tokenLexeme tok) (getRange tok)
 
 transformStr = T.tail . T.init
 

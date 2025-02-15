@@ -15,17 +15,17 @@ import Fine.Syntax.Common
     Ext,
     Fixity,
     HasRange (..),
+    Id (Id),
     Lit,
     Range,
-    Var (Var),
   )
 
 data Pattern
   = LiteralP Lit Range
-  | DataP Var [Pattern] Range
-  | RecordP (NonEmpty (Var, Pattern)) Range
+  | DataP Id [Pattern] Range
+  | RecordP (NonEmpty (Id, Pattern)) Range
   | TupleP (NonEmpty2 Pattern) Range
-  | Capture Var
+  | Capture Id
   deriving (Show)
 
 instance HasRange Pattern where
@@ -34,37 +34,37 @@ instance HasRange Pattern where
   getRange (DataP _ _ r) = r
   getRange (RecordP _ r) = r
   getRange (TupleP _ r) = r
-  getRange (Capture (Var _ r)) = r
+  getRange (Capture (Id _ r)) = r
 
-boundVars :: Pattern -> [Var]
+boundVars :: Pattern -> [Id]
 boundVars (LiteralP _ _) = []
 boundVars (DataP _ patts _) = concatMap boundVars patts
 boundVars (RecordP props _) = foldMap (boundVars . snd) props
 boundVars (TupleP patts _) = foldMap boundVars patts
-boundVars (Capture var) = [var]
+boundVars (Capture idn) = [idn]
 
 data Block
   = Return Expr
   | Do Expr Block
-  | Let Var () Expr Block
+  | Let Id () Expr Block
   deriving (Show)
 
 data Expr
   = Literal Lit Range
-  | Data Var [Expr] Range
-  | Record (NonEmpty (Var, Expr)) Range
+  | Data Id [Expr] Range
+  | Record (NonEmpty (Id, Expr)) Range
   | Tuple (NonEmpty2 Expr) Range
-  | Id Var
+  | Var Id
   | App Expr (NonEmpty Expr) Range
-  | Access Expr Var
+  | Access Expr Id
   | Index Expr Int Range
   | PatternMatch Expr (NonEmpty (Pattern, Expr)) Range
   | Cond Expr Expr Expr Range
-  | Fun (NonEmpty Var) Expr Range
+  | Fun (NonEmpty Id) Expr Range
   | Block Block Range
   | ExtExpr Ext
   | Debug Expr Range
-  | Closure (Map Var Expr) Expr (Maybe Var)
+  | Closure (Map Id Expr) Expr (Maybe Id)
   deriving (Show)
 
 instance HasRange Expr where
@@ -73,7 +73,7 @@ instance HasRange Expr where
   getRange (Data _ _ r) = r
   getRange (Record _ r) = r
   getRange (Tuple _ r) = r
-  getRange (Id var) = getRange var
+  getRange (Var var) = getRange var
   getRange (App _ _ r) = r
   getRange (Access expr prop) = getRange (expr, prop)
   getRange (Index _ _ r) = r
@@ -88,11 +88,11 @@ instance HasRange Expr where
 data Module
   = Module
       { bindings :: [Bind () Expr],
-        fixities :: Map Var Fixity
+        fixities :: Map Id Fixity
       }
   | EntryModule
       { bindings :: [Bind () Expr],
-        fixities :: Map Var Fixity,
+        fixities :: Map Id Fixity,
         _entryExpr :: Expr
       }
   deriving (Show)
