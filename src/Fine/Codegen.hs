@@ -161,7 +161,7 @@ instance CodeGens Expr Ctx where
     expr' <- local (withIndentation indent) (genCode expr)
     let name = "obj"
     matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ L.toList matches)
-    let matches'' = T.intercalate [i|\n#{indent}|] matches'
+    let matches'' = T.intercalate " else " matches'
     return [i|((#{name}) => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
   genCode (Fun params body _) = genFunCode False (L.toList params) body
   genCode (Block block _) = do
