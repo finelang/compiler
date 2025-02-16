@@ -47,6 +47,8 @@ data Block
   = Return Expr
   | Do Expr Block
   | Let Bool Id () Expr Block
+  | Void -- internal
+  | Loop Expr Block Block -- internal
   deriving (Show)
 
 data Expr

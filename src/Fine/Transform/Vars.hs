@@ -52,6 +52,9 @@ blockFreeVars (Let _ bound _ expr block) = do
     else do
       tell [Unused bound]
       return (S.union exprVars blockVars)
+blockFreeVars Void = return S.empty
+blockFreeVars (Loop cond actions block) =
+  S.unions <$> sequence [freeVars cond, blockFreeVars actions, blockFreeVars block]
 
 patternFreeVars :: Pattern -> RW AvailableVars [VarStatus] FreeVars
 patternFreeVars (LiteralP _ _) = return S.empty
@@ -65,9 +68,6 @@ patternFreeVars (RecordP props _) = S.unions <$> mapM (patternFreeVars . snd) pr
 patternFreeVars (TupleP patts _) = S.unions <$> mapM patternFreeVars patts
 patternFreeVars (Capture _) = return S.empty
 
--- a version of 'Fine.FreeVars.freeVars' that collects:
--- 1- undefined vars (given the available vars at the moment)
--- 2- unused vars (calculated with free vars and bound vars)
 freeVars :: Expr -> RW AvailableVars [VarStatus] FreeVars
 freeVars (Literal _ _) = return S.empty
 freeVars (Data _ exprs _) = S.unions <$> mapM freeVars exprs

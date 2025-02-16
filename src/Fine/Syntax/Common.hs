@@ -13,6 +13,9 @@ data Range = Range
     endLine :: Int
   }
 
+invalidRange :: Range
+invalidRange = Range 0 0 0 0 0 0 -- use only to build ast out of nothing
+
 instance Show Range where
   show :: Range -> String
   show range = [i|[#{startIndex range}, #{endIndex range})|]

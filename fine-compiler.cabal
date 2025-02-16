@@ -33,8 +33,8 @@ library
       Fine.Codegen
       Fine.Codegen.Lit
       Fine.Codegen.Pattern
+      Fine.Codegen.TailRec
       Fine.Error
-      Fine.FreeVars
       Fine.Lexer
       Fine.Parser
       Fine.Syntax.Abstract

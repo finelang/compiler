@@ -5,12 +5,13 @@ import qualified Data.List.NonEmpty as L
 import qualified Data.List.NonEmpty2 as L2
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (maybeToList)
+import Data.Maybe (fromMaybe, maybeToList)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Fine.Codegen.Lit (genLitCode)
 import Fine.Codegen.Pattern (extractCondsAndBinds)
+import Fine.Codegen.TailRec (optimize)
 import Fine.Syntax.Abstract
   ( Bind (..),
     Block (..),
@@ -92,6 +93,13 @@ genBlockCode (Let isMut bound () expr block) = do
   block' <- genBlockCode block
   indent <- asks indentation
   return [i|#{indent}#{keyword} #{bound} = #{expr'};\n#{block'}|]
+genBlockCode Void = return ""
+genBlockCode (Loop cond actions block) = do
+  cond' <- genCode cond
+  actions' <- genStmtsCode actions
+  block' <- genBlockCode block
+  indent <- asks indentation
+  return [i|#{indent}while (#{cond'}) {\n#{actions'}#{indent}}\n#{block'}|]
 
 genStmtsCode :: Block -> Reader Ctx Text
 genStmtsCode block = do
@@ -168,9 +176,14 @@ instance CodeGens Expr Ctx where
 
 instance CodeGens (Bind () Expr) Ctx where
   genCode :: Bind () Expr -> Reader Ctx Text
-  genCode (Bind (Id name _) _ expr) = do
+  genCode (Bind bder@(Id name _) _ expr) = do
     name' <- withReaderT symNames (sanitize name)
-    expr' <- genCode expr
+    expr' <- case expr of
+      (Closure _ (Fun params body r) (Just self))
+        | self == bder ->
+            let optimized = fmap (\body' -> Fun params body' r) (optimize bder params body)
+             in genCode (fromMaybe expr optimized)
+      _ -> genCode expr
     return [i|const #{name'} = #{expr'};|]
 
 instance CodeGens Module Ctx where
@@ -208,7 +221,7 @@ runGenCode extraCode x =
                     ('\\', "$bsol"),
                     ('?', "$qust"),
                     ('!', "$excl"),
-                    ('$', "$dllr"),
+                    -- ('$', "$dllr"),
                     ('@', "$at"),
                     ('~', "$tild"),
                     ('.', "$dot")

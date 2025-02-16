@@ -11,6 +11,9 @@ blockFreeVars (Return expr) = freeVars expr
 blockFreeVars (Do expr block) = S.union (freeVars expr) (blockFreeVars block)
 blockFreeVars (Let _ bound _ expr block) =
   S.union (freeVars expr) (S.delete bound $ blockFreeVars block)
+blockFreeVars Void = S.empty
+blockFreeVars (Loop cond actions block) =
+  S.unions [freeVars cond, blockFreeVars actions, blockFreeVars block]
 
 patternFreeVars :: Pattern -> Set Id
 patternFreeVars (LiteralP _ _) = S.empty
