@@ -1,8 +1,8 @@
 module Fine.Codegen (runGenCode) where
 
 import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
-import qualified Data.List.NonEmpty as L
-import qualified Data.List.NonEmpty2 as L2
+import qualified Data.List.NonEmpty as NEL
+import qualified Data.List.NonEmpty2 as NEL2
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe, maybeToList)
@@ -130,10 +130,10 @@ instance CodeGens Expr Ctx where
         then [i|({#{tagged}})|]
         else [i|({#{tagged}, #{exprs'}})|]
   genCode (Record props _) = do
-    props' <- genPropsCode (L.toList props)
+    props' <- genPropsCode (NEL.toList props)
     return [i|({#{props'}})|]
   genCode (Tuple exprs _) = do
-    exprs' <- genIndexed (L2.toList exprs)
+    exprs' <- genIndexed (NEL2.toList exprs)
     return [i|({#{exprs'}})|]
   genCode (Var (Id name _)) = withReaderT symNames (sanitize name)
   genCode (Mut (Id name _) expr) = do
@@ -142,7 +142,7 @@ instance CodeGens Expr Ctx where
     return [i|(#{name'} = #{expr'})|]
   genCode (App f args _) = do
     f' <- genCode f
-    args' <- (T.intercalate ", ") <$> mapM genCode (L.toList args)
+    args' <- (T.intercalate ", ") <$> mapM genCode args
     return [i|#{f'}(#{args'})|]
   genCode (Access expr (Id prop _)) = do
     expr' <- genCode expr
@@ -160,10 +160,10 @@ instance CodeGens Expr Ctx where
     indent <- increaseIndentation
     expr' <- local (withIndentation indent) (genCode expr)
     let name = "obj"
-    matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ L.toList matches)
+    matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ NEL.toList matches)
     let matches'' = T.intercalate " else " matches'
     return [i|((#{name}) => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
-  genCode (Fun params body _) = genFunCode False (L.toList params) body
+  genCode (Fun params body _) = genFunCode False params body
   genCode (Block block _) = do
     content <- genStmtsCode block
     indent <- asks indentation

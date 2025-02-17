@@ -1,7 +1,6 @@
 module Fine.Transform.Pattern (runTransform) where
 
 import Control.Monad.Trans.RW (RW, asks, runRW, tell)
-import Data.List.NonEmpty (toList)
 import qualified Data.Set as S
 import Fine.Error (Error (InvalidPattern), Errors, collectError)
 import Fine.Syntax.Abstract (Pattern (..))
@@ -32,7 +31,7 @@ transform app@(App (Var var) args r) = do
   if isCt
     then do
       patts <- mapM transform args
-      return (DataP var (toList patts) r)
+      return (DataP var patts r)
     else invalidPattern app
 transform (Discard r) = return (DiscardP r)
 transform other = invalidPattern other

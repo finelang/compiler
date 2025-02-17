@@ -2,7 +2,6 @@ module Fine.Transform (runTransform) where
 
 import Control.Monad (unless)
 import Control.Monad.Trans.SW (SW, gets, modify, runSW, tell)
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (catMaybes, isNothing)
@@ -73,7 +72,7 @@ transformDefn (C.CtorDefn tag params r) = do
             data' = Data tag exprs r
          in case params of
               [] -> data'
-              (param : params') -> Fun (param :| params') data' r
+              _ -> Fun params data' r
   modify
     ( \st ->
         st

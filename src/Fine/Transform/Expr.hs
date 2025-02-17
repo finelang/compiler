@@ -3,8 +3,7 @@ module Fine.Transform.Expr (runTransform) where
 import Control.Monad (forM_)
 import Control.Monad.Trans.RW (RW, ask, runRW, tell, withReader)
 import Data.List.Extra (repeated)
-import Data.List.NonEmpty (toList)
-import qualified Data.List.NonEmpty as L
+import qualified Data.List.NonEmpty as NEL
 import Fine.Error
   ( Error (..),
     Errors,
@@ -88,9 +87,9 @@ transform (C.PatternMatch expr matches r) = do
     patterns'
     (tell . collectErrors . map RepeatedVar . repeated . boundVars)
   exprs' <- mapM (transform . snd) matches
-  return $ PatternMatch expr' (L.zip patterns' exprs') r
+  return $ PatternMatch expr' (NEL.zip patterns' exprs') r
 transform (C.Fun params body r) = do
-  tell (collectErrors $ map RepeatedParam $ repeated $ toList params)
+  tell (collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
 transform (C.Block stmts expr r) = do

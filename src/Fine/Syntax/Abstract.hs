@@ -61,12 +61,12 @@ data Expr
   | Tuple (NonEmpty2 Expr) Range
   | Var Id
   | Mut Id Expr
-  | App Expr (NonEmpty Expr) Range
+  | App Expr [Expr] Range
   | Access Expr Id
   | Index Expr Int Range
   | PatternMatch Expr (NonEmpty (Pattern, Expr)) Range
   | Cond Expr Expr Expr Range
-  | Fun (NonEmpty Id) Expr Range
+  | Fun [Id] Expr Range
   | Block Block Range
   | ExtExpr Ext
   | Closure (Map Id Expr) Expr (Maybe Id)

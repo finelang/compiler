@@ -73,19 +73,19 @@ Infix : op  { mkIdn $1 }
 Params_ : Params_ ',' Prefix  { $3 : $1 }
         | Prefix              { [$1] }
 
-Params : Params_  { asNonEmpty (reverse $1) }
+Params : Params_  { reverse $1 }
 
-FParams : '(' Params ')'  { $2 }
-        | '(' ')'         { Id "_" (getRange ($1, $2)) :| [] }
+FParams : Params      { $1 }
+        | {- empty -} { [] }
 
 Defns : Defns Defn      { $2 : $1 }
       | Defns DataDefn  { $2 ++ $1 }
       | {- empty -}     { [] }
 
-Defn : let Prefix '=' TopExpr               { Defn $2 $4 }
-     | let Prefix FParams '=' TopExpr       { Defn $2 (Fun $3 $5 (getRange ($2, $5))) }
-     | let Prefix Infix Prefix '=' TopExpr  { Defn $3 (Fun ($2 :| [$4]) $6 (getRange ($2, $6))) }
-     | Fix Infix                            { FixDefn $1 $2 }
+Defn : let Prefix '=' TopExpr                 { Defn $2 $4 }
+     | let Prefix '(' FParams ')' '=' TopExpr { Defn $2 (Fun $4 $7 (getRange ($2, $7))) }
+     | let Prefix Infix Prefix '=' TopExpr    { Defn $3 (Fun [$2, $4] $6 (getRange ($2, $6))) }
+     | Fix Infix                              { FixDefn $1 $2 }
 
 DataDefn: data '{' Ctors '}'  { reverse $3 }
 
@@ -93,7 +93,7 @@ Ctors : Ctors Ctor  { $2 : $1 }
       | Ctor        { [$1] }
 
 Ctor : let Prefix                 { CtorDefn $2 [] (getRange $2) }
-     | let Prefix '(' Params ')'  { CtorDefn $2 (toList $4) (getRange ($2, $5)) }
+     | let Prefix '(' Params ')'  { CtorDefn $2 $4 (getRange ($2, $5)) }
 
 Fix : Assoc nat { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
@@ -104,7 +104,7 @@ Assoc : infix   { NonAssoc }
 TopExpr : ext str { ExtExpr $ Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
         | Expr    { $1 }
 
-Expr : fn FParams Expr              { Fun $2 $3 (getRange ($1, $3)) }
+Expr : fn '(' FParams ')' Expr      { Fun $3 $5 (getRange ($1, $5)) }
      | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
      | Prefix '<-' Expr             { Mut $1 $3 }
      | debug Expr                   { Debug $2 (getRange ($1, $2)) }
@@ -121,7 +121,6 @@ Chain : App             { Operand' $1 }
       | Chain Infix App { Operation' $1 $2 $3 }
 
 App : App '(' Args ')'  { App $1 $3 (getRange ($1, $4)) }
-    | App '(' ')'       { App $1 (Literal Unit (getRange ($2, $3)) :| []) (getRange ($1, $3)) }
     | App '.' Prefix    { Access $1 $3 }
     | App '.' nat       { Index $1 (read $ T.unpack $ tokenLexeme $3) (getRange ($1, $3)) }
     | Atom              { $1 }
@@ -129,10 +128,12 @@ App : App '(' Args ')'  { App $1 $3 (getRange ($1, $4)) }
 Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
        | Expr             { [$1] }
 
-Args : Exprs_ { asNonEmpty (reverse $1) }
+Exprs : Exprs_  { reverse $1 }
+
+Args : Exprs        { $1 }
+     | {- empty -}  { [] }
 
 Atom : '(' Args ')'   { mkGroup $2 (getRange ($1, $3)) }
-     | '(' ')'        { Literal Unit (getRange ($1, $2)) }
      | '{' Obj '}'    { Record $2 (getRange ($1, $3)) }
      | '{' Block '}'  { mkBlock $2 (getRange ($1, $3)) }
      | Prefix         { Var $1 }
@@ -176,8 +177,9 @@ mkStr tok = Literal (Str $ transformStr $ tokenLexeme tok) (getRange tok)
 
 asNonEmpty (x : xs) = x :| xs
 
-mkGroup (x :| []) _ = x
-mkGroup (x :| (y : zs)) r = Tuple (NonEmpty2 x y zs) r 
+mkGroup [] r = Literal Unit r
+mkGroup [x] _ = x
+mkGroup (x : y : zs) r = Tuple (NonEmpty2 x y zs) r
 
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)

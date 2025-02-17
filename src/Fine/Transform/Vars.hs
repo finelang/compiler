@@ -2,7 +2,7 @@ module Fine.Transform.Vars (handleVars) where
 
 import Control.Monad (forM_)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
-import Data.List.NonEmpty (cons, toList)
+import Data.List.NonEmpty (toList)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -76,7 +76,7 @@ freeVars (Record props _) = S.unions <$> mapM (freeVars . snd) props
 freeVars (Tuple exprs _) = S.unions <$> mapM freeVars exprs
 freeVars (Var var) = chechDefined var
 freeVars (Mut var expr) = S.union <$> chechDefined var <*> freeVars expr
-freeVars (App f args _) = S.unions <$> mapM freeVars (cons f args)
+freeVars (App f args _) = S.unions <$> mapM freeVars (f : args)
 freeVars (Access expr _) = freeVars expr
 freeVars (Index expr _ _) = freeVars expr
 freeVars (Cond cond yes no _) = S.unions <$> mapM freeVars [cond, yes, no]
@@ -96,7 +96,7 @@ freeVars (PatternMatch expr matches _) = do
     return (S.unions $ zipWith S.difference freeVarsList boundVarsList)
   return (S.unions [exprFreeVars, pattsFreeVars, contsFreeVars])
 freeVars (Fun params body _) = do
-  let params' = S.fromList (toList params)
+  let params' = S.fromList params
   bodyVars <- withReader (S.union params') (freeVars body)
   tell (map Unused $ S.toList $ S.difference params' bodyVars)
   return (S.difference bodyVars params')

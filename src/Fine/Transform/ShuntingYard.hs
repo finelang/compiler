@@ -4,7 +4,6 @@ module Fine.Transform.ShuntingYard (runSy) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RWS.Strict (RWS, asks, get, gets, modify, runRWS, tell)
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as M
 import Fine.Error
   ( Error (SameInfixPrecedence),
@@ -42,7 +41,7 @@ modifyOperators :: (Monoid w) => ([Id] -> [Id]) -> RWS r w SYStack ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
 mkTopApp :: [Expr] -> Id -> [Expr]
-mkTopApp (right : left : rest) var = App (Var var) (left :| [right]) (getRange (left, right)) : rest
+mkTopApp (right : left : rest) var = App (Var var) [left, right] (getRange (left, right)) : rest
 mkTopApp _ _ = errorUNREACHABLE
 
 consume :: [Expr] -> [Id] -> [Expr]

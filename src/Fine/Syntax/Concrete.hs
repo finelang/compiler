@@ -24,12 +24,12 @@ data Expr
   | Var Id
   | Discard Range
   | Mut Id Expr
-  | App Expr (NonEmpty Expr) Range
+  | App Expr [Expr] Range
   | Access Expr Id
   | Index Expr Int Range
   | Cond Expr Expr Expr Range
   | PatternMatch Expr (NonEmpty (Expr, Expr)) Range
-  | Fun (NonEmpty Id) Expr Range
+  | Fun [Id] Expr Range
   | Block [Stmt] Expr Range
   | Chain (OpChain Expr)
   | ExtExpr Ext

@@ -3,8 +3,7 @@ module Fine.Codegen.TailRec (optimize) where
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (Reader, ReaderT (runReaderT), ask, asks, runReader)
 import qualified Data.Functor as F
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as L
+import qualified Data.List.NonEmpty as NEL
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text (cons)
 import Fine.Syntax.Abstract (Block (..), Expr (..), boundVars)
@@ -51,7 +50,7 @@ replaceVar vars (Debug expr r) = Debug (replaceVar vars expr) r
 
 data TransformCtx = TransformCtx
   { fBinder :: Id,
-    fParams :: NonEmpty Id
+    fParams :: [Id]
   }
 
 type RM t = ReaderT TransformCtx Maybe t
@@ -75,7 +74,7 @@ tryTransformRecBranch (App (Var name) args r) = do
     then lift Nothing
     else do
       params <- asks fParams
-      let muts = L.zipWith (\(Id name' r') arg -> Mut (Id (cons '$' name') r') arg) params args
+      let muts = zipWith (\(Id name' r') arg -> Mut (Id (cons '$' name') r') arg) params args
       let block = foldr (\mut block' -> Do mut block') Void muts
       return (Block block r)
 tryTransformRecBranch (Block block r) = do
@@ -103,15 +102,15 @@ tryTransformBranches (PatternMatch expr' matches r) = do
   ctx <- ask
   let (patts, branches) = F.unzip matches
   let recsTransformed = fmap (\expr -> runReaderT (tryTransformRecBranch expr) ctx) branches
-  if null (catMaybes $ L.toList recsTransformed)
+  if null (catMaybes $ NEL.toList recsTransformed)
     then lift Nothing
     else
       let allTransformed =
-            L.zipWith
+            NEL.zipWith
               (\expr optExpr -> fromMaybe (runReader (transformNonRecBranch expr) ctx) optExpr)
               branches
               recsTransformed
-       in return (PatternMatch expr' (L.zip patts allTransformed) r)
+       in return (PatternMatch expr' (NEL.zip patts allTransformed) r)
 tryTransformBranches (Cond cond yes no r) = do
   ctx <- ask
   let branches = [yes, no]
@@ -130,10 +129,10 @@ tryTransformBranches (Block block r) = do
   return (Block block' r)
 tryTransformBranches _ = lift Nothing
 
-optimize :: Id -> NonEmpty Id -> Expr -> Maybe Expr
+optimize :: Id -> [Id] -> Expr -> Maybe Expr
 optimize binder params body = do
   body' <- runReaderT (tryTransformBranches body) (TransformCtx binder params)
-  let varSubstts = L.map (\old@(Id name r) -> (old, Id (cons '$' name) r)) params
+  let varSubstts = map (\old@(Id name r) -> (old, Id (cons '$' name) r)) params
   let body'' = foldr replaceVar body' varSubstts
   let retResult = Return (Var resultVar)
   let loop = Loop (Var nonstopVar) (Do body'' Void) retResult
