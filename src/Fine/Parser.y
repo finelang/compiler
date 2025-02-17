@@ -74,15 +74,17 @@ Params_ : Params_ ',' Prefix  { $3 : $1 }
 
 Params : Params_  { asNonEmpty (reverse $1) }
 
+FParams : '(' Params ')'  { $2 }
+        | '(' ')'         { Id "_" (getRange ($1, $2)) :| [] }
+
 Defns : Defns Defn      { $2 : $1 }
       | Defns DataDefn  { $2 ++ $1 }
       | {- empty -}     { [] }
 
-Defn : let Prefix '=' Expr              { Defn $2 $4 }
-     | ExtExpr let Prefix               { Defn $3 $1 }
-     | let Prefix Infix Prefix '=' Expr { Defn $3 (Fun ($2 :| [$4]) $6 (getRange ($2, $6))) }
-     | ExtExpr let Prefix Infix Prefix  { Defn $4 (Fun ($3 :| [$5]) $1 (getRange ($3, $5))) }
-     | Fix Infix                        { FixDefn $1 $2 }
+Defn : let Prefix '=' TopExpr               { Defn $2 $4 }
+     | let Prefix FParams '=' TopExpr       { Defn $2 (Fun $3 $5 (getRange ($2, $5))) }
+     | let Prefix Infix Prefix '=' TopExpr  { Defn $3 (Fun ($2 :| [$4]) $6 (getRange ($2, $6))) }
+     | Fix Infix                            { FixDefn $1 $2 }
 
 DataDefn: data '{' Ctors '}'  { reverse $3 }
 
@@ -98,8 +100,10 @@ Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
       | infixr  { RightAssoc }
 
-Expr : fn '(' Params ')' Expr       { Fun $3 $5 (getRange ($1, $5)) }
-     | fn '(' ')' Expr              { Fun (Id "_" (getRange ($2, $3)) :| []) $4 (getRange ($1, $4)) }
+TopExpr : ext str { ExtExpr $ Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
+        | Expr    { $1 }
+
+Expr : fn FParams Expr              { Fun $2 $3 (getRange ($1, $3)) }
      | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
      | Prefix '<-' Expr             { Mut $1 $3 }
      | debug Expr                   { Debug $2 (getRange ($1, $2)) }
@@ -160,10 +164,6 @@ Props : Props ',' Prop  { $3 : $1 }
 
 Prop : Prefix '=' Expr  { ($1, $3) }
      | '=' Prefix       { ($2, Var $2) }
-
-Ext : ext str { Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
-
-ExtExpr : Ext { ExtExpr $1 }
 
 {
 mkIdn tok = Id (tokenLexeme tok) (getRange tok)
