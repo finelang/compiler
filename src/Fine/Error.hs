@@ -32,15 +32,10 @@ data Error
   = UndefinedVar Id
   | RepeatedVar Id
   | RepeatedParam Id
-  | UndefinedVariant Id
-  | RepeatedProp Id
-  | RequiredProp Id Id
-  | InvalidProp Id Id
   | InvalidPrecedence Int Int Id
   | RepeatedFixity Id
   | SameInfixPrecedence (Id, Fixity) (Id, Fixity)
   | InvalidPattern Range
-  | MultipleSpreadPatterns [Range]
   | DiscardUsage Range
 
 instance Show Error where
@@ -51,14 +46,6 @@ instance Show Error where
     [i|Variable #{hl var} is repeated.|]
   show (RepeatedParam var) =
     [i|Parameter #{hl var} is repeated.|]
-  show (UndefinedVariant var) =
-    [i|Variant #{hl var} is not defined.|]
-  show (RepeatedProp var) =
-    [i|Property #{hl var} is repeated.|]
-  show (RequiredProp tag prop) =
-    [i|Property #{hl prop} of variant #{hl tag} is missing.|]
-  show (InvalidProp tag prop) =
-    [i|Variant #{hl tag} does not have a #{hl prop} property.|]
   show (InvalidPrecedence lb ub var) =
     [i|Precedence of operator #{hl var} must be greater or equal than #{lb} and lesser than #{ub}.|]
   show (RepeatedFixity var) =
@@ -67,8 +54,6 @@ instance Show Error where
     errorTODO
   show (InvalidPattern _) =
     [i|This expression is not a valid pattern.|]
-  show (MultipleSpreadPatterns _) =
-    [i|An object pattern cannot have multiple spread subpatterns.|]
   show (DiscardUsage _) =
     [i|The 'discard' identifier can only be used inside patterns.|]
 
@@ -81,7 +66,6 @@ wrapError err = [i|#{errorPrefix}#{err}|]
 data Warning
   = UnusedVar Id
   | MissingFixity Id Fixity
-  | UnusedFixity Id
   | DebugKeywordUsage Range
 
 instance Show Warning where
@@ -90,8 +74,6 @@ instance Show Warning where
     [i|Variable #{hl var} is not used.|]
   show (MissingFixity var fix) =
     [i|Missing fixity definition for #{hl var}. Defaulting to #{hl fix}.|]
-  show (UnusedFixity var) =
-    [i|Fixity definition for #{hl var} lacks an accompanying binding.|]
   show (DebugKeywordUsage _) =
     [i|Consider removing the debug keyword because it produces an IO action.|]
 
