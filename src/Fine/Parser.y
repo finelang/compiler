@@ -41,6 +41,7 @@ import Fine.Syntax.Concrete (Defn (..), Stmt (..), Expr (..), Module (Module))
   mut     { Token MutTok _ _ }
   then    { Token Then _ _ }
   true    { Token TrueTok _ _ }
+  discard { Token DiscardTok _ _ }
   id      { Token IdTok _ _ }
   str     { Token StrTok _ _ }
   nat     { Token Nat _ _ }
@@ -141,6 +142,7 @@ Atom : '(' Args ')'   { mkGroup $2 (getRange ($1, $3)) }
      | false          { Literal (Bool False) (getRange $1) }
      | true           { Literal (Bool True) (getRange $1) }
      | str            { mkStr $1 }
+     | discard        { Discard (getRange $1) }
 
 Int : nat     { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
     | nonnat  { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }

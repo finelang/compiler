@@ -50,6 +50,7 @@ tokens :-
   "mut"                       { mkt MutTok }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
+  "_"+                        { mkt DiscardTok }
   [$alpha][$alpha $digit]*    { mkt IdTok }
   \" @string* \"              { mkt StrTok }
   @decimal                    { mkt Nat }
@@ -86,6 +87,7 @@ data TokenType
   | MutTok
   | Then
   | TrueTok
+  | DiscardTok
   | IdTok
   | StrTok
   | Nat

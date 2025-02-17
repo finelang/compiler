@@ -67,6 +67,7 @@ patternFreeVars (DataP tag patts _) = do
 patternFreeVars (RecordP props _) = S.unions <$> mapM (patternFreeVars . snd) props
 patternFreeVars (TupleP patts _) = S.unions <$> mapM patternFreeVars patts
 patternFreeVars (Capture _) = return S.empty
+patternFreeVars (DiscardP _) = return S.empty
 
 freeVars :: Expr -> RW AvailableVars [VarStatus] FreeVars
 freeVars (Literal _ _) = return S.empty

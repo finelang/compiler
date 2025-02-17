@@ -34,6 +34,7 @@ transform app@(App (Var var) args r) = do
       patts <- mapM transform args
       return (DataP var (toList patts) r)
     else invalidPattern app
+transform (Discard r) = return (DiscardP r)
 transform other = invalidPattern other
 
 runTransform :: CtBinders -> Expr -> (Pattern, Errors)

@@ -40,6 +40,7 @@ fromPattern (RecordP props _) =
     props
 fromPattern (TupleP patts _) = indexedPaths (toList patts)
 fromPattern (Capture var) = [End $ As var]
+fromPattern (DiscardP _) = []
 
 fromPatternPath :: PatternPath -> ([PathPiece], PathEnd)
 fromPatternPath pattPath = go pattPath []

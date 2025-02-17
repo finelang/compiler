@@ -9,11 +9,12 @@ import Fine.Error
   ( Error (..),
     Errors,
     Warning (DebugKeywordUsage),
+    collectError,
     collectErrors,
     collectWarning,
   )
 import Fine.Syntax.Abstract (Block (..), Expr (..), Pattern, boundVars)
-import Fine.Syntax.Common (HasRange (getRange), OpChain (..))
+import Fine.Syntax.Common (HasRange (getRange), Lit (Unit), OpChain (..))
 import qualified Fine.Syntax.Concrete as C
 import Fine.Transform.Common (CtBinders, Fixities)
 import qualified Fine.Transform.Pattern as TP
@@ -61,6 +62,9 @@ transform (C.Tuple exprs r) = do
   exprs' <- mapM transform exprs
   return (Tuple exprs' r)
 transform (C.Var var) = return (Var var)
+transform (C.Discard r) = do
+  tell (collectError $ DiscardUsage r)
+  return (Literal Unit r)
 transform (C.Mut var expr) = Mut var <$> transform expr
 transform (C.App f args r) = do
   f' <- transform f

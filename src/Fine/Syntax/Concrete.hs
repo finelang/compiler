@@ -22,6 +22,7 @@ data Expr
   | Record (NonEmpty (Id, Expr)) Range
   | Tuple (NonEmpty2 Expr) Range
   | Var Id
+  | Discard Range
   | Mut Id Expr
   | App Expr (NonEmpty Expr) Range
   | Access Expr Id
@@ -41,6 +42,7 @@ instance HasRange Expr where
   getRange (Record _ r) = r
   getRange (Tuple _ r) = r
   getRange (Var var) = getRange var
+  getRange (Discard r) = r
   getRange (Mut var expr) = getRange (var, expr)
   getRange (App _ _ r) = r
   getRange (Access expr prop) = getRange (expr, prop)

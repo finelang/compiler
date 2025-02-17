@@ -26,6 +26,7 @@ data Pattern
   | RecordP (NonEmpty (Id, Pattern)) Range
   | TupleP (NonEmpty2 Pattern) Range
   | Capture Id
+  | DiscardP Range
   deriving (Show)
 
 instance HasRange Pattern where
@@ -35,6 +36,7 @@ instance HasRange Pattern where
   getRange (RecordP _ r) = r
   getRange (TupleP _ r) = r
   getRange (Capture (Id _ r)) = r
+  getRange (DiscardP r) = r
 
 boundVars :: Pattern -> [Id]
 boundVars (LiteralP _ _) = []
@@ -42,6 +44,7 @@ boundVars (DataP _ patts _) = concatMap boundVars patts
 boundVars (RecordP props _) = foldMap (boundVars . snd) props
 boundVars (TupleP patts _) = foldMap boundVars patts
 boundVars (Capture idn) = [idn]
+boundVars (DiscardP _) = []
 
 data Block
   = Return Expr

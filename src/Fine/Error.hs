@@ -41,6 +41,7 @@ data Error
   | SameInfixPrecedence (Id, Fixity) (Id, Fixity)
   | InvalidPattern Range
   | MultipleSpreadPatterns [Range]
+  | DiscardUsage Range
 
 instance Show Error where
   show :: Error -> String
@@ -68,6 +69,8 @@ instance Show Error where
     [i|This expression is not a valid pattern.|]
   show (MultipleSpreadPatterns _) =
     [i|An object pattern cannot have multiple spread subpatterns.|]
+  show (DiscardUsage _) =
+    [i|The 'discard' identifier can only be used inside patterns.|]
 
 errorPrefix :: String
 errorPrefix = red "Error: "
