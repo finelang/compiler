@@ -95,6 +95,7 @@ freeVars (PatternMatch expr matches _) = do
       (tell . map Unused . S.toList)
     return (S.unions $ zipWith S.difference freeVarsList boundVarsList)
   return (S.unions [exprFreeVars, pattsFreeVars, contsFreeVars])
+freeVars (Fun _ (ExtExpr _) _) = return S.empty
 freeVars (Fun params body _) = do
   let params' = S.fromList params
   bodyVars <- withReader (S.union params') (freeVars body)
