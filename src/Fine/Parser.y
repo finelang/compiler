@@ -8,7 +8,7 @@ import qualified Data.Text as T
 import Fine.Lexer (Token (..), TokenType (..))
 import Fine.Syntax.Common
   ( Id (Id),
-    HasRange (getRange),
+    HasRange (range),
     Range (..),
     OpChain' (..),
     fromLRChain,
@@ -83,8 +83,8 @@ Defns : Defns Defn      { $2 : $1 }
       | {- empty -}     { [] }
 
 Defn : let Prefix '=' TopExpr                 { Defn $2 $4 }
-     | let Prefix '(' FParams ')' '=' TopExpr { Defn $2 (Fun $4 $7 (getRange ($2, $7))) }
-     | let Prefix Infix Prefix '=' TopExpr    { Defn $3 (Fun [$2, $4] $6 (getRange ($2, $6))) }
+     | let Prefix '(' FParams ')' '=' TopExpr { Defn $2 (Fun $4 $7 (range $2 <> range $7)) }
+     | let Prefix Infix Prefix '=' TopExpr    { Defn $3 (Fun [$2, $4] $6 (range $2 <> range $6)) }
      | Fix Infix                              { FixDefn $1 $2 }
 
 DataDefn: data '{' Ctors '}'  { reverse $3 }
@@ -92,8 +92,8 @@ DataDefn: data '{' Ctors '}'  { reverse $3 }
 Ctors : Ctors Ctor  { $2 : $1 }
       | Ctor        { [$1] }
 
-Ctor : let Prefix                 { CtorDefn $2 [] (getRange $2) }
-     | let Prefix '(' Params ')'  { CtorDefn $2 $4 (getRange ($2, $5)) }
+Ctor : let Prefix                 { CtorDefn $2 [] (range $2) }
+     | let Prefix '(' Params ')'  { CtorDefn $2 $4 (range $2 <> range $5) }
 
 Fix : Assoc nat { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
 
@@ -101,14 +101,14 @@ Assoc : infix   { NonAssoc }
       | infixl  { LeftAssoc }
       | infixr  { RightAssoc }
 
-TopExpr : ext str { ExtExpr $ Ext (transformStr $ tokenLexeme $2) (getRange ($1, $2)) }
+TopExpr : ext str { ExtExpr $ Ext (transformStr $ tokenLexeme $2) (range $1 <> range $2) }
         | Expr    { $1 }
 
-Expr : fn '(' FParams ')' Expr      { Fun $3 $5 (getRange ($1, $5)) }
-     | if Expr then Expr else Expr  { Cond $2 $4 $6 (getRange ($1, $6)) }
+Expr : fn '(' FParams ')' Expr      { Fun $3 $5 (range $1 <> range $5) }
+     | if Expr then Expr else Expr  { Cond $2 $4 $6 (range $1 <> range $6) }
      | Prefix '<-' Expr             { Mut $1 $3 }
-     | debug Expr                   { Debug $2 (getRange ($1, $2)) }
-     | match Expr '{' Matches '}'   { PatternMatch $2 (asNonEmpty $ reverse $4) (getRange ($1, $5)) }
+     | debug Expr                   { Debug $2 (range $1 <> range $2) }
+     | match Expr '{' Matches '}'   { PatternMatch $2 (asNonEmpty $ reverse $4) (range $1 <> range $5) }
      | Chain                        { chainToExpr $1 }
 
 Matches : Matches ';' Match { $3 : $1 }
@@ -120,9 +120,9 @@ Match : App '->' Expr { ($1, $3) }
 Chain : App             { Operand' $1 }
       | Chain Infix App { Operation' $1 $2 $3 }
 
-App : App '(' Args ')'  { App $1 $3 (getRange ($1, $4)) }
+App : App '(' Args ')'  { App $1 $3 (range $1 <> range $4) }
     | App '.' Prefix    { Access $1 $3 }
-    | App '.' nat       { Index $1 (read $ T.unpack $ tokenLexeme $3) (getRange ($1, $3)) }
+    | App '.' nat       { Index $1 (read $ T.unpack $ tokenLexeme $3) (range $1 <> range $3) }
     | Atom              { $1 }
 
 Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
@@ -133,20 +133,20 @@ Exprs : Exprs_  { reverse $1 }
 Args : Exprs        { $1 }
      | {- empty -}  { [] }
 
-Atom : '(' Args ')'   { mkGroup $2 (getRange ($1, $3)) }
-     | '{' Obj '}'    { Record $2 (getRange ($1, $3)) }
-     | '{' Block '}'  { mkBlock $2 (getRange ($1, $3)) }
+Atom : '(' Args ')'   { mkGroup $2 (range $1 <> range $3) }
+     | '{' Obj '}'    { Record $2 (range $1 <> range $3) }
+     | '{' Block '}'  { mkBlock $2 (range $1 <> range $3) }
      | Prefix         { Var $1 }
-     | '(' op ')'     { Var $ Id (tokenLexeme $2) (getRange ($1, $3)) }
+     | '(' op ')'     { Var $ Id (tokenLexeme $2) (range $1 <> range $3) }
      | Int            { $1 }
-     | float          { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-     | false          { Literal (Bool False) (getRange $1) }
-     | true           { Literal (Bool True) (getRange $1) }
+     | float          { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (range $1) }
+     | false          { Literal (Bool False) (range $1) }
+     | true           { Literal (Bool True) (range $1) }
      | str            { mkStr $1 }
-     | discard        { Discard (getRange $1) }
+     | discard        { Discard (range $1) }
 
-Int : nat     { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
-    | nonnat  { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (getRange $1) }
+Int : nat     { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (range $1) }
+    | nonnat  { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (range $1) }
 
 Block : Stmts ';' Expr  { (reverse $1, $3) }
       | Expr            { ([], $1) }
@@ -169,11 +169,11 @@ Prop : Prefix '=' Expr  { ($1, $3) }
      | '=' Prefix       { ($2, Var $2) }
 
 {
-mkIdn tok = Id (tokenLexeme tok) (getRange tok)
+mkIdn tok = Id (tokenLexeme tok) (range tok)
 
 transformStr = T.tail . T.init
 
-mkStr tok = Literal (Str $ transformStr $ tokenLexeme tok) (getRange tok)
+mkStr tok = Literal (Str $ transformStr $ tokenLexeme tok) (range tok)
 
 asNonEmpty (x : xs) = x :| xs
 

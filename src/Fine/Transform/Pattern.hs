@@ -4,13 +4,13 @@ import Control.Monad.Trans.RW (RW, asks, runRW, tell)
 import qualified Data.Set as S
 import Fine.Error (Error (InvalidPattern), Errors, collectError)
 import Fine.Syntax.Abstract (Pattern (..))
-import Fine.Syntax.Common (Lit (Unit), getRange)
+import Fine.Syntax.Common (Lit (Unit), range)
 import Fine.Syntax.Concrete (Expr (..))
 import Fine.Transform.Common (CtBinders)
 
 invalidPattern :: Expr -> RW r Errors Pattern
 invalidPattern expr = do
-  let r = getRange expr
+  let r = range expr
   tell (collectError $ InvalidPattern r) >> return (LiteralP Unit r)
 
 transform :: Expr -> RW CtBinders Errors Pattern
@@ -24,7 +24,7 @@ transform (Tuple exprs r) = do
 transform (Var var) = do
   isCt <- asks (S.member var)
   if isCt
-    then return (DataP var [] (getRange var))
+    then return (DataP var [] (range var))
     else return (Capture var)
 transform app@(App (Var var) args r) = do
   isCt <- asks (S.member var)

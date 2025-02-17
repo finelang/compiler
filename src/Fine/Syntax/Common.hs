@@ -4,35 +4,30 @@ import Data.Function (on)
 import Data.String.Interpolate (i)
 import Data.Text (Text, unpack)
 
-data Range = Range
-  { startIndex :: Int,
-    startColumn :: Int,
-    startLine :: Int,
-    endIndex :: Int,
-    endColumn :: Int,
-    endLine :: Int
-  }
-
-invalidRange :: Range
-invalidRange = Range 0 0 0 0 0 0 -- use only to build ast out of nothing
+data Range
+  = InvalidRange -- use only to build ast out of nothing
+  | Range
+      { _startIndex :: Int,
+        _startColumn :: Int,
+        _startLine :: Int,
+        _endIndex :: Int,
+        _endColumn :: Int,
+        _endLine :: Int
+      }
 
 instance Show Range where
   show :: Range -> String
-  show range = [i|[#{startIndex range}, #{endIndex range})|]
+  show InvalidRange = "[,)"
+  show (Range si _ _ ei _ _) = [i|[#{si}, #{ei})|]
+
+instance Semigroup Range where
+  (<>) :: Range -> Range -> Range
+  InvalidRange <> r = r
+  r <> InvalidRange = r
+  (Range si sc sl _ _ _) <> (Range _ _ _ ei ec el) = Range si sc sl ei ec el
 
 class HasRange t where
-  getRange :: t -> Range
-
-instance HasRange Range where
-  getRange :: Range -> Range
-  getRange = id
-
-instance (HasRange p, HasRange q) => HasRange (p, q) where
-  getRange :: (p, q) -> Range
-  getRange (l, r) =
-    let (Range si sc sl _ _ _) = getRange l
-        (Range _ _ _ ei ec el) = getRange r
-     in Range si sc sl ei ec el
+  range :: t -> Range
 
 data Id = Id {idName :: Text, idRange :: Range}
 
@@ -45,8 +40,8 @@ instance Ord Id where
   compare = compare `on` idName
 
 instance HasRange Id where
-  getRange :: Id -> Range
-  getRange = idRange
+  range :: Id -> Range
+  range = idRange
 
 instance Show Id where
   show :: Id -> String
@@ -103,13 +98,13 @@ fromLRChain (Operand' expr) = Operand expr
 fromLRChain (Operation' chain op right) = extendChain (fromLRChain chain) op right
 
 instance (HasRange t) => HasRange (OpChain t) where
-  getRange :: OpChain t -> Range
-  getRange (Operand expr) = getRange expr
-  getRange (Operation l _ chain) = getRange (l, chain)
+  range :: OpChain t -> Range
+  range (Operand expr) = range expr
+  range (Operation l _ chain) = range l <> range chain
 
 data Ext = Ext Text Range
   deriving (Show)
 
 instance HasRange Ext where
-  getRange :: Ext -> Range
-  getRange (Ext _ r) = r
+  range :: Ext -> Range
+  range (Ext _ r) = r

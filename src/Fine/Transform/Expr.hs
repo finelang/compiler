@@ -13,7 +13,7 @@ import Fine.Error
     collectWarning,
   )
 import Fine.Syntax.Abstract (Block (..), Expr (..), Pattern, boundVars)
-import Fine.Syntax.Common (HasRange (getRange), Lit (Unit), OpChain (..))
+import Fine.Syntax.Common (HasRange (range), Lit (Unit), OpChain (..))
 import qualified Fine.Syntax.Concrete as C
 import Fine.Transform.Common (CtBinders, Fixities)
 import qualified Fine.Transform.Pattern as TP
@@ -100,7 +100,7 @@ transform (C.Chain chain) = do
   withReader fixities (shuntingYard chain')
 transform (C.ExtExpr ext) = return (ExtExpr ext)
 transform (C.Debug expr r) = do
-  tell (collectWarning $ DebugKeywordUsage $ getRange expr)
+  tell (collectWarning $ DebugKeywordUsage $ range expr)
   expr' <- transform expr
   return (Debug expr' r)
 

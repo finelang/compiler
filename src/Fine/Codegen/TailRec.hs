@@ -7,7 +7,7 @@ import qualified Data.List.NonEmpty as NEL
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text (cons)
 import Fine.Syntax.Abstract (Block (..), Expr (..), boundVars)
-import Fine.Syntax.Common (Ext (Ext), Id (Id), Lit (Bool), invalidRange)
+import Fine.Syntax.Common (Ext (Ext), Id (Id), Lit (Bool), Range (InvalidRange))
 
 replaceBlockVar :: (Id, Id) -> Block -> Block
 replaceBlockVar vars (Return expr) = Return (replaceVar vars expr)
@@ -83,19 +83,19 @@ tryTransformRecBranch (Block block r) = do
 tryTransformRecBranch _ = lift Nothing
 
 resultVar :: Id
-resultVar = Id "$result" invalidRange
+resultVar = Id "$result" InvalidRange
 
 nonstopVar :: Id
-nonstopVar = Id "$nonstop" invalidRange
+nonstopVar = Id "$nonstop" InvalidRange
 
 stop :: Expr
-stop = Mut nonstopVar (Literal (Bool False) invalidRange)
+stop = Mut nonstopVar (Literal (Bool False) InvalidRange)
 
 transformNonRecBranch :: Expr -> Reader TransformCtx Expr
 transformNonRecBranch expr =
   let setResult = Mut resultVar expr
       block = Do setResult $ Do stop $ Void
-   in return (Block block invalidRange)
+   in return (Block block InvalidRange)
 
 tryTransformBranches :: Expr -> RM Expr
 tryTransformBranches (PatternMatch expr' matches r) = do
@@ -136,7 +136,7 @@ optimize binder params body = do
   let body'' = foldr replaceVar body' varSubstts
   let retResult = Return (Var resultVar)
   let loop = Loop (Var nonstopVar) (Do body'' Void) retResult
-  let letNonStop = Let True nonstopVar () (Literal (Bool True) invalidRange) loop
-  let letResult = Let True resultVar () (ExtExpr $ Ext "null" invalidRange) letNonStop
+  let letNonStop = Let True nonstopVar () (Literal (Bool True) InvalidRange) loop
+  let letResult = Let True resultVar () (ExtExpr $ Ext "null" InvalidRange) letNonStop
   let block = foldr (\(old, new) block' -> Let True new () (Var old) block') letResult varSubstts
-  return (Block block invalidRange)
+  return (Block block InvalidRange)

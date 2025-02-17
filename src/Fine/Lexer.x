@@ -3,7 +3,7 @@ module Fine.Lexer (Token (..), TokenType (..), lexText) where
 
 import Data.Text (Text)
 import qualified Data.Text as Text (length)
-import Fine.Syntax.Common (HasRange (getRange), Range (Range))
+import Fine.Syntax.Common (HasRange (range), Range (Range))
 }
 
 %wrapper "posn-strict-text"
@@ -121,7 +121,7 @@ data Token = Token
   deriving (Show)
 
 instance HasRange Token where
-  getRange (Token _ lexeme (TokenPosn i line col)) =
+  range (Token _ lexeme (TokenPosn i line col)) =
     let len = Text.length lexeme
         ei = i + len
         ec = col + len
