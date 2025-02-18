@@ -13,14 +13,14 @@ import Fine.Codegen.Lit (genLitCode)
 import Fine.Codegen.Pattern (extractCondsAndBinds)
 import Fine.Codegen.TailRec (optimize)
 import Fine.Syntax.Abstract
-  ( Bind (..),
-    Block (..),
+  ( Block (..),
     Expr (..),
     Module (..),
     Pattern (..),
   )
 import Fine.Syntax.Common
-  ( Ext (Ext),
+  ( Bind (Bind),
+    Ext (Ext),
     Id (Id),
     idName,
   )

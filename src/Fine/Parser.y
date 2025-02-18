@@ -15,9 +15,10 @@ import Fine.Syntax.Common
     Fixity(Fixity),
     Assoc(..),
     Ext (Ext),
-    Lit (..)
+    Lit (..),
+    Bind (Bind)
   )
-import Fine.Syntax.Concrete (Defn (..), Stmt (..), Expr (..), Module (Module))
+import Fine.Syntax.Concrete (CtorDefn (..), Defn (..), Stmt (..), Expr (..), Module (Module))
 }
 
 %name parseTokens
@@ -28,6 +29,7 @@ import Fine.Syntax.Concrete (Defn (..), Stmt (..), Expr (..), Module (Module))
   debug   { Token DebugTok _ _ }
   ext     { Token ExtTok _ _ }
   run     { Token Run _ _ }
+  and     { Token And _ _ }
   data    { Token Data _ _ }
   else    { Token Else _ _ }
   false   { Token FalseTok _ _ }
@@ -79,15 +81,18 @@ FParams : Params      { $1 }
         | {- empty -} { [] }
 
 Defns : Defns Defn      { $2 : $1 }
-      | Defns DataDefn  { $2 ++ $1 }
       | {- empty -}     { [] }
 
-Defn : let Prefix '=' TopExpr                 { Defn $2 $4 }
-     | let Prefix '(' FParams ')' '=' TopExpr { Defn $2 (Fun $4 $7 (range $2 <> range $7)) }
-     | let Prefix Infix Prefix '=' TopExpr    { Defn $3 (Fun [$2, $4] $6 (range $2 <> range $6)) }
-     | Fix Infix                              { FixDefn $1 $2 }
+Defn : let Binds          { handleBinds (reverse $2) }
+     | Fix Infix          { FixDefn $1 $2 }
+     | data '{' Ctors '}' { DataDefn (asNonEmpty (reverse $3)) }
 
-DataDefn: data '{' Ctors '}'  { reverse $3 }
+Binds : Binds and Bind  { $3 : $1 }
+      | Bind            { [$1] }
+
+Bind : Prefix '=' TopExpr                 { Bind $1 () $3 }
+     | Prefix '(' FParams ')' '=' TopExpr { Bind $1 () (Fun $3 $6 (range $1 <> range $6)) }
+     | Prefix Infix Prefix '=' TopExpr    { Bind $2 () (Fun [$1, $3] $5 (range $1 <> range $5)) }
 
 Ctors : Ctors Ctor  { $2 : $1 }
       | Ctor        { [$1] }
@@ -186,6 +191,9 @@ chainToExpr chain = Chain (fromLRChain chain)
 
 mkBlock ([], expr) _ = expr
 mkBlock (stmts, expr) r = Block stmts expr r
+
+handleBinds [bind] = Defn bind
+handleBinds (x : y : zs) = MRDefns (NonEmpty2 x y zs)
 
 parseError tokens = error . show . head $ tokens
 }

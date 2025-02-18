@@ -3,7 +3,8 @@ module Fine.Syntax.Concrete (module Fine.Syntax.Concrete) where
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty2 (NonEmpty2)
 import Fine.Syntax.Common
-  ( Ext,
+  ( Bind,
+    Ext,
     Fixity,
     HasRange (..),
     Id,
@@ -15,7 +16,6 @@ import Fine.Syntax.Common
 data Stmt
   = Do Expr
   | Let Bool Id () Expr
-  deriving (Show)
 
 data Expr
   = Literal Lit Range
@@ -34,7 +34,6 @@ data Expr
   | Chain (OpChain Expr)
   | ExtExpr Ext
   | Debug Expr Range
-  deriving (Show)
 
 instance HasRange Expr where
   range :: Expr -> Range
@@ -55,14 +54,15 @@ instance HasRange Expr where
   range (ExtExpr ext) = range ext
   range (Debug _ r) = r
 
+data CtorDefn = CtorDefn Id [Id] Range
+
 data Defn
-  = Defn Id Expr
-  | CtorDefn Id [Id] Range
+  = Defn (Bind () Expr)
+  | DataDefn (NonEmpty CtorDefn)
+  | MRDefns (NonEmpty2 (Bind () Expr)) -- mutually recursive function definitions
   | FixDefn Fixity Id
-  deriving (Show)
 
 data Module = Module
   { definitions :: [Defn],
     entryExpr :: Maybe Expr
   }
-  deriving (Show)

@@ -2,7 +2,7 @@ module Fine.Syntax.Abstract
   ( Pattern (..),
     Block (..),
     Expr (..),
-    Bind (..),
+    Bind,
     Module (..),
     boundVars,
   )
@@ -11,8 +11,10 @@ where
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty2 (NonEmpty2)
 import Data.Map.Strict (Map)
+import Data.Set (Set)
 import Fine.Syntax.Common
-  ( Ext,
+  ( Bind,
+    Ext,
     Fixity,
     HasRange (..),
     Id (Id),
@@ -69,7 +71,7 @@ data Expr
   | Fun [Id] Expr Range
   | Block Block Range
   | ExtExpr Ext
-  | Closure (Map Id Expr) Expr (Maybe Id)
+  | Closure (Set Id) Expr (Maybe Id)
   | Debug Expr Range
   deriving (Show)
 
@@ -91,13 +93,6 @@ instance HasRange Expr where
   range (ExtExpr ext) = range ext
   range (Closure _ expr _) = range expr
   range (Debug _ r) = r
-
-data Bind t v = Bind
-  { binder :: Id,
-    boundType :: t,
-    boundValue :: v
-  }
-  deriving (Show)
 
 data Module
   = Module

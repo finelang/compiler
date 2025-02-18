@@ -37,6 +37,7 @@ tokens :-
   "#debug"                    { mkt DebugTok }
   "#external"                 { mkt ExtTok }
   "#run"                      { mkt Run }
+  "and"                       { mkt And }
   "data"                      { mkt Data }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
@@ -74,6 +75,7 @@ data TokenType
   | ExtTok
   | ExtOp
   | Run
+  | And
   | Data
   | Else
   | FalseTok

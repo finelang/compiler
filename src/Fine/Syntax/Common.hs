@@ -108,3 +108,10 @@ data Ext = Ext Text Range
 instance HasRange Ext where
   range :: Ext -> Range
   range (Ext _ r) = r
+
+data Bind t v = Bind
+  { binder :: Id,
+    boundType :: t,
+    boundValue :: v
+  }
+  deriving (Show)
