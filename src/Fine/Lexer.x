@@ -34,11 +34,12 @@ tokens :-
 
   $white+                     ;
   "--"\-*[^$symbol].*         ;
-  "#debug"                    { mkt DebugTok }
   "#external"                 { mkt ExtTok }
   "#run"                      { mkt Run }
   "and"                       { mkt And }
   "data"                      { mkt Data }
+  "debug"                     { mkt DebugTok }
+  "do"                        { mkt DoTok }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
   "if"                        { mkt If }
@@ -61,22 +62,23 @@ tokens :-
   "<-"                        { mkt RArrow }
   "="                         { mkt Eq }
   "."                         { mkt Dot }
+  "|"                         { mkt Bar }
   "("                         { mkt Opar } 
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
   "}"                         { mkt Cbrace }
   $opsymbol{1, 3}             { mkt Op }
-  ";"                         { mkt Semi }
   ","                         { mkt Comma }
 
 {
 data TokenType
-  = DebugTok
-  | ExtTok
+  = ExtTok
   | ExtOp
   | Run
   | And
   | Data
+  | DebugTok
+  | DoTok
   | Else
   | FalseTok
   | If
@@ -99,12 +101,12 @@ data TokenType
   | RArrow
   | Eq
   | Dot
+  | Bar
   | Opar
   | Cpar
   | Obrace
   | Cbrace
   | Op
-  | Semi
   | Comma
   deriving (Show)
 

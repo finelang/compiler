@@ -16,6 +16,8 @@ replaceBlockVar vars@(old, _) (Let isMut binder typ expr block) =
   let expr' = replaceVar vars expr
       block' = if binder /= old then replaceBlockVar vars block else block
    in Let isMut binder typ expr' block'
+replaceBlockVar vars (Debug expr r block) =
+  Debug (replaceVar vars expr) r (replaceBlockVar vars block)
 replaceBlockVar _ Void = Void
 replaceBlockVar vars (Loop cond actions block) =
   Loop (replaceVar vars cond) (replaceBlockVar vars actions) (replaceBlockVar vars block)
@@ -46,7 +48,6 @@ replaceVar vars@(old, _) expr@(Fun params body r) =
 replaceVar vars (Block block r) = Block (replaceBlockVar vars block) r
 replaceVar _ expr@(ExtExpr _) = expr
 replaceVar _ expr@(Closure _ _ _) = expr
-replaceVar vars (Debug expr r) = Debug (replaceVar vars expr) r
 
 data TransformCtx = TransformCtx
   { fBinder :: Id,
@@ -63,6 +64,7 @@ tryTransformBlock f (Let isMut binder typ expr block) = do
   if isBound
     then lift Nothing
     else Let isMut binder typ expr <$> tryTransformBlock f block
+tryTransformBlock f (Debug expr r block) = Debug expr r <$> tryTransformBlock f block
 tryTransformBlock _ Void = lift Nothing
 tryTransformBlock f (Loop cond actions block) = Loop cond actions <$> tryTransformBlock f block
 

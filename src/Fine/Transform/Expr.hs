@@ -51,6 +51,10 @@ transformBlock (C.Do action : stmts) expr =
   Do <$> transform action <*> transformBlock stmts expr
 transformBlock (C.Let isMut bound _ val : stmts) expr =
   Let isMut bound () <$> transform val <*> transformBlock stmts expr
+transformBlock (C.Debug dexpr r : stmts) expr = do
+  tell (collectWarning $ DebugKeywordUsage $ range dexpr)
+  dexpr' <- transform dexpr
+  Debug dexpr' r <$> transformBlock stmts expr
 
 transform :: C.Expr -> RW Ctx Errors Expr
 transform (C.Literal lit r) = return (Literal lit r)
@@ -99,10 +103,6 @@ transform (C.Chain chain) = do
   chain' <- transformChain chain
   withReader fixities (shuntingYard chain')
 transform (C.ExtExpr ext) = return (ExtExpr ext)
-transform (C.Debug expr r) = do
-  tell (collectWarning $ DebugKeywordUsage $ range expr)
-  expr' <- transform expr
-  return (Debug expr' r)
 
 runTransform :: Fixities -> CtBinders -> C.Expr -> (Expr, Errors)
 runTransform fixs cts expr = runRW (transform expr) (Ctx fixs cts)

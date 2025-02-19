@@ -52,6 +52,7 @@ data Block
   = Return Expr
   | Do Expr Block
   | Let Bool Id () Expr Block
+  | Debug Expr Range Block
   | Void -- internal
   | Loop Expr Block Block -- internal
   deriving (Show)
@@ -72,7 +73,6 @@ data Expr
   | Block Block Range
   | ExtExpr Ext
   | Closure (Set Id) Expr (Maybe Id)
-  | Debug Expr Range
   deriving (Show)
 
 instance HasRange Expr where
@@ -92,7 +92,6 @@ instance HasRange Expr where
   range (Block _ r) = r
   range (ExtExpr ext) = range ext
   range (Closure _ expr _) = range expr
-  range (Debug _ r) = r
 
 data Module
   = Module

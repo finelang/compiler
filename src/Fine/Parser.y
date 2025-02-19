@@ -26,11 +26,12 @@ import Fine.Syntax.Concrete (CtorDefn (..), Defn (..), Stmt (..), Expr (..), Mod
 %error { parseError }
 
 %token
-  debug   { Token DebugTok _ _ }
   ext     { Token ExtTok _ _ }
   run     { Token Run _ _ }
   and     { Token And _ _ }
   data    { Token Data _ _ }
+  debug   { Token DebugTok _ _ }
+  do      { Token DoTok _ _ }
   else    { Token Else _ _ }
   false   { Token FalseTok _ _ }
   if      { Token If _ _ }
@@ -53,12 +54,12 @@ import Fine.Syntax.Concrete (CtorDefn (..), Defn (..), Stmt (..), Expr (..), Mod
   '<-'    { Token RArrow _ _ }
   '='     { Token Eq _ _ }
   '.'     { Token Dot _ _ }
+  '|'     { Token Bar _ _ }
   '('     { Token Opar _ _ }
   ')'     { Token Cpar _ _ }
   '{'     { Token Obrace _ _ }
   '}'     { Token Cbrace _ _ }
   op      { Token Op _ _ }
-  ';'     { Token Semi _ _ }
   ','     { Token Comma _ _ }
 
 %%
@@ -112,13 +113,24 @@ TopExpr : ext str { ExtExpr $ Ext (transformStr $ tokenLexeme $2) (range $1 <> r
 Expr : fn '(' FParams ')' Expr      { Fun $3 $5 (range $1 <> range $5) }
      | if Expr then Expr else Expr  { Cond $2 $4 $6 (range $1 <> range $6) }
      | Prefix '<-' Expr             { Mut $1 $3 }
-     | debug Expr                   { Debug $2 (range $1 <> range $2) }
-     | match Expr '{' Matches '}'   { PatternMatch $2 (asNonEmpty $ reverse $4) (range $1 <> range $5) }
+     | Stmts then Expr              { mkBlock (reverse $1) $3 }
      | Chain                        { chainToExpr $1 }
 
-Matches : Matches ';' Match { $3 : $1 }
-        | Matches ';'       { $1 }
+Stmts : Stmts Stmt  { $2 : $1 }
+      | Stmt        { [$1] }
+
+Stmt : do Expr                  { (Do $2, range $1) }
+     | let Mut Prefix '=' Expr  { (Let $2 $3 () $5, range $1) }
+     | debug Expr               { (Debug $2 (range $1 <> range $2), range $1) }
+
+Mut : mut         { True }
+    | {- empty -} { False }
+
+Matches : Matches '|' Match { $3 : $1 }
         | Match             { [$1] }
+
+OptBar : '|'          {}
+       | {- empty -}  {}
 
 Match : App '->' Expr { ($1, $3) }
 
@@ -138,32 +150,21 @@ Exprs : Exprs_  { reverse $1 }
 Args : Exprs        { $1 }
      | {- empty -}  { [] }
 
-Atom : '(' Args ')'   { mkGroup $2 (range $1 <> range $3) }
-     | '{' Obj '}'    { Record $2 (range $1 <> range $3) }
-     | '{' Block '}'  { mkBlock $2 (range $1 <> range $3) }
-     | Prefix         { Var $1 }
-     | '(' op ')'     { Var $ Id (tokenLexeme $2) (range $1 <> range $3) }
-     | Int            { $1 }
-     | float          { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (range $1) }
-     | false          { Literal (Bool False) (range $1) }
-     | true           { Literal (Bool True) (range $1) }
-     | str            { mkStr $1 }
-     | discard        { Discard (range $1) }
+Atom : match Expr '{' OptBar Matches '}'  { PatternMatch $2 (asNonEmpty $ reverse $5) (range $1 <> range $6) }
+     | '(' Args ')'                       { mkGroup $2 (range $1 <> range $3) }
+     | '{' Obj '}'                        { Record $2 (range $1 <> range $3) }
+     | '{' Expr '}'                       { $2 }
+     | Prefix                             { Var $1 }
+     | '(' op ')'                         { Var $ Id (tokenLexeme $2) (range $1 <> range $3) }
+     | Int                                { $1 }
+     | float                              { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (range $1) }
+     | false                              { Literal (Bool False) (range $1) }
+     | true                               { Literal (Bool True) (range $1) }
+     | str                                { mkStr $1 }
+     | discard                            { Discard (range $1) }
 
 Int : nat     { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (range $1) }
     | nonnat  { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (range $1) }
-
-Block : Stmts ';' Expr  { (reverse $1, $3) }
-      | Expr            { ([], $1) }
-
-Stmts : Stmts ';' Stmt  { $3 : $1 }
-      | Stmt            { [$1] }
-
-Stmt : Expr                     { Do $1 }
-     | let Mut Prefix '=' Expr  { Let $2 $3 () $5 }
-
-Mut : mut         { True }
-    | {- empty -} { False }
 
 Obj : Props { asNonEmpty (reverse $1) }
 
@@ -189,8 +190,7 @@ mkGroup (x : y : zs) r = Tuple (NonEmpty2 x y zs) r
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)
 
-mkBlock ([], expr) _ = expr
-mkBlock (stmts, expr) r = Block stmts expr r
+mkBlock stmts expr = Block (map fst stmts) expr (snd (head stmts) <> range expr)
 
 handleBinds [bind] = Defn bind
 handleBinds (x : y : zs) = MRDefns (NonEmpty2 x y zs)

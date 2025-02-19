@@ -16,6 +16,7 @@ import Fine.Syntax.Common
 data Stmt
   = Do Expr
   | Let Bool Id () Expr
+  | Debug Expr Range
 
 data Expr
   = Literal Lit Range
@@ -33,7 +34,6 @@ data Expr
   | Block [Stmt] Expr Range
   | Chain (OpChain Expr)
   | ExtExpr Ext
-  | Debug Expr Range
 
 instance HasRange Expr where
   range :: Expr -> Range
@@ -52,7 +52,6 @@ instance HasRange Expr where
   range (Block _ _ r) = r
   range (Chain chain) = range chain
   range (ExtExpr ext) = range ext
-  range (Debug _ r) = r
 
 data CtorDefn = CtorDefn Id [Id] Range
 

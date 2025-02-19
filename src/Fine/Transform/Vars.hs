@@ -52,6 +52,7 @@ blockFreeVars (Let _ bound _ expr block) = do
     else do
       tell [Unused bound]
       return (S.union exprVars blockVars)
+blockFreeVars (Debug expr _ block) = S.union <$> freeVars expr <*> blockFreeVars block
 blockFreeVars Void = return S.empty
 blockFreeVars (Loop cond actions block) =
   S.unions <$> sequence [freeVars cond, blockFreeVars actions, blockFreeVars block]
@@ -104,7 +105,6 @@ freeVars (Fun params body _) = do
 freeVars (Block block _) = blockFreeVars block
 freeVars (ExtExpr _) = return S.empty
 freeVars (Closure _ _ _) = return S.empty
-freeVars (Debug expr _) = freeVars expr
 
 handleVars :: AvailableVars -> Expr -> (FreeVars, Errors)
 handleVars vars expr =
