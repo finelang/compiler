@@ -31,7 +31,7 @@ data Expr
   | Cond Expr Expr Expr Range
   | PatternMatch Expr (NonEmpty (Expr, Expr)) Range
   | Fun [Id] Expr Range
-  | Block [Stmt] Expr Range
+  | Block (NonEmpty Stmt) Expr Range
   | Chain (OpChain Expr)
   | ExtExpr Ext
 

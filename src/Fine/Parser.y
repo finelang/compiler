@@ -190,7 +190,8 @@ mkGroup (x : y : zs) r = Tuple (NonEmpty2 x y zs) r
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)
 
-mkBlock stmts expr = Block (map fst stmts) expr (snd (head stmts) <> range expr)
+mkBlock (stmt : stmts) expr =
+  Block (fst stmt :| fmap fst stmts) expr (snd stmt <> range expr)
 
 handleBinds [bind] = Defn bind
 handleBinds (x : y : zs) = MRDefns (NonEmpty2 x y zs)

@@ -97,7 +97,7 @@ transform (C.Fun params body r) = do
   body' <- transform body
   return (Fun params body' r)
 transform (C.Block stmts expr r) = do
-  block <- transformBlock stmts expr
+  block <- transformBlock (NEL.toList stmts) expr
   return (Block block r)
 transform (C.Chain chain) = do
   chain' <- transformChain chain
