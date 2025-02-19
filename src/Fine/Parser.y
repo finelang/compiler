@@ -119,12 +119,10 @@ Expr : fn '(' FParams ')' Expr      { Fun $3 $5 (range $1 <> range $5) }
 Stmts : Stmts Stmt  { $2 : $1 }
       | Stmt        { [$1] }
 
-Stmt : do Expr                  { (Do $2, range $1) }
-     | let Mut Prefix '=' Expr  { (Let $2 $3 () $5, range $1) }
-     | debug Expr               { (Debug $2 (range $1 <> range $2), range $1) }
-
-Mut : mut         { True }
-    | {- empty -} { False }
+Stmt : do Expr              { (Do $2, range $1) }
+     | let Prefix '=' Expr  { (Let False $2 () $4, range $1) }
+     | mut Prefix '=' Expr  { (Let True $2 () $4, range $1) }
+     | debug Expr           { (Debug $2 (range $1 <> range $2), range $1) }
 
 Matches : Matches '|' Match { $3 : $1 }
         | Match             { [$1] }
