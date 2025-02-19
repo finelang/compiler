@@ -164,7 +164,7 @@ instance CodeGens Expr Ctx where
     oldIndent <- asks indentation
     indent <- increaseIndentation
     expr' <- local (withIndentation indent) (genCode expr)
-    let name = "obj"
+    let name = "$$obj"
     matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ NEL.toList matches)
     let matches'' = T.intercalate " else " matches'
     return [i|((#{name}) => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
