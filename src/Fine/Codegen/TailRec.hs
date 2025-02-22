@@ -6,7 +6,7 @@ import qualified Data.Functor as F
 import qualified Data.List.NonEmpty as NEL
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text (cons)
-import Fine.Syntax.Abstract (Block (..), Expr (..), boundVars)
+import Fine.Syntax.Abstract (Block (..), Expr (..), apply, boundVars)
 import Fine.Syntax.Common (Ext (Ext), Id (Id), Lit (Bool), Range (InvalidRange))
 
 replaceBlockVar :: (Id, Id) -> Block -> Block
@@ -23,17 +23,10 @@ replaceBlockVar vars (Loop cond actions block) =
   Loop (replaceVar vars cond) (replaceBlockVar vars actions) (replaceBlockVar vars block)
 
 replaceVar :: (Id, Id) -> Expr -> Expr
-replaceVar _ expr@(Literal _ _) = expr
-replaceVar vars (Data tag exprs r) = Data tag (map (replaceVar vars) exprs) r
-replaceVar vars (Record props r) = Record ((fmap . fmap) (replaceVar vars) props) r
-replaceVar vars (Tuple exprs r) = Tuple (fmap (replaceVar vars) exprs) r
 replaceVar (old, new) expr@(Var var) = if var == old then Var new else expr
 replaceVar vars@(old, new) (Mut var expr) =
   let expr' = replaceVar vars expr
    in Mut (if var == old then new else var) expr'
-replaceVar vars (App f args r) = App (replaceVar vars f) (fmap (replaceVar vars) args) r
-replaceVar vars (Access expr prop) = Access (replaceVar vars expr) prop
-replaceVar vars (Index expr ix r) = Index (replaceVar vars expr) ix r
 replaceVar vars@(old, _) (PatternMatch expr matches r) =
   let expr' = replaceVar vars expr
       matches' =
@@ -41,13 +34,10 @@ replaceVar vars@(old, _) (PatternMatch expr matches r) =
           (\(patt, cont) -> (patt, if old `elem` boundVars patt then cont else replaceVar vars cont))
           matches
    in PatternMatch expr' matches' r
-replaceVar vars (Cond cond yes no r) =
-  Cond (replaceVar vars cond) (replaceVar vars yes) (replaceVar vars no) r
 replaceVar vars@(old, _) expr@(Fun params body r) =
   if old `elem` params then expr else Fun params (replaceVar vars body) r
 replaceVar vars (Block block r) = Block (replaceBlockVar vars block) r
-replaceVar _ expr@(ExtExpr _) = expr
-replaceVar _ expr@(Closure _ _ _) = expr
+replaceVar vars other = apply (replaceVar vars) other
 
 data TransformCtx = TransformCtx
   { fBinder :: Id,

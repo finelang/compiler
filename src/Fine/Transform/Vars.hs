@@ -1,76 +1,74 @@
 module Fine.Transform.Vars (handleVars) where
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
 import Data.List.NonEmpty (toList)
-import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error
-  ( Error (UndefinedVar),
+  ( Error (AlreadyInScope, UndefinedVar, UsageBeforeInit),
     Errors,
     Warning (UnusedVar),
-    collectErrors,
+    collectError,
+    collectWarning,
     collectWarnings,
   )
 import Fine.Syntax.Abstract (Block (..), Expr (..), Pattern (..), boundVars)
 import Fine.Syntax.Common (Id)
 
-type AvailableVars = Set Id
-
 type FreeVars = Set Id
 
-data VarStatus
-  = Undefined Id
-  | Unused Id
+type GlobalVars = Set Id
 
-justUndefined :: VarStatus -> Maybe Id
-justUndefined (Undefined var) = Just var
-justUndefined _ = Nothing
+data AvailableVars = AvailableVars
+  { scoped :: Set Id,
+    globally :: GlobalVars
+  }
 
-justUnused :: VarStatus -> Maybe Id
-justUnused (Unused var) = Just var
-justUnused _ = Nothing
-
-chechDefined :: Id -> RW AvailableVars [VarStatus] FreeVars
+chechDefined :: Id -> RW GlobalVars Errors FreeVars
 chechDefined var = do
   isDefined <- asks (S.member var)
-  if isDefined
-    then return (S.singleton var)
-    else do
-      tell [Undefined var]
-      return S.empty
+  when (not isDefined) (tell $ collectError $ UndefinedVar var)
+  return (S.singleton var)
 
-blockFreeVars :: Block -> RW AvailableVars [VarStatus] FreeVars
-blockFreeVars (Return expr) = freeVars expr
-blockFreeVars (Do expr block) = S.union <$> freeVars expr <*> blockFreeVars block
+blockFreeVars :: Block -> RW AvailableVars Errors FreeVars
+blockFreeVars (Return expr) = withReader globally (freeVars expr)
+blockFreeVars (Do expr block) = S.union <$> withReader globally (freeVars expr) <*> blockFreeVars block
 blockFreeVars (Let _ bound _ expr block) = do
-  exprVars <- freeVars expr
-  blockVars <- withReader (S.insert bound) (blockFreeVars block)
-  if S.member bound blockVars
-    then return (S.union exprVars $ S.delete bound blockVars)
-    else do
-      tell [Unused bound]
-      return (S.union exprVars blockVars)
-blockFreeVars (Debug expr _ block) = S.union <$> freeVars expr <*> blockFreeVars block
+  do
+    inScope <- asks (S.member bound . scoped)
+    when inScope (tell $ collectError $ AlreadyInScope bound)
+  exprVars <- withReader (S.insert bound . globally) (freeVars expr)
+  case expr of
+    Fun _ _ _ -> return ()
+    _ -> when (S.member bound exprVars) (tell $ collectError $ UsageBeforeInit bound)
+  blockVars <-
+    withReader
+      (\(AvailableVars sc gl) -> AvailableVars (S.insert bound sc) (S.insert bound gl))
+      (blockFreeVars block)
+  let allVars = S.union exprVars blockVars
+  if S.member bound allVars
+    then return (S.delete bound allVars)
+    else tell (collectWarning $ UnusedVar bound) >> return allVars
+blockFreeVars (Debug expr _ block) = S.union <$> withReader globally (freeVars expr) <*> blockFreeVars block
 blockFreeVars Void = return S.empty
 blockFreeVars (Loop cond actions block) =
-  S.unions <$> sequence [freeVars cond, blockFreeVars actions, blockFreeVars block]
+  S.unions <$> sequence [withReader globally (freeVars cond), blockFreeVars actions, blockFreeVars block]
 
-patternFreeVars :: Pattern -> RW AvailableVars [VarStatus] FreeVars
+patternFreeVars :: Pattern -> RW GlobalVars Errors FreeVars
 patternFreeVars (LiteralP _ _) = return S.empty
 patternFreeVars (DataP tag patts _) = do
   pattsFreeVars <- S.unions <$> mapM patternFreeVars patts
   isDefined <- asks (S.member tag)
   if isDefined
     then return (S.insert tag pattsFreeVars)
-    else tell [Undefined tag] >> return pattsFreeVars
+    else tell (collectError $ UndefinedVar tag) >> return pattsFreeVars
 patternFreeVars (RecordP props _) = S.unions <$> mapM (patternFreeVars . snd) props
 patternFreeVars (TupleP patts _) = S.unions <$> mapM patternFreeVars patts
 patternFreeVars (Capture _) = return S.empty
 patternFreeVars (DiscardP _) = return S.empty
 
-freeVars :: Expr -> RW AvailableVars [VarStatus] FreeVars
+freeVars :: Expr -> RW GlobalVars Errors FreeVars
 freeVars (Literal _ _) = return S.empty
 freeVars (Data _ exprs _) = S.unions <$> mapM freeVars exprs
 freeVars (Record props _) = S.unions <$> mapM (freeVars . snd) props
@@ -93,23 +91,20 @@ freeVars (PatternMatch expr matches _) = do
         (zip boundVarsList conts)
     forM_
       (zipWith S.difference boundVarsList freeVarsList)
-      (tell . map Unused . S.toList)
+      (tell . collectWarnings . map UnusedVar . S.toList)
     return (S.unions $ zipWith S.difference freeVarsList boundVarsList)
   return (S.unions [exprFreeVars, pattsFreeVars, contsFreeVars])
 freeVars (Fun _ (ExtExpr _) _) = return S.empty
 freeVars (Fun params body _) = do
   let params' = S.fromList params
-  bodyVars <- withReader (S.union params') (freeVars body)
-  tell (map Unused $ S.toList $ S.difference params' bodyVars)
+  bodyVars <- case body of
+    Block block _ -> withReader (AvailableVars params' . S.union params') (blockFreeVars block)
+    _ -> withReader (S.union params') (freeVars body)
+  tell (collectWarnings $ map UnusedVar $ S.toList $ S.difference params' bodyVars)
   return (S.difference bodyVars params')
-freeVars (Block block _) = blockFreeVars block
+freeVars (Block block _) = withReader (AvailableVars S.empty) (blockFreeVars block)
 freeVars (ExtExpr _) = return S.empty
-freeVars (Closure _ _ _) = return S.empty
+freeVars (Closure _ expr _) = freeVars expr >> return S.empty
 
-handleVars :: AvailableVars -> Expr -> (FreeVars, Errors)
-handleVars vars expr =
-  let (free, statuses) = runRW (freeVars expr) vars
-      errors =
-        (collectErrors $ mapMaybe (fmap UndefinedVar . justUndefined) statuses)
-          <> (collectWarnings $ mapMaybe (fmap UnusedVar . justUnused) statuses)
-   in (free, errors)
+handleVars :: GlobalVars -> Expr -> (FreeVars, Errors)
+handleVars vars expr = runRW (freeVars expr) vars

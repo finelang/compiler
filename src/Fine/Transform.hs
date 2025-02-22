@@ -1,6 +1,6 @@
 module Fine.Transform (runTransform) where
 
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.Trans.SW (SW, gets, modify, runSW, tell)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.List.NonEmpty2 as NEL2
@@ -40,22 +40,24 @@ transformExpr expr = do
   return expr'
 
 transformBind :: Bind t C.Expr -> SW State Errors (Bind t Expr)
-transformBind (Bind bder t v) = do
+transformBind (Bind bound t v) = do
   value <- transformExpr v
   currentEnv <- do
     vs <- gets env
-    if S.member bder vs
-      then tell (collectError $ RepeatedVar bder) >> return vs
-      else return (S.insert bder vs)
+    when (S.member bound vs) (tell $ collectError $ AlreadyInScope bound)
+    return (S.insert bound vs)
   let (valueEnv, errors) = handleVars currentEnv value
   tell errors
-  let selfBinder = if S.member bder valueEnv then Just bder else Nothing
+  case value of
+    Fun _ _ _ -> return ()
+    _ -> when (S.member bound valueEnv) (tell $ collectError $ UsageBeforeInit bound)
+  let selfBinder = if S.member bound valueEnv then Just bound else Nothing
   let value' =
         if isNothing selfBinder && S.null valueEnv
           then value
           else Closure valueEnv value selfBinder
   modify (\st -> st {env = currentEnv})
-  return (Bind bder t value')
+  return (Bind bound t value')
 
 transformDefn :: C.Defn -> SW State Errors [Bind () Expr]
 transformDefn (C.FixDefn fix@(Fixity _ prec) op) = do

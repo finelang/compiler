@@ -32,6 +32,8 @@ data Error
   = UndefinedVar Id
   | RepeatedVar Id
   | RepeatedParam Id
+  | AlreadyInScope Id
+  | UsageBeforeInit Id
   | InvalidPrecedence Int Int Id
   | RepeatedFixity Id
   | SameInfixPrecedence (Id, Fixity) (Id, Fixity)
@@ -46,6 +48,10 @@ instance Show Error where
     [i|Variable #{hl var} is repeated.|]
   show (RepeatedParam var) =
     [i|Parameter #{hl var} is repeated.|]
+  show (AlreadyInScope var) =
+    [i|Variable #{hl var} is already defined in the current scope.|]
+  show (UsageBeforeInit var) =
+    [i|Variable #{hl var} cannot be read during its own initialization.|]
   show (InvalidPrecedence lb ub var) =
     [i|Precedence of operator #{hl var} must be greater or equal than #{lb} and lesser than #{ub}.|]
   show (RepeatedFixity var) =
