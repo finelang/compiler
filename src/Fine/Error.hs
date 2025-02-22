@@ -30,7 +30,7 @@ hl x = [i|'#{show x}'|]
 
 data Error
   = UndefinedVar Id
-  | RepeatedVar Id
+  | RepeatedCapture Id
   | RepeatedParam Id
   | AlreadyInScope Id
   | UsageBeforeInit Id
@@ -44,8 +44,8 @@ instance Show Error where
   show :: Error -> String
   show (UndefinedVar var) =
     [i|Variable #{hl var} is not defined.|]
-  show (RepeatedVar var) =
-    [i|Variable #{hl var} is repeated.|]
+  show (RepeatedCapture var) =
+    [i|Captured variable #{hl var} is repeated.|]
   show (RepeatedParam var) =
     [i|Parameter #{hl var} is repeated.|]
   show (AlreadyInScope var) =

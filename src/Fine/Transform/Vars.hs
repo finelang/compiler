@@ -2,14 +2,16 @@ module Fine.Transform.Vars (handleVars) where
 
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
+import Data.List.Extra (repeated)
 import Data.List.NonEmpty (toList)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fine.Error
-  ( Error (AlreadyInScope, UndefinedVar, UsageBeforeInit),
+  ( Error (..),
     Errors,
     Warning (UnusedVar),
     collectError,
+    collectErrors,
     collectWarning,
     collectWarnings,
   )
@@ -82,6 +84,7 @@ freeVars (Cond cond yes no _) = S.unions <$> mapM freeVars [cond, yes, no]
 freeVars (PatternMatch expr matches _) = do
   exprFreeVars <- freeVars expr
   let (patts, conts) = unzip (toList matches)
+  forM_ patts (tell . collectErrors . map RepeatedCapture . repeated . boundVars)
   pattsFreeVars <- S.unions <$> mapM patternFreeVars patts
   contsFreeVars <- do
     let boundVarsList = map (S.fromList . boundVars) patts
@@ -96,6 +99,7 @@ freeVars (PatternMatch expr matches _) = do
   return (S.unions [exprFreeVars, pattsFreeVars, contsFreeVars])
 freeVars (Fun _ (ExtExpr _) _) = return S.empty
 freeVars (Fun params body _) = do
+  tell (collectErrors $ map RepeatedParam $ repeated params)
   let params' = S.fromList params
   bodyVars <- case body of
     Block block _ -> withReader (AvailableVars params' . S.union params') (blockFreeVars block)

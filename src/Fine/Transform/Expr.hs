@@ -1,18 +1,15 @@
 module Fine.Transform.Expr (runTransform) where
 
-import Control.Monad (forM_)
 import Control.Monad.Trans.RW (RW, ask, runRW, tell, withReader)
-import Data.List.Extra (repeated)
 import qualified Data.List.NonEmpty as NEL
 import Fine.Error
   ( Error (..),
     Errors,
     Warning (DebugKeywordUsage),
     collectError,
-    collectErrors,
     collectWarning,
   )
-import Fine.Syntax.Abstract (Block (..), Expr (..), Pattern, boundVars)
+import Fine.Syntax.Abstract (Block (..), Expr (..), Pattern)
 import Fine.Syntax.Common (HasRange (range), Lit (Unit), OpChain (..))
 import qualified Fine.Syntax.Concrete as C
 import Fine.Transform.Common (CtBinders, Fixities)
@@ -87,13 +84,9 @@ transform (C.Cond cond yes no r) = do
 transform (C.PatternMatch expr matches r) = do
   expr' <- transform expr
   patterns' <- withReader ctBinders (mapM (transformToPatt . fst) matches)
-  forM_
-    patterns'
-    (tell . collectErrors . map RepeatedVar . repeated . boundVars)
   exprs' <- mapM (transform . snd) matches
   return $ PatternMatch expr' (NEL.zip patterns' exprs') r
 transform (C.Fun params body r) = do
-  tell (collectErrors $ map RepeatedParam $ repeated params)
   body' <- transform body
   return (Fun params body' r)
 transform (C.Block stmts expr r) = do
