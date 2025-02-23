@@ -48,10 +48,6 @@ transformBlock (C.Do action : stmts) expr =
   Do <$> transform action <*> transformBlock stmts expr
 transformBlock (C.Let isMut bound _ val : stmts) expr =
   Let isMut bound () <$> transform val <*> transformBlock stmts expr
-transformBlock (C.Debug dexpr r : stmts) expr = do
-  tell (collectWarning $ DebugKeywordUsage $ range dexpr)
-  dexpr' <- transform dexpr
-  Debug dexpr' r <$> transformBlock stmts expr
 
 transform :: C.Expr -> RW Ctx Errors Expr
 transform (C.Literal lit r) = return (Literal lit r)
@@ -66,10 +62,10 @@ transform (C.Discard r) = do
   tell (collectError $ DiscardUsage r)
   return (Literal Unit r)
 transform (C.Mut var expr) = Mut var <$> transform expr
-transform (C.App f args r) = do
+transform (C.App f arg) = do
   f' <- transform f
-  args' <- mapM transform args
-  return (App f' args' r)
+  arg' <- transform arg
+  return (App f' arg')
 transform (C.Access expr prop) = do
   expr' <- transform expr
   return (Access expr' prop)
@@ -86,12 +82,16 @@ transform (C.PatternMatch expr matches r) = do
   patterns' <- withReader ctBinders (mapM (transformToPatt . fst) matches)
   exprs' <- mapM (transform . snd) matches
   return $ PatternMatch expr' (NEL.zip patterns' exprs') r
-transform (C.Fun params body r) = do
+transform (C.Fun params body _) = do
   body' <- transform body
-  return (Fun params body' r)
+  return (foldr Fun body' params)
 transform (C.Block stmts expr r) = do
   block <- transformBlock (NEL.toList stmts) expr
   return (Block block r)
+transform (C.Debug expr r) = do
+  tell (collectWarning $ DebugKeywordUsage $ range expr)
+  expr' <- transform expr
+  return (Debug expr' r)
 transform (C.Chain chain) = do
   chain' <- transformChain chain
   withReader fixities (shuntingYard chain')

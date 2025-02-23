@@ -22,7 +22,6 @@ import Fine.Syntax.Common
   ( Bind (Bind),
     Ext (Ext),
     Id (Id),
-    idName,
   )
 
 class CodeGens t ctx where
@@ -93,11 +92,6 @@ genBlockCode (Let isMut bound () expr block) = do
   block' <- genBlockCode block
   indent <- asks indentation
   return [i|#{indent}#{keyword} #{bound} = #{expr'};\n#{block'}|]
-genBlockCode (Debug expr _ block) = do
-  expr' <- genCode expr
-  block' <- genBlockCode block
-  indent <- asks indentation
-  return [i|#{indent}console.debug(#{expr'});\n#{block'}|]
 genBlockCode Void = return ""
 genBlockCode (Loop cond actions block) = do
   cond' <- genCode cond
@@ -111,18 +105,15 @@ genStmtsCode block = do
   indent <- increaseIndentation
   local (withIndentation indent) (genBlockCode block)
 
-genFunCode :: Bool -> [Id] -> Expr -> Reader Ctx Text
-genFunCode areObjParams params body = do
-  let params' = T.intercalate ", " (map idName params)
-  let params'' = if areObjParams then [i|{#{params'}}|] else params'
-  case body of
-    Block block _ -> do
-      body' <- genStmtsCode block
-      indent <- asks indentation
-      return [i|(#{params''}) => {\n#{body'}#{indent}}|]
-    _ -> do
-      body' <- genCode body
-      return [i|(#{params''}) => #{body'}|]
+genFunCode :: Id -> Expr -> Reader Ctx Text
+genFunCode param body = case body of
+  Block block _ -> do
+    body' <- genStmtsCode block
+    indent <- asks indentation
+    return [i|(#{param} => {\n#{body'}#{indent}})|]
+  _ -> do
+    body' <- genCode body
+    return [i|(#{param} => #{body'})|]
 
 instance CodeGens Expr Ctx where
   genCode :: Expr -> Reader Ctx Text
@@ -145,10 +136,10 @@ instance CodeGens Expr Ctx where
     name' <- withReaderT symNames (sanitize name)
     expr' <- genCode expr
     return [i|(#{name'} = #{expr'})|]
-  genCode (App f args _) = do
+  genCode (App f arg) = do
     f' <- genCode f
-    args' <- (T.intercalate ", ") <$> mapM genCode args
-    return [i|#{f'}(#{args'})|]
+    arg' <- genCode arg
+    return [i|#{f'}(#{arg'})|]
   genCode (Access expr (Id prop _)) = do
     expr' <- genCode expr
     return [i|#{expr'}.#{prop}|]
@@ -167,12 +158,15 @@ instance CodeGens Expr Ctx where
     let name = "$$obj"
     matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ NEL.toList matches)
     let matches'' = T.intercalate " else " matches'
-    return [i|((#{name}) => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
-  genCode (Fun params body _) = genFunCode False params body
+    return [i|(#{name} => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
+  genCode (Fun param body) = genFunCode param body
   genCode (Block block _) = do
     content <- genStmtsCode block
     indent <- asks indentation
     return [i|(() => {\n#{content}#{indent}})()|]
+  genCode (Debug expr _) = do
+    expr' <- genCode expr
+    return [i|console.debug(#{expr'})|]
   genCode (ExtExpr (Ext code _)) = return code
   genCode (Closure _ expr _) = genCode expr
 
@@ -181,9 +175,9 @@ instance CodeGens (Bind () Expr) Ctx where
   genCode (Bind bder@(Id name _) _ expr) = do
     name' <- withReaderT symNames (sanitize name)
     expr' <- case expr of
-      (Closure _ (Fun params body r) (Just self))
+      (Closure _ fun@(Fun _ _) (Just self))
         | self == bder ->
-            let optimized = fmap (\body' -> Fun params body' r) (optimize bder params body)
+            let optimized = optimize bder fun
              in genCode (fromMaybe expr optimized)
       _ -> genCode expr
     return [i|const #{name'} = #{expr'};|]

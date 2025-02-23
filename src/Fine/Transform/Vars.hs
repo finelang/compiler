@@ -42,7 +42,7 @@ blockFreeVars (Let _ bound _ expr block) = do
     when inScope (tell $ collectError $ AlreadyInScope bound)
   exprVars <- withReader (S.insert bound . globally) (freeVars expr)
   case expr of
-    Fun _ _ _ -> return ()
+    Fun _ _ -> return ()
     _ -> when (S.member bound exprVars) (tell $ collectError $ UsageBeforeInit bound)
   blockVars <-
     withReader
@@ -52,7 +52,6 @@ blockFreeVars (Let _ bound _ expr block) = do
   if S.member bound allVars
     then return (S.delete bound allVars)
     else tell (collectWarning $ UnusedVar bound) >> return allVars
-blockFreeVars (Debug expr _ block) = S.union <$> withReader globally (freeVars expr) <*> blockFreeVars block
 blockFreeVars Void = return S.empty
 blockFreeVars (Loop cond actions block) =
   S.unions <$> sequence [withReader globally (freeVars cond), blockFreeVars actions, blockFreeVars block]
@@ -70,6 +69,11 @@ patternFreeVars (TupleP patts _) = S.unions <$> mapM patternFreeVars patts
 patternFreeVars (Capture _) = return S.empty
 patternFreeVars (DiscardP _) = return S.empty
 
+isExtFun :: Expr -> Bool
+isExtFun (Fun _ (ExtExpr _)) = True
+isExtFun (Fun _ body) = isExtFun body
+isExtFun _ = False
+
 freeVars :: Expr -> RW GlobalVars Errors FreeVars
 freeVars (Literal _ _) = return S.empty
 freeVars (Data _ exprs _) = S.unions <$> mapM freeVars exprs
@@ -77,7 +81,7 @@ freeVars (Record props _) = S.unions <$> mapM (freeVars . snd) props
 freeVars (Tuple exprs _) = S.unions <$> mapM freeVars exprs
 freeVars (Var var) = chechDefined var
 freeVars (Mut var expr) = S.union <$> chechDefined var <*> freeVars expr
-freeVars (App f args _) = S.unions <$> mapM freeVars (f : args)
+freeVars (App f arg) = S.union <$> freeVars f <*> freeVars arg
 freeVars (Access expr _) = freeVars expr
 freeVars (Index expr _ _) = freeVars expr
 freeVars (Cond cond yes no _) = S.unions <$> mapM freeVars [cond, yes, no]
@@ -97,16 +101,16 @@ freeVars (PatternMatch expr matches _) = do
       (tell . collectWarnings . map UnusedVar . S.toList)
     return (S.unions $ zipWith S.difference freeVarsList boundVarsList)
   return (S.unions [exprFreeVars, pattsFreeVars, contsFreeVars])
-freeVars (Fun _ (ExtExpr _) _) = return S.empty
-freeVars (Fun params body _) = do
-  tell (collectErrors $ map RepeatedParam $ repeated params)
-  let params' = S.fromList params
+freeVars fun@(Fun _ _) | isExtFun fun = return S.empty
+freeVars (Fun param body) = do
   bodyVars <- case body of
-    Block block _ -> withReader (AvailableVars params' . S.union params') (blockFreeVars block)
-    _ -> withReader (S.union params') (freeVars body)
-  tell (collectWarnings $ map UnusedVar $ S.toList $ S.difference params' bodyVars)
-  return (S.difference bodyVars params')
+    Block block _ -> withReader (AvailableVars (S.singleton param) . S.insert param) (blockFreeVars block)
+    _ -> withReader (S.insert param) (freeVars body)
+  if S.member param bodyVars
+    then return (S.delete param bodyVars)
+    else tell (collectWarning $ UnusedVar param) >> return bodyVars
 freeVars (Block block _) = withReader (AvailableVars S.empty) (blockFreeVars block)
+freeVars (Debug expr _) = freeVars expr
 freeVars (ExtExpr _) = return S.empty
 freeVars (Closure _ expr _) = freeVars expr >> return S.empty
 

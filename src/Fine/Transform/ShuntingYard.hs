@@ -14,7 +14,7 @@ import Fine.Error
     errorUNREACHABLE,
   )
 import Fine.Syntax.Abstract (Expr (..))
-import Fine.Syntax.Common (Assoc (..), Fixity (..), HasRange (range), Id, OpChain (..))
+import Fine.Syntax.Common (Assoc (..), Fixity (..), Id, OpChain (..))
 import Fine.Transform.Common (Fixities)
 
 type SYStack = ([Expr], [Id])
@@ -41,7 +41,7 @@ modifyOperators :: (Monoid w) => ([Id] -> [Id]) -> RWS r w SYStack ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
 mkTopApp :: [Expr] -> Id -> [Expr]
-mkTopApp (right : left : rest) var = App (Var var) [left, right] (range left <> range right) : rest
+mkTopApp (right : left : rest) var = App (App (Var var) left) right : rest
 mkTopApp _ _ = errorUNREACHABLE
 
 consume :: [Expr] -> [Id] -> [Expr]

@@ -1,11 +1,12 @@
 module Fine.Transform.Pattern (runTransform) where
 
-import Control.Monad.Trans.RW (RW, asks, runRW, tell)
+import Control.Monad.Trans.RW (RW, ask, asks, runRW, tell)
+import Data.List.NonEmpty (toList)
 import qualified Data.Set as S
 import Fine.Error (Error (InvalidPattern), Errors, collectError)
 import Fine.Syntax.Abstract (Pattern (..))
 import Fine.Syntax.Common (Lit (Unit), range)
-import Fine.Syntax.Concrete (Expr (..))
+import Fine.Syntax.Concrete (Expr (..), flattenApp)
 import Fine.Transform.Common (CtBinders)
 
 invalidPattern :: Expr -> RW r Errors Pattern
@@ -26,13 +27,13 @@ transform (Var var) = do
   if isCt
     then return (DataP var [] (range var))
     else return (Capture var)
-transform app@(App (Var var) args r) = do
-  isCt <- asks (S.member var)
-  if isCt
-    then do
-      patts <- mapM transform args
-      return (DataP var patts r)
-    else invalidPattern app
+transform app@(App _ _) = do
+  cts <- ask
+  case flattenApp app of
+    Just (Var tag, exprs) | S.member tag cts -> do
+      patts <- mapM transform exprs
+      return (DataP tag (toList patts) (range app))
+    _ -> invalidPattern app
 transform (Discard r) = return (DiscardP r)
 transform other = invalidPattern other
 

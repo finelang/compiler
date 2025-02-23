@@ -49,7 +49,7 @@ transformBind (Bind bound t v) = do
   let (valueEnv, errors) = handleVars currentEnv value
   tell errors
   case value of
-    Fun _ _ _ -> return ()
+    Fun _ _ -> return ()
     _ -> when (S.member bound valueEnv) (tell $ collectError $ UsageBeforeInit bound)
   let selfBinder = if S.member bound valueEnv then Just bound else Nothing
   let value' =
@@ -94,7 +94,7 @@ transformCtorDefn (C.CtorDefn tag params r) = do
             data' = Data tag exprs r
          in case params of
               [] -> data'
-              _ -> Fun params data' r
+              _ -> foldr Fun data' params
   modify
     ( \st ->
         st

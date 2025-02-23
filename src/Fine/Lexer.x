@@ -35,10 +35,8 @@ tokens :-
   $white+                     ;
   "--"\-*[^$symbol].*         ;
   "#external"                 { mkt ExtTok }
-  "#run"                      { mkt Run }
+  "#debug"                    { mkt DebugTok }
   "and"                       { mkt And }
-  "data"                      { mkt Data }
-  "debug"                     { mkt DebugTok }
   "do"                        { mkt DoTok }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
@@ -47,11 +45,12 @@ tokens :-
   "infixl"                    { mkt Infixl }
   "infixr"                    { mkt Infixr }
   "fn"                        { mkt Fn }
-  "let"                       { mkt LetTok }
   "match"                     { mkt Match }
   "mut"                       { mkt MutTok }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
+  "type"                      { mkt TypeTok }
+  "with"                      { mkt With }
   "_"+                        { mkt DiscardTok }
   [$alpha][$alpha $digit]*    { mkt IdTok }
   \" @string* \"              { mkt StrTok }
@@ -67,17 +66,15 @@ tokens :-
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
   "}"                         { mkt Cbrace }
+  ";"                         { mkt Semi }
   $opsymbol{1, 3}             { mkt Op }
   ","                         { mkt Comma }
 
 {
 data TokenType
   = ExtTok
-  | ExtOp
-  | Run
-  | And
-  | Data
   | DebugTok
+  | And
   | DoTok
   | Else
   | FalseTok
@@ -86,11 +83,12 @@ data TokenType
   | Infixl
   | Infixr
   | Fn
-  | LetTok
   | Match
   | MutTok
   | Then
   | TrueTok
+  | TypeTok
+  | With
   | DiscardTok
   | IdTok
   | StrTok
@@ -106,6 +104,7 @@ data TokenType
   | Cpar
   | Obrace
   | Cbrace
+  | Semi
   | Op
   | Comma
   deriving (Show)

@@ -2,7 +2,8 @@
 {-# LANGUAGE NoStrictData #-}
 module Fine.Parser (parseTokens) where
 
-import Data.List.NonEmpty (NonEmpty ((:|)), toList)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NEL
 import Data.List.NonEmpty2 (NonEmpty2 (NonEmpty2))
 import qualified Data.Text as T
 import Fine.Lexer (Token (..), TokenType (..))
@@ -27,10 +28,8 @@ import Fine.Syntax.Concrete (CtorDefn (..), Defn (..), Stmt (..), Expr (..), Mod
 
 %token
   ext     { Token ExtTok _ _ }
-  run     { Token Run _ _ }
-  and     { Token And _ _ }
-  data    { Token Data _ _ }
   debug   { Token DebugTok _ _ }
+  and     { Token And _ _ }
   do      { Token DoTok _ _ }
   else    { Token Else _ _ }
   false   { Token FalseTok _ _ }
@@ -39,11 +38,12 @@ import Fine.Syntax.Concrete (CtorDefn (..), Defn (..), Stmt (..), Expr (..), Mod
   infixl  { Token Infixl _ _ }
   infixr  { Token Infixr _ _ }
   fn      { Token Fn _ _ }
-  let     { Token LetTok _ _ }
   match   { Token Match _ _ }
   mut     { Token MutTok _ _ }
   then    { Token Then _ _ }
   true    { Token TrueTok _ _ }
+  type    { Token TypeTok _ _ }
+  with    { Token With _ _ }
   discard { Token DiscardTok _ _ }
   id      { Token IdTok _ _ }
   str     { Token StrTok _ _ }
@@ -59,6 +59,7 @@ import Fine.Syntax.Concrete (CtorDefn (..), Defn (..), Stmt (..), Expr (..), Mod
   ')'     { Token Cpar _ _ }
   '{'     { Token Obrace _ _ }
   '}'     { Token Cbrace _ _ }
+  ';'     { Token Semi _ _ }
   op      { Token Op _ _ }
   ','     { Token Comma _ _ }
 
@@ -66,100 +67,67 @@ import Fine.Syntax.Concrete (CtorDefn (..), Defn (..), Stmt (..), Expr (..), Mod
 
 Module : Defns Entry  { Module (reverse $1) $2 }
 
-Entry : run Expr    { Just $2 }
-      | {- empty -} { Nothing }
-
 Prefix : id { mkIdn $1 }
 
 Infix : op  { mkIdn $1 }
 
-Params_ : Params_ ',' Prefix  { $3 : $1 }
-        | Prefix              { [$1] }
+Params_ : Params_ Prefix  { $2 : $1 }
+        | Prefix          { [$1] }
 
-Params : Params_  { reverse $1 }
-
-FParams : Params      { $1 }
-        | {- empty -} { [] }
-
-Defns : Defns Defn      { $2 : $1 }
-      | {- empty -}     { [] }
-
-Defn : let Binds          { handleBinds (reverse $2) }
-     | Fix Infix          { FixDefn $1 $2 }
-     | data '{' Ctors '}' { DataDefn (asNonEmpty (reverse $3)) }
-
-Binds : Binds and Bind  { $3 : $1 }
-      | Bind            { [$1] }
-
-Bind : Prefix '=' TopExpr                 { Bind $1 () $3 }
-     | Prefix '(' FParams ')' '=' TopExpr { Bind $1 () (Fun $3 $6 (range $1 <> range $6)) }
-     | Prefix Infix Prefix '=' TopExpr    { Bind $2 () (Fun [$1, $3] $5 (range $1 <> range $5)) }
-
-Ctors : Ctors Ctor  { $2 : $1 }
-      | Ctor        { [$1] }
-
-Ctor : let Prefix                 { CtorDefn $2 [] (range $2) }
-     | let Prefix '(' Params ')'  { CtorDefn $2 $4 (range $2 <> range $5) }
-
-Fix : Assoc nat { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
-
-Assoc : infix   { NonAssoc }
-      | infixl  { LeftAssoc }
-      | infixr  { RightAssoc }
-
-TopExpr : ext str { ExtExpr $ Ext (transformStr $ tokenLexeme $2) (range $1 <> range $2) }
-        | Expr    { $1 }
-
-Expr : fn '(' FParams ')' Expr      { Fun $3 $5 (range $1 <> range $5) }
-     | if Expr then Expr else Expr  { Cond $2 $4 $6 (range $1 <> range $6) }
-     | Prefix '<-' Expr             { Mut $1 $3 }
-     | Stmts then Expr              { mkBlock (reverse $1) $3 }
-     | Chain                        { chainToExpr $1 }
-
-Stmts : Stmts Stmt  { $2 : $1 }
-      | Stmt        { [$1] }
-
-Stmt : do Expr              { (Do $2, range $1) }
-     | let Prefix '=' Expr  { (Let False $2 () $4, range $1) }
-     | mut Prefix '=' Expr  { (Let True $2 () $4, range $1) }
-     | debug Expr           { (Debug $2 (range $1 <> range $2), range $1) }
-
-Matches : Matches '|' Match { $3 : $1 }
-        | Match             { [$1] }
+Params : Params_  { asNonEmpty (reverse $1) }
 
 OptBar : '|'          {}
        | {- empty -}  {}
 
-Match : App '->' Expr { ($1, $3) }
+TopExpr : ext str { ExtExpr $ Ext (transformStr $ tokenLexeme $2) (range $1 <> range $2) }
+        | Expr    { $1 }
+
+Expr : NonMatchExpr { $1 }
+     | MatchExpr    { $1 }
+
+NonMatchExpr : fn Params '->' Expr          { Fun $2 $4 (range $1 <> range $4) }
+             | if Expr then Expr else Expr  { Cond $2 $4 $6 (range $1 <> range $6) }
+             | Prefix '<-' Expr             { Mut $1 $3 }
+             | debug Expr                   { Debug $2 (range $1 <> range $2) }
+             | Chain                        { chainToExpr $1 }
+
+MatchExpr : match Expr with OptBar Matches  { PatternMatch $2 $5 (range $1 <> (range . snd . NEL.last) $5) }
+
+Matches_ : Matches_ '|' Match { $3 : $1 }
+         | Match              { [$1] }
+
+Matches : Matches_  { asNonEmpty (reverse $1) }
+
+Match : App '->' NonMatchExpr { ($1, $3) }
 
 Chain : App             { Operand' $1 }
       | Chain Infix App { Operation' $1 $2 $3 }
 
-App : App '(' Args ')'  { App $1 $3 (range $1 <> range $4) }
-    | App '.' Prefix    { Access $1 $3 }
-    | App '.' nat       { Index $1 (read $ T.unpack $ tokenLexeme $3) (range $1 <> range $3) }
-    | Atom              { $1 }
+App : App Access  { App $1 $2 }
+    | Access      { $1 }
+
+Access : Access '.' Prefix  { Access $1 $3 }
+       | Access '.' nat     { Index $1 (read $ T.unpack $ tokenLexeme $3) (range $1 <> range $3) }
+       | Atom               { $1 }
+
+Atom : '(' Exprs ')'  { if length $2 == 1 then NEL.head $2 else mkTuple $2 (range $1 <> range $3) }
+     | '(' ')'        { Literal Unit (range $1 <> range $2) }
+     | '{' Obj '}'    { Record $2 (range $1 <> range $3) }
+     | '{' Expr '}'   { $2 }
+     | do '{' Stmts ';' Expr '}'  { Block (asNonEmpty (reverse $3)) $5 (range $1 <> range $6) }
+     | Prefix         { Var $1 }
+     | '(' op ')'     { Var $ Id (tokenLexeme $2) (range $1 <> range $3) }
+     | Int            { $1 }
+     | float          { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (range $1) }
+     | false          { Literal (Bool False) (range $1) }
+     | true           { Literal (Bool True) (range $1) }
+     | str            { mkStr $1 }
+     | discard        { Discard (range $1) }
 
 Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
        | Expr             { [$1] }
 
-Exprs : Exprs_  { reverse $1 }
-
-Args : Exprs        { $1 }
-     | {- empty -}  { [] }
-
-Atom : match Expr '{' OptBar Matches '}'  { PatternMatch $2 (asNonEmpty $ reverse $5) (range $1 <> range $6) }
-     | '(' Args ')'                       { mkGroup $2 (range $1 <> range $3) }
-     | '{' Obj '}'                        { Record $2 (range $1 <> range $3) }
-     | '{' Expr '}'                       { $2 }
-     | Prefix                             { Var $1 }
-     | '(' op ')'                         { Var $ Id (tokenLexeme $2) (range $1 <> range $3) }
-     | Int                                { $1 }
-     | float                              { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (range $1) }
-     | false                              { Literal (Bool False) (range $1) }
-     | true                               { Literal (Bool True) (range $1) }
-     | str                                { mkStr $1 }
-     | discard                            { Discard (range $1) }
+Exprs : Exprs_  { asNonEmpty (reverse $1) }
 
 Int : nat     { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (range $1) }
     | nonnat  { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (range $1) }
@@ -172,6 +140,42 @@ Props : Props ',' Prop  { $3 : $1 }
 Prop : Prefix '=' Expr  { ($1, $3) }
      | '=' Prefix       { ($2, Var $2) }
 
+Stmts : Stmts ';' Stmt  { $3 : $1 }
+      | Stmt            { [$1] }
+
+Stmt : Expr                 { Do $1 }
+     | Prefix '=' Expr      { Let False $1 () $3 }
+     | mut Prefix '=' Expr  { Let True $2 () $4 }
+
+Entry : Expr        { Just $1 }
+      | {- empty -} { Nothing }
+
+Defns : Defns Defn ';'  { $2 : $1 }
+      | {- empty -}     { [] }
+
+Defn : Fix '(' op ')'         { FixDefn $1 (Id (tokenLexeme $3) (range $2 <> range $4)) }
+     | type with OptBar Ctors { DataDefn (asNonEmpty (reverse $4)) }
+     | Binds                  { handleBinds (reverse $1) }
+
+Fix : Assoc nat { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
+
+Assoc : infix   { NonAssoc }
+      | infixl  { LeftAssoc }
+      | infixr  { RightAssoc }
+
+Ctors : Ctors '|' Ctor  { $3 : $1 }
+      | Ctor            { [$1] }
+
+Ctor : Prefix         { CtorDefn $1 [] (range $1) }
+     | Prefix Params  { CtorDefn $1 (NEL.toList $2) (range $1 <> range (NEL.last $2)) }
+
+Binds : Binds and Bind  { $3 : $1 }
+      | Bind            { [$1] }
+
+Bind : Prefix '=' TopExpr               { Bind $1 () $3 }
+     | Prefix Params '=' TopExpr        { Bind $1 () (Fun $2 $4 (range $1 <> range $4)) }
+     | Prefix Infix Prefix '=' TopExpr  { Bind $2 () (Fun ($1 :| [$3]) $5 (range $1 <> range $5)) }
+
 {
 mkIdn tok = Id (tokenLexeme tok) (range tok)
 
@@ -179,17 +183,12 @@ transformStr = T.tail . T.init
 
 mkStr tok = Literal (Str $ transformStr $ tokenLexeme tok) (range tok)
 
-asNonEmpty (x : xs) = x :| xs
+mkTuple (x :| (y : zs)) r = Tuple (NonEmpty2 x y zs) r
 
-mkGroup [] r = Literal Unit r
-mkGroup [x] _ = x
-mkGroup (x : y : zs) r = Tuple (NonEmpty2 x y zs) r
+asNonEmpty (x : xs) = x :| xs
 
 chainToExpr (Operand' expr) = expr
 chainToExpr chain = Chain (fromLRChain chain)
-
-mkBlock (stmt : stmts) expr =
-  Block (fst stmt :| fmap fst stmts) expr (snd stmt <> range expr)
 
 handleBinds [bind] = Defn bind
 handleBinds (x : y : zs) = MRDefns (NonEmpty2 x y zs)

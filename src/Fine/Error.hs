@@ -31,7 +31,6 @@ hl x = [i|'#{show x}'|]
 data Error
   = UndefinedVar Id
   | RepeatedCapture Id
-  | RepeatedParam Id
   | AlreadyInScope Id
   | UsageBeforeInit Id
   | InvalidPrecedence Int Int Id
@@ -46,8 +45,6 @@ instance Show Error where
     [i|Variable #{hl var} is not defined.|]
   show (RepeatedCapture var) =
     [i|Captured variable #{hl var} is repeated.|]
-  show (RepeatedParam var) =
-    [i|Parameter #{hl var} is repeated.|]
   show (AlreadyInScope var) =
     [i|Variable #{hl var} is already defined in the current scope.|]
   show (UsageBeforeInit var) =
