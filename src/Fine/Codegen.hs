@@ -15,7 +15,7 @@ import Fine.Codegen.TailRec (optimize)
 import Fine.Syntax.Abstract
   ( Block (..),
     Expr (..),
-    Module (..),
+    Module (Module),
     Pattern (..),
   )
 import Fine.Syntax.Common
@@ -86,7 +86,7 @@ genBlockCode (Do stmt block) = do
   block' <- genBlockCode block
   indent <- asks indentation
   return [i|#{indent}#{stmt'};\n#{block'}|]
-genBlockCode (Let isMut bound () expr block) = do
+genBlockCode (Let isMut bound _ expr block) = do
   let keyword = if isMut then "let" else "const" :: Text
   expr' <- genCode expr
   block' <- genBlockCode block
@@ -170,8 +170,8 @@ instance CodeGens Expr Ctx where
   genCode (ExtExpr (Ext code _)) = return code
   genCode (Closure _ expr _) = genCode expr
 
-instance CodeGens (Bind () Expr) Ctx where
-  genCode :: Bind () Expr -> Reader Ctx Text
+instance CodeGens (Bind t Expr) Ctx where
+  genCode :: Bind t Expr -> Reader Ctx Text
   genCode (Bind bder@(Id name _) _ expr) = do
     name' <- withReaderT symNames (sanitize name)
     expr' <- case expr of
@@ -184,13 +184,13 @@ instance CodeGens (Bind () Expr) Ctx where
 
 instance CodeGens Module Ctx where
   genCode :: Module -> Reader Ctx Text
-  genCode (Module binds _) = do
-    stmts <- mapM genCode binds
-    return (T.intercalate "\n\n" stmts)
-  genCode (EntryModule binds fixs expr) = do
-    code <- genCode (Module binds fixs)
-    entry <- genCode expr
-    return [i|#{code}\n\n#{entry};|]
+  genCode (Module values _ _ optExpr) = do
+    defns <- fmap (T.intercalate "\n\n") (mapM genCode values)
+    case optExpr of
+      Nothing -> return defns
+      Just expr -> do
+        expr' <- genCode expr
+        return [i|#{defns}\n\n#{expr'};|]
 
 runGenCode :: (CodeGens t Ctx) => (Maybe Text) -> t -> Text
 runGenCode extraCode x =

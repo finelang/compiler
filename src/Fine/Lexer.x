@@ -2,7 +2,7 @@
 module Fine.Lexer (Token (..), TokenType (..), lexText) where
 
 import Data.Text (Text)
-import qualified Data.Text as Text (length)
+import qualified Data.Text as T
 import Fine.Syntax.Common (HasRange (range), Range (Range))
 }
 
@@ -36,17 +36,22 @@ tokens :-
   "--"\-*[^$symbol].*         ;
   "#external"                 { mkt ExtTok }
   "#debug"                    { mkt DebugTok }
-  "and"                       { mkt And }
+  "#run"                      { mkt Run }
+  "bool"                      { mkt BoolTTok }
   "do"                        { mkt DoTok }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
+  "forall"                    { mkt ForallTok }
   "if"                        { mkt If }
   "infix"                     { mkt Infix }
   "infixl"                    { mkt Infixl }
   "infixr"                    { mkt Infixr }
+  "int"                       { mkt IntTTok }
   "fn"                        { mkt Fn }
+  "float"                     { mkt FloatTTok }
   "match"                     { mkt Match }
   "mut"                       { mkt MutTok }
+  "string"                    { mkt StrTTok }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
   "type"                      { mkt TypeTok }
@@ -67,6 +72,7 @@ tokens :-
   "{"                         { mkt Obrace }
   "}"                         { mkt Cbrace }
   ";"                         { mkt Semi }
+  ":"                         { mkt Colon }
   $opsymbol{1, 3}             { mkt Op }
   ","                         { mkt Comma }
 
@@ -74,17 +80,22 @@ tokens :-
 data TokenType
   = ExtTok
   | DebugTok
-  | And
+  | Run
+  | BoolTTok
   | DoTok
   | Else
   | FalseTok
+  | ForallTok
   | If
   | Infix
   | Infixl
   | Infixr
+  | IntTTok
   | Fn
+  | FloatTTok
   | Match
   | MutTok
+  | StrTTok
   | Then
   | TrueTok
   | TypeTok
@@ -105,6 +116,7 @@ data TokenType
   | Obrace
   | Cbrace
   | Semi
+  | Colon
   | Op
   | Comma
   deriving (Show)
@@ -125,7 +137,7 @@ data Token = Token
 
 instance HasRange Token where
   range (Token _ lexeme (TokenPosn i line col)) =
-    let len = Text.length lexeme
+    let len = T.length lexeme
         ei = i + len
         ec = col + len
      in Range i col line ei ec line

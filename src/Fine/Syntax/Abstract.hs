@@ -22,8 +22,10 @@ import Fine.Syntax.Common
     Fixity,
     HasRange (..),
     Id (Id),
+    Kind,
     Lit,
     Range,
+    Type,
   )
 
 data Pattern
@@ -55,7 +57,7 @@ boundVars (DiscardP _) = []
 data Block
   = Return Expr
   | Do Expr Block
-  | Let Bool Id () Expr Block
+  | Let Bool Id (Maybe Type) Expr Block
   | Void -- internal
   | Loop Expr Block Block -- internal
   deriving (Show)
@@ -140,12 +142,9 @@ instance HasRange Expr where
 
 data Module
   = Module
-      { bindings :: [Bind () Expr],
-        fixities :: Map Id Fixity
-      }
-  | EntryModule
-      { bindings :: [Bind () Expr],
-        fixities :: Map Id Fixity,
-        _entryExpr :: Expr
-      }
+  { values :: [Bind Type Expr],
+    types :: [Bind Kind Type],
+    fixities :: Map Id Fixity,
+    _entryExpr :: Maybe Expr
+  }
   deriving (Show)

@@ -46,11 +46,14 @@ transformBlock :: [C.Stmt] -> C.Expr -> RW Ctx Errors Block
 transformBlock [] expr = Return <$> transform expr
 transformBlock (C.Do action : stmts) expr =
   Do <$> transform action <*> transformBlock stmts expr
-transformBlock (C.Let isMut bound _ val : stmts) expr =
-  Let isMut bound () <$> transform val <*> transformBlock stmts expr
+transformBlock (C.Let isMut bound type' val : stmts) expr =
+  Let isMut bound type' <$> transform val <*> transformBlock stmts expr
 
 transform :: C.Expr -> RW Ctx Errors Expr
 transform (C.Literal lit r) = return (Literal lit r)
+transform (C.Data tag exprs r) = do
+  exprs' <- mapM transform exprs
+  return (Data tag exprs' r)
 transform (C.Record props r) = do
   props' <- (mapM . mapM) transform props
   return (Record props' r)

@@ -126,8 +126,8 @@ optimize binder fun@(Fun _ _) = do
   let body'' = foldr replaceVar body' varSubstts
   let retResult = Return (Var resultVar)
   let loop = Loop (Var nonstopVar) (Do body'' Void) retResult
-  let letNonStop = Let True nonstopVar () (Literal (Bool True) InvalidRange) loop
-  let letResult = Let True resultVar () (ExtExpr $ Ext "null" InvalidRange) letNonStop
-  let block = foldr (\(old, new) block' -> Let True new () (Var old) block') letResult varSubstts
+  let letNonStop = Let True nonstopVar Nothing (Literal (Bool True) InvalidRange) loop
+  let letResult = Let True resultVar Nothing (ExtExpr $ Ext "null" InvalidRange) letNonStop
+  let block = foldr (\(old, new) block' -> Let True new Nothing (Var old) block') letResult varSubstts
   return (foldr Fun (Block block InvalidRange) params)
 optimize _ _ = Nothing

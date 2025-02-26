@@ -9,17 +9,20 @@ import Fine.Syntax.Common
     Fixity,
     HasRange (..),
     Id,
+    Kind,
     Lit,
     OpChain,
     Range,
+    Type,
   )
 
 data Stmt
   = Do Expr
-  | Let Bool Id () Expr
+  | Let Bool Id (Maybe Type) Expr
 
 data Expr
   = Literal Lit Range
+  | Data Id [Expr] Range
   | Record (NonEmpty (Id, Expr)) Range
   | Tuple (NonEmpty2 Expr) Range
   | Var Id
@@ -39,6 +42,7 @@ data Expr
 instance HasRange Expr where
   range :: Expr -> Range
   range (Literal _ r) = r
+  range (Data _ _ r) = r
   range (Record _ r) = r
   range (Tuple _ r) = r
   range (Var var) = range var
@@ -62,12 +66,11 @@ flattenApp expr = (fmap . fmap) NEL.reverse (go expr)
     go (App f arg) = Just (f, NEL.singleton arg)
     go _ = Nothing
 
-data CtorDefn = CtorDefn Id [Id] Range
-
 data Defn
-  = Defn (Bind () Expr)
-  | DataDefn (NonEmpty CtorDefn)
-  | MRDefns (NonEmpty2 (Bind () Expr)) -- mutually recursive function definitions
+  = Defn Id Expr
+  | TypingDefn Id Type
+  | TypeDefn (Bind Kind Type)
+  | DataDefn (Bind Kind Type) (NonEmpty (Bind Type Expr))
   | FixDefn Fixity Id
 
 data Module = Module

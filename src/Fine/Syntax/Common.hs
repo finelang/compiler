@@ -1,6 +1,8 @@
 module Fine.Syntax.Common (module Fine.Syntax.Common) where
 
 import Data.Function (on)
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty2 (NonEmpty2)
 import Data.String.Interpolate (i)
 import Data.Text (Text, unpack)
 
@@ -108,6 +110,43 @@ data Ext = Ext Text Range
 instance HasRange Ext where
   range :: Ext -> Range
   range (Ext _ r) = r
+
+data LitT = IntT | FloatT | BoolT | StrT | UnitT
+  deriving (Show)
+
+data Type
+  = LiteralT LitT Range
+  | TupleT (NonEmpty2 Type) Range
+  | RecordT (NonEmpty (Id, Type)) Range
+  | FunT Type Type -- type of a function
+  | TData Id [Type] Range
+  | TVar Id
+  | TApp Type Type
+  | TFun Id Type -- type function (for type constructors and type aliases)
+  | Forall (NonEmpty (Id, Kind)) Type Range
+  deriving (Show)
+
+instance HasRange Type where
+  range :: Type -> Range
+  range (LiteralT _ r) = r
+  range (TupleT _ r) = r
+  range (RecordT _ r) = r
+  range (FunT left right) = range left <> range right
+  range (TData _ _ r) = r
+  range (TVar var) = range var
+  range (TApp tf targ) = range tf <> range targ
+  range (TFun tparam body) = range tparam <> range body
+  range (Forall _ _ r) = r
+
+data Kind
+  = KLit Range
+  | FunK Kind Kind
+  deriving (Show)
+
+instance HasRange Kind where
+  range :: Kind -> Range
+  range (KLit r) = r
+  range (FunK left right) = range left <> range right
 
 data Bind t v = Bind
   { binder :: Id,
