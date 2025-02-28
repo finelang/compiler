@@ -84,7 +84,7 @@ NonMatchExpr : fn Params '->' Expr          { Fun $2 $4 (range $1 <> range $4) }
              | if Expr then Expr else Expr  { Cond $2 $4 $6 (range $1 <> range $6) }
              | Prefix '<-' Expr             { Mut $1 $3 }
              | debug Expr                   { Debug $2 (range $1 <> range $2) }
-             | Chain                        { chainToExpr $1 }
+             | Chain                        { tryUnchain $1 }
 
 MatchExpr : match Expr with OptBar Matches  { PatternMatch $2 $5 (range $1 <> (range . snd . NEL.last) $5) }
 
@@ -95,8 +95,8 @@ Matches : Matches_  { asNonEmpty (reverse $1) }
 
 Match : App '->' NonMatchExpr { ($1, $3) }
 
-Chain : App             { Operand' $1 }
-      | Chain Infix App { Operation' $1 $2 $3 }
+Chain : App             { Operand $1 }
+      | App Infix Chain { Operation $1 $2 $3 }
 
 App : App Access  { App $1 $2 }
     | Access      { $1 }
@@ -190,6 +190,7 @@ Defn : Fix '(' op ')'                       { FixDefn $1 (Id (tokenLexeme $3) (r
      | type Prefix '=' Type                 { TypeDefn (Bind $2 (KLit (range $2)) $4) }
      | type Prefix Params '=' Type          { mkTypeDefn $2 $3 $5 }
      | Prefix ':' Type                      { TypingDefn $1 $3 }
+     | '(' op ')' ':' Type                  { TypingDefn (Id (tokenLexeme $2) (range $1 <> range $3)) $5 }
      | Prefix '=' TopExpr                   { Defn $1 $3 }
      | Prefix Params '=' TopExpr            { Defn $1 (Fun $2 $4 (range $1 <> range $4)) }
      | Prefix Infix Prefix '=' TopExpr      { Defn $2 (Fun ($1 :| [$3]) $5 (range $1 <> range $5)) }
@@ -255,8 +256,9 @@ kindedVars = NEL.map (\v -> (v, KLit $ range v))
 
 asNonEmpty (x : xs) = x :| xs
 
-chainToExpr (Operand' expr) = expr
-chainToExpr chain = Chain (fromLRChain chain)
+tryUnchain (Operand expr) = expr
+tryUnchain (Operation left op (Operand right)) = App (App (Var op) left) right
+tryUnchain chain = Chain chain
 
 parseError tokens = error . show . head $ tokens
 }

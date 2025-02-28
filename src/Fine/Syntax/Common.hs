@@ -79,25 +79,10 @@ instance Show Fixity where
   show :: Fixity -> String
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
 
--- left-recursive operation chain to leverage left-recursive parsing
-data OpChain' t
-  = Operand' t
-  | Operation' (OpChain' t) Id t
-  deriving (Show)
-
--- right-recursive operation chain for shunting yard algorithm
 data OpChain t
   = Operand t
   | Operation t Id (OpChain t)
   deriving (Show)
-
-extendChain :: OpChain t -> Id -> t -> OpChain t
-extendChain (Operand left) op right = Operation left op (Operand right)
-extendChain (Operation left firstOp chain) op right = Operation left firstOp (extendChain chain op right)
-
-fromLRChain :: OpChain' t -> OpChain t
-fromLRChain (Operand' expr) = Operand expr
-fromLRChain (Operation' chain op right) = extendChain (fromLRChain chain) op right
 
 instance (HasRange t) => HasRange (OpChain t) where
   range :: OpChain t -> Range
