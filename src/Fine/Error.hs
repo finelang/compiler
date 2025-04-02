@@ -1,10 +1,8 @@
 module Fine.Error
-  ( Errors,
+  ( Errors (..),
     Warning (..),
     Error (..),
-    collectErrors,
     collectError,
-    collectWarnings,
     collectWarning,
     errorTODO,
     errorUNREACHABLE,
@@ -15,7 +13,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax.Common (Fixity, Id, Range)
+import Fine.Syntax (Fixity, Id, Range)
 import GHC.Stack (HasCallStack)
 import String.ANSI (red, yellow)
 
@@ -92,16 +90,18 @@ warningPrefix = yellow "Warning: "
 wrapWarning :: Warning -> String
 wrapWarning wrn = [i|#{warningPrefix}#{wrn}|]
 
-type Errors = ([Error], [Warning])
+data Errors = Errors [Error] [Warning]
+
+instance Semigroup Errors where
+  (<>) :: Errors -> Errors -> Errors
+  Errors e w <> Errors e' w' = Errors (e <> e') (w <> w')
+
+instance Monoid Errors where
+  mempty :: Errors
+  mempty = Errors [] []
 
 collectError :: Error -> Errors
-collectError err = ([err], [])
-
-collectErrors :: [Error] -> Errors
-collectErrors errs = (errs, [])
+collectError err = Errors [err] []
 
 collectWarning :: Warning -> Errors
-collectWarning wrn = ([], [wrn])
-
-collectWarnings :: [Warning] -> Errors
-collectWarnings wrns = ([], wrns)
+collectWarning wrn = Errors [] [wrn]

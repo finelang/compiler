@@ -1,13 +1,12 @@
 module Fine.Codegen.Pattern (extractCondsAndBinds) where
 
-import Data.List.NonEmpty2 (toList)
+import Data.List.NonEmpty (toList)
 import Data.Maybe (mapMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as Text
 import Fine.Codegen.Lit (genLitCode)
-import Fine.Syntax.Abstract (Pattern (..))
-import Fine.Syntax.Common (Id (Id), Lit (Str))
+import Fine.Syntax (Id (Id), Lit (Str), Pattern (..))
 
 data PathEnd
   = Equals Lit
@@ -30,17 +29,17 @@ indexedPaths patts =
       [(0 :: Int) ..]
 
 fromPattern :: Pattern -> [PatternPath]
-fromPattern (LiteralP lit _) = [End $ Equals lit]
-fromPattern (DataP (Id name _) patts _) =
+fromPattern (LiteralP _ lit) = [End $ Equals lit]
+fromPattern (DataP _ (Id _ name) patts) =
   let fromTag = Continue (PropTo "$tag") (End $ Equals $ Str name)
    in fromTag : indexedPaths patts
-fromPattern (RecordP props _) =
+fromPattern (RecordP _ props) =
   foldMap
-    (\(Id name _, patt) -> map (Continue $ PropTo name) (fromPattern patt))
+    (\(Id _ name, patt) -> map (Continue $ PropTo name) (fromPattern patt))
     props
-fromPattern (TupleP patts _) = indexedPaths (toList patts)
-fromPattern (Capture var) = [End $ As var]
-fromPattern (DiscardP _) = []
+fromPattern (TupleP _ patts) = indexedPaths (toList patts)
+fromPattern (Capture _ var) = [End $ As var]
+fromPattern (Discard _) = []
 
 fromPatternPath :: PatternPath -> ([PathPiece], PathEnd)
 fromPatternPath pattPath = go pattPath []
@@ -53,7 +52,7 @@ genPathPieceCode (PropTo name) = [i|.#{name}|]
 genPathPieceCode (IndexTo ix) = [i|[#{ix}]|]
 
 genPathCode :: Text -> [PathPiece] -> Text
-genPathCode name pieces = T.concat (name : map genPathPieceCode pieces)
+genPathCode name pieces = Text.concat (name : map genPathPieceCode pieces)
 
 data CodeType t
   = Cond t

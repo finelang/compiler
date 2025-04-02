@@ -2,12 +2,14 @@ module Main (main) where
 
 import Control.Monad (forM_)
 import Data.Text (Text)
+import qualified Data.Set as Set
 import qualified Data.Text.IO as TIO (readFile, writeFile)
-import Fine.Codegen (runGenCode)
+import Fine.Codegen (runCodegen)
+import Fine.Rename (runRenamer)
 import Fine.Error (wrapError, wrapWarning)
 import Fine.Lexer (lexText)
 import Fine.Parser (parseTokens)
-import Fine.Transform (runTransform)
+import Fine.Transform (runTransformer)
 import System.Environment (getArgs)
 
 getPaths :: IO (String, String)
@@ -17,17 +19,13 @@ getPaths = do
     (x : y : _) -> return (x, y)
     _ -> error "Not enough arguments."
 
-readCodeInjection :: IO (Maybe Text)
-readCodeInjection = return Nothing -- Just <$> TIO.readFile "src/runtime.js"
-
 main :: IO ()
 main = do
   (inFilePath, outFilePath) <- getPaths
   code <- TIO.readFile inFilePath
-  codeInjection <- readCodeInjection
   let parsed = parseTokens $ lexText code
-  let (result, warnings) = runTransform parsed
+  let (result, warnings) = runTransformer parsed
   forM_ warnings (putStrLn . wrapWarning)
   case result of
     Left errors -> forM_ errors (putStrLn . wrapError)
-    Right mdule -> print mdule >> TIO.writeFile outFilePath (runGenCode codeInjection mdule)
+    Right mdule -> print mdule >> TIO.writeFile outFilePath (runCodegen $ runRenamer Set.empty mdule)

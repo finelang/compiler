@@ -2,8 +2,8 @@
 module Fine.Lexer (Token (..), TokenType (..), lexText) where
 
 import Data.Text (Text)
-import qualified Data.Text as T
-import Fine.Syntax.Common (HasRange (range), Range (Range))
+import qualified Data.Text as Text
+import Fine.Syntax (HasRange (range), Range (Range))
 }
 
 %wrapper "posn-strict-text"
@@ -55,6 +55,7 @@ tokens :-
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
   "type"                      { mkt TypeTok }
+  "while"                     { mkt While }
   "with"                      { mkt With }
   "_"+                        { mkt DiscardTok }
   [$alpha][$alpha $digit]*    { mkt IdTok }
@@ -99,6 +100,7 @@ data TokenType
   | Then
   | TrueTok
   | TypeTok
+  | While
   | With
   | DiscardTok
   | IdTok
@@ -137,7 +139,7 @@ data Token = Token
 
 instance HasRange Token where
   range (Token _ lexeme (TokenPosn i line col)) =
-    let len = T.length lexeme
+    let len = Text.length lexeme
         ei = i + len
         ec = col + len
      in Range i col line ei ec line

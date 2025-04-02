@@ -1,106 +1,148 @@
-module Fine.Codegen.TailRec (optimize) where
+module Fine.Codegen.TailRec (tryOptimize) where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (Reader, ReaderT (runReaderT), ask, asks, runReader)
-import qualified Data.Functor as F
+import qualified Data.Functor as Functor
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NEL
+import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe (catMaybes, fromJust, fromMaybe)
 import Data.Text (cons)
-import Fine.Syntax.Abstract (Block (..), Expr (..), apply, boundVars, flattenApp, flattenFun)
-import Fine.Syntax.Common (Ext (Ext), HasRange (range), Id (Id), Lit (Bool), Range (InvalidRange))
+import Fine.Syntax
+  ( Block (..),
+    Expr (..),
+    Id (Id),
+    Kind (KLit),
+    Lit (Bool),
+    LitT (UnitT),
+    Pass (Typed),
+    Range (NoRange),
+    Type (LiteralT),
+  )
+import Fine.Syntax.Utils (boundVars, flattenApp, flattenFun)
 
-replaceBlockVar :: (Id, Id) -> Block -> Block
-replaceBlockVar vars (Return expr) = Return (replaceVar vars expr)
-replaceBlockVar vars (Do expr block) = Do (replaceVar vars expr) (replaceBlockVar vars block)
-replaceBlockVar vars@(old, _) (Let isMut binder typ expr block) =
-  let expr' = replaceVar vars expr
-      block' = if binder /= old then replaceBlockVar vars block else block
-   in Let isMut binder typ expr' block'
-replaceBlockVar _ Void = Void
-replaceBlockVar vars (Loop cond actions block) =
-  Loop (replaceVar vars cond) (replaceBlockVar vars actions) (replaceBlockVar vars block)
+type Expr' = Expr Typed
 
-replaceVar :: (Id, Id) -> Expr -> Expr
-replaceVar (old, new) expr@(Var var) = if var == old then Var new else expr
-replaceVar vars@(old, new) (Mut var expr) =
-  let expr' = replaceVar vars expr
-   in Mut (if var == old then new else var) expr'
-replaceVar vars@(old, _) (PatternMatch expr matches r) =
-  let expr' = replaceVar vars expr
-      matches' =
-        fmap
-          (\(patt, cont) -> (patt, if old `elem` boundVars patt then cont else replaceVar vars cont))
-          matches
-   in PatternMatch expr' matches' r
-replaceVar vars@(old, _) expr@(Fun param body) =
-  if old == param then expr else Fun param (replaceVar vars body)
-replaceVar vars (Block block r) = Block (replaceBlockVar vars block) r
-replaceVar vars other = apply (replaceVar vars) other
+type Block' = Block Typed
+
+data Substt = Substt
+  { oldVar :: Id,
+    _newVar :: Id
+  }
+
+replaceIn :: Expr' -> Reader Substt Expr'
+replaceIn expr@(Literal {}) = return expr
+replaceIn (Data ext tag exprs) = Data ext tag <$> mapM replaceIn exprs
+replaceIn (Record ext props) = Record ext <$> (mapM . mapM) replaceIn props
+replaceIn (Tuple ext exprs) = Tuple ext <$> mapM replaceIn exprs
+replaceIn expr@(Var ext var) = do
+  (Substt old new) <- ask
+  return (if var == old then Var ext new else expr)
+replaceIn (Mut ext var expr) = do
+  (Substt old new) <- ask
+  Mut ext (if var == old then new else var) <$> replaceIn expr
+replaceIn (App ext f arg) = App ext <$> replaceIn f <*> replaceIn arg
+replaceIn (Access ext expr prop) = Access ext <$> replaceIn expr <*> return prop
+replaceIn (Index ext expr ix) = Index ext <$> replaceIn expr <*> return ix
+replaceIn (Cond ext cond yes no) =
+  Cond ext <$> replaceIn cond <*> replaceIn yes <*> replaceIn no
+replaceIn fun@(Fun ext param body) = do
+  old <- asks oldVar
+  if param == old
+    then return fun
+    else Fun ext param <$> replaceIn body
+replaceIn (Block ext' block') = Block ext' <$> inBlock block'
+  where
+    inBlock (Return expr) = Return <$> replaceIn expr
+    inBlock (Do action block) = Do <$> replaceIn action <*> inBlock block
+    inBlock (Let isMut binder expr block) = do
+      old <- asks oldVar
+      let blockAction = if old == binder then return else inBlock
+      Let isMut binder <$> replaceIn expr <*> blockAction block
+    inBlock block@(Void _) = return block
+    inBlock (Loop cond actions block) =
+      Loop <$> replaceIn cond <*> inBlock actions <*> inBlock block
+replaceIn (PatternMatch ext expr matches) =
+  PatternMatch ext <$> replaceIn expr <*> mapM inMatch matches
+  where
+    inMatch (patt, cont) = do
+      old <- asks oldVar
+      if old `elem` boundVars patt
+        then return (patt, cont)
+        else (,) patt <$> replaceIn cont
+replaceIn (Debug ext expr) = Debug ext <$> replaceIn expr
+replaceIn expr@(External _ _ _) = return expr
+
+replaceVar :: Substt -> Expr' -> Expr'
+replaceVar substt expr = runReader (replaceIn expr) substt
 
 data TransformCtx = TransformCtx
   { fBinder :: Id,
-    fParams :: (NonEmpty Id)
+    _fParams :: (NonEmpty Id)
   }
 
 type RM t = ReaderT TransformCtx Maybe t
 
-tryTransformBlock :: (Expr -> RM Expr) -> Block -> RM Block
+tryTransformBlock :: (Expr' -> RM Expr') -> Block' -> RM Block'
 tryTransformBlock f (Return expr) = Return <$> f expr
 tryTransformBlock f (Do expr block) = Do expr <$> tryTransformBlock f block
-tryTransformBlock f (Let isMut binder typ expr block) = do
-  isBound <- asks ((binder ==) . fBinder)
+tryTransformBlock f (Let isMut binder expr block) = do
+  isBound <- asks $ (binder ==) . fBinder
   if isBound
     then lift Nothing
-    else Let isMut binder typ expr <$> tryTransformBlock f block
-tryTransformBlock _ Void = lift Nothing
+    else Let isMut binder expr <$> tryTransformBlock f block
+tryTransformBlock _ (Void _) = lift Nothing
 tryTransformBlock f (Loop cond actions block) = Loop cond actions <$> tryTransformBlock f block
 
-tryTransformRecBranch :: Expr -> RM Expr
-tryTransformRecBranch app@(App _ _) = do
-  binder <- asks fBinder
-  params <- asks fParams
+invalidX :: (Range, Type Typed)
+invalidX = (NoRange, LiteralT (NoRange, KLit NoRange) UnitT)
+
+tryTransformRecBranch :: Expr' -> RM Expr'
+tryTransformRecBranch app@(App ext _ _) = do
+  (TransformCtx binder params) <- ask
   case flattenApp app of
-    Just (Var name, args) | name == binder && length args == length params -> do
-      let muts = NEL.zipWith (\(Id name' r') arg -> Mut (Id (cons '$' name') r') arg) params args
-      let block = foldr (\mut block' -> Do mut block') Void muts
-      return (Block block (range app))
+    Just (Var _ name, args) | name == binder && length args == length params -> do
+      let muts =
+            NonEmpty.zipWith
+              (\(Id r' name') arg -> Mut invalidX (Id r' (cons '$' name')) arg)
+              params
+              args
+      let block = foldr Do (Void ()) muts
+      return (Block ext block)
     _ -> lift Nothing
-tryTransformRecBranch (Block block r) = do
-  block' <- tryTransformBlock (tryTransformRecBranch) block
-  return (Block block' r)
+tryTransformRecBranch (Block ext block) =
+  Block ext <$> tryTransformBlock (tryTransformRecBranch) block
 tryTransformRecBranch _ = lift Nothing
 
 resultVar :: Id
-resultVar = Id "$$result" InvalidRange
+resultVar = Id NoRange "$$result"
 
 nonstopVar :: Id
-nonstopVar = Id "$$nonstop" InvalidRange
+nonstopVar = Id NoRange "$$nonstop"
 
-stop :: Expr
-stop = Mut nonstopVar (Literal (Bool False) InvalidRange)
+stop :: Expr Typed
+stop = Mut invalidX nonstopVar (Literal invalidX (Bool False))
 
-transformNonRecBranch :: Expr -> Reader TransformCtx Expr
+transformNonRecBranch :: Expr' -> Expr'
 transformNonRecBranch expr =
-  let setResult = Mut resultVar expr
-      block = Do setResult $ Do stop $ Void
-   in return (Block block InvalidRange)
+  let setResult = Mut invalidX resultVar expr
+      block = Do setResult $ Do stop $ Void ()
+   in Block invalidX block
 
-tryTransformBranches :: Expr -> RM Expr
-tryTransformBranches (PatternMatch expr' matches r) = do
+tryTransformBranches :: Expr' -> RM Expr'
+tryTransformBranches (PatternMatch ext expr matches) = do
   ctx <- ask
-  let (patts, branches) = F.unzip matches
-  let recsTransformed = fmap (\expr -> runReaderT (tryTransformRecBranch expr) ctx) branches
-  if null (catMaybes $ NEL.toList recsTransformed)
+  let (patts, branches) = Functor.unzip matches
+  let recsTransformed = fmap (\cont -> runReaderT (tryTransformRecBranch cont) ctx) branches
+  if null (catMaybes $ NonEmpty.toList recsTransformed)
     then lift Nothing
     else
       let allTransformed =
-            NEL.zipWith
-              (\expr optExpr -> fromMaybe (runReader (transformNonRecBranch expr) ctx) optExpr)
+            NonEmpty.zipWith
+              (\cont optCont -> fromMaybe (transformNonRecBranch cont) optCont)
               branches
               recsTransformed
-       in return (PatternMatch expr' (NEL.zip patts allTransformed) r)
-tryTransformBranches (Cond cond yes no r) = do
+       in return (PatternMatch ext expr (NonEmpty.zip patts allTransformed))
+tryTransformBranches (Cond ext cond yes no) = do
   ctx <- ask
   let branches = [yes, no]
   let recsTransformed = map (\expr -> runReaderT (tryTransformRecBranch expr) ctx) branches
@@ -109,25 +151,24 @@ tryTransformBranches (Cond cond yes no r) = do
     else
       let allTransformed =
             zipWith
-              (\expr optExpr -> fromMaybe (runReader (transformNonRecBranch expr) ctx) optExpr)
+              (\expr optExpr -> fromMaybe (transformNonRecBranch expr) optExpr)
               branches
               recsTransformed
-       in return (Cond cond (allTransformed !! 0) (allTransformed !! 1) r)
-tryTransformBranches (Block block r) = do
-  block' <- tryTransformBlock tryTransformBranches block
-  return (Block block' r)
+       in return (Cond ext cond (allTransformed !! 0) (allTransformed !! 1))
+tryTransformBranches (Block ext block) =
+  Block ext <$> tryTransformBlock tryTransformBranches block
 tryTransformBranches _ = lift Nothing
 
-optimize :: Id -> Expr -> Maybe Expr
-optimize binder fun@(Fun _ _) = do
+tryOptimize :: Id -> Expr' -> Maybe Expr'
+tryOptimize binder fun@(Fun _ _ _) = do
   let (body, params) = fromJust (flattenFun fun)
   body' <- runReaderT (tryTransformBranches body) (TransformCtx binder params)
-  let varSubstts = NEL.map (\old@(Id name r) -> (old, Id (cons '$' name) r)) params
+  let varSubstts = NonEmpty.map (\old@(Id r name) -> Substt old (Id r (cons '$' name))) params
   let body'' = foldr replaceVar body' varSubstts
-  let retResult = Return (Var resultVar)
-  let loop = Loop (Var nonstopVar) (Do body'' Void) retResult
-  let letNonStop = Let True nonstopVar Nothing (Literal (Bool True) InvalidRange) loop
-  let letResult = Let True resultVar Nothing (ExtExpr $ Ext "null" InvalidRange) letNonStop
-  let block = foldr (\(old, new) block' -> Let True new Nothing (Var old) block') letResult varSubstts
-  return (foldr Fun (Block block InvalidRange) params)
-optimize _ _ = Nothing
+  let retResult = Return (Var invalidX resultVar)
+  let loop = Loop (Var invalidX nonstopVar) (Do body'' (Void ())) retResult
+  let letNonStop = Let True nonstopVar (Literal invalidX (Bool True)) loop
+  let letResult = Let True resultVar (External invalidX [] "null") letNonStop
+  let block = foldr (\(Substt old new) block' -> Let True new (Var invalidX old) block') letResult varSubstts
+  return (foldr (Fun invalidX) (Block invalidX block) params)
+tryOptimize _ _ = Nothing

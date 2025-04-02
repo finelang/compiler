@@ -47,6 +47,9 @@ default-extensions:
 - FlexibleContexts
 - FlexibleInstances
 - QuasiQuotes
+- DataKinds
+- KindSignatures
+- TypeFamilies
 
 library:
   source-dirs: src

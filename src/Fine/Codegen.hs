@@ -1,226 +1,174 @@
-module Fine.Codegen (runGenCode) where
+module Fine.Codegen (runCodegen) where
 
-import Control.Monad.Trans.Reader (Reader, ask, asks, local, runReader, withReaderT)
-import qualified Data.List.NonEmpty as NEL
-import qualified Data.List.NonEmpty2 as NEL2
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.Maybe (fromMaybe, maybeToList)
+import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
+import qualified Data.List.NonEmpty as NonEmpty
+import Data.Maybe (fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as Text
 import Fine.Codegen.Lit (genLitCode)
 import Fine.Codegen.Pattern (extractCondsAndBinds)
-import Fine.Codegen.TailRec (optimize)
-import Fine.Syntax.Abstract
-  ( Block (..),
-    Expr (..),
-    Module (Module),
-    Pattern (..),
-  )
-import Fine.Syntax.Common
+import Fine.Codegen.TailRec (tryOptimize)
+import Fine.Syntax
   ( Bind (Bind),
-    Ext (Ext),
+    Block (..),
+    Expr (..),
     Id (Id),
+    Module (Module),
+    Pass (Typed),
+    Pattern (..),
+    Range (NoRange),
+    TypeOfBind (OfValue),
   )
 
-class CodeGens t ctx where
-  genCode :: t -> Reader ctx Text
+type Indentation = Text
 
-data Ctx = Ctx
-  { indentation :: Text,
-    separator :: Char,
-    symNames :: Map Char Text
-  }
+withIndentation :: Indentation -> Reader Indentation a -> Reader Indentation a
+withIndentation = local . const
 
-withIndentation :: Text -> Ctx -> Ctx
-withIndentation ind ctx = ctx {indentation = ind}
-
-increaseIndentation :: Reader Ctx Text
+increaseIndentation :: Reader Indentation Text
 increaseIndentation = do
-  indent <- asks indentation
+  indent <- ask
   return (indent <> "  ")
 
-sanitize :: Text -> Reader (Map Char Text) Text
-sanitize name = do
-  syms <- ask
-  let f = go syms
-  return (T.concat $ map f $ T.unpack name)
-  where
-    go names ch = M.findWithDefault (T.singleton ch) ch names
+type Expr' = Expr Typed
 
-instance (CodeGens t Ctx, Show n) => CodeGens ((n, t)) Ctx where
-  genCode :: (n, t) -> Reader Ctx Text
-  genCode (name, value) = do
-    value' <- genCode value
-    return [i|#{name}: #{value'}|]
+type Block' = Block Typed
 
-genPropsCode :: (CodeGens t Ctx, Show n) => [(n, t)] -> Reader Ctx Text
-genPropsCode props = T.intercalate ", " <$> mapM genCode props
+genPropCode :: (Id, Expr') -> Reader Indentation Text
+genPropCode (prop, value) = do
+  value' <- genExprCode value
+  return [i|#{prop}: #{value'}|]
 
-genIndexed :: (CodeGens t Ctx) => [t] -> Reader Ctx Text
-genIndexed values = genPropsCode (zip [(0 :: Int) ..] values)
+genPropsCode :: [(Id, Expr')] -> Reader Indentation Text
+genPropsCode props = Text.intercalate ", " <$> mapM genPropCode props
 
-genMatchCode :: Text -> (Pattern, Expr) -> Reader Ctx Text
+genIndexedPropsCode :: [Expr'] -> Reader Indentation Text
+genIndexedPropsCode values =
+  let indexes = map (Id NoRange . Text.pack . show) [(0 :: Integer) ..]
+   in genPropsCode (zip indexes values)
+
+genBlockCode :: Block' -> Reader Indentation Text
+genBlockCode (Return expr) = do
+  expr' <- genExprCode expr
+  indent <- ask
+  return [i|#{indent}return #{expr'};\n|]
+genBlockCode (Do stmt block) = do
+  stmt' <- genExprCode stmt
+  block' <- genBlockCode block
+  indent <- ask
+  return [i|#{indent}#{stmt'};\n#{block'}|]
+genBlockCode (Let isMut bound expr block) = do
+  let keyword = if isMut then "let" else "const" :: Text
+  expr' <- genExprCode expr
+  block' <- genBlockCode block
+  indent <- ask
+  return [i|#{indent}#{keyword} #{bound} = #{expr'};\n#{block'}|]
+genBlockCode (Void _) = return ""
+genBlockCode (Loop cond actions block) = do
+  cond' <- genExprCode cond
+  actions' <- genStmtsCode actions
+  block' <- genBlockCode block
+  indent <- ask
+  return [i|#{indent}while (#{cond'}) {\n#{actions'}#{indent}}\n#{block'}|]
+
+genStmtsCode :: Block' -> Reader Indentation Text
+genStmtsCode block = do
+  indent <- increaseIndentation
+  withIndentation indent (genBlockCode block)
+
+genMatchCode :: Text -> (Pattern, Expr') -> Reader Indentation Text
 genMatchCode name (patt, expr) = do
-  oldIndent <- asks indentation
+  oldIndent <- ask
   indent <- increaseIndentation
   let (conds, binds) = extractCondsAndBinds name patt
-  let cond = if null conds then "true" else T.intercalate " && " conds
-  let binds' = T.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|]) binds
+  let cond = if null conds then "true" else Text.intercalate " && " conds
+  let binds' = Text.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|]) binds
   case expr of
-    Block block _ -> do
+    Block _ block -> do
       stmts <- genStmtsCode block
       return [i|if (#{cond}) {\n#{binds'}#{stmts}#{oldIndent}}|]
     _ -> do
-      expr' <- local (withIndentation indent) (genCode expr)
+      expr' <- withIndentation indent (genExprCode expr)
       return [i|if (#{cond}) {\n#{binds'}#{indent}return #{expr'};\n#{oldIndent}}|]
 
-genBlockCode :: Block -> Reader Ctx Text
-genBlockCode (Return expr) = do
-  expr' <- genCode expr
-  indent <- asks indentation
-  return [i|#{indent}return #{expr'};\n|]
-genBlockCode (Do stmt block) = do
-  stmt' <- genCode stmt
-  block' <- genBlockCode block
-  indent <- asks indentation
-  return [i|#{indent}#{stmt'};\n#{block'}|]
-genBlockCode (Let isMut bound _ expr block) = do
-  let keyword = if isMut then "let" else "const" :: Text
-  expr' <- genCode expr
-  block' <- genBlockCode block
-  indent <- asks indentation
-  return [i|#{indent}#{keyword} #{bound} = #{expr'};\n#{block'}|]
-genBlockCode Void = return ""
-genBlockCode (Loop cond actions block) = do
-  cond' <- genCode cond
-  actions' <- genStmtsCode actions
-  block' <- genBlockCode block
-  indent <- asks indentation
-  return [i|#{indent}while (#{cond'}) {\n#{actions'}#{indent}}\n#{block'}|]
-
-genStmtsCode :: Block -> Reader Ctx Text
-genStmtsCode block = do
-  indent <- increaseIndentation
-  local (withIndentation indent) (genBlockCode block)
-
-genFunCode :: Id -> Expr -> Reader Ctx Text
+genFunCode :: Id -> Expr' -> Reader Indentation Text
 genFunCode param body = case body of
-  Block block _ -> do
+  Block _ block -> do
     body' <- genStmtsCode block
-    indent <- asks indentation
+    indent <- ask
     return [i|(#{param} => {\n#{body'}#{indent}})|]
   _ -> do
-    body' <- genCode body
+    body' <- genExprCode body
     return [i|(#{param} => #{body'})|]
 
-instance CodeGens Expr Ctx where
-  genCode :: Expr -> Reader Ctx Text
-  genCode (Literal lit _) = return (genLitCode lit)
-  genCode (Data tag exprs _) = do
-    let tagged = [i|$tag: "#{tag}"|] :: Text
-    exprs' <- genIndexed exprs
-    return $
-      if null exprs
-        then [i|({#{tagged}})|]
-        else [i|({#{tagged}, #{exprs'}})|]
-  genCode (Record props _) = do
-    props' <- genPropsCode (NEL.toList props)
-    return [i|({#{props'}})|]
-  genCode (Tuple exprs _) = do
-    exprs' <- genIndexed (NEL2.toList exprs)
-    return [i|({#{exprs'}})|]
-  genCode (Var (Id name _)) = withReaderT symNames (sanitize name)
-  genCode (Mut (Id name _) expr) = do
-    name' <- withReaderT symNames (sanitize name)
-    expr' <- genCode expr
-    return [i|(#{name'} = #{expr'})|]
-  genCode (App f arg) = do
-    f' <- genCode f
-    arg' <- genCode arg
-    return [i|#{f'}(#{arg'})|]
-  genCode (Access expr (Id prop _)) = do
-    expr' <- genCode expr
-    return [i|#{expr'}.#{prop}|]
-  genCode (Index expr ix _) = do
-    expr' <- genCode expr
-    return [i|#{expr'}[#{ix}]|]
-  genCode (Cond cond yes no _) = do
-    cond' <- genCode cond
-    yes' <- genCode yes
-    no' <- genCode no
-    return [i|#{cond'} ? #{yes'} : #{no'}|]
-  genCode (PatternMatch expr matches _) = do
-    oldIndent <- asks indentation
-    indent <- increaseIndentation
-    expr' <- local (withIndentation indent) (genCode expr)
-    let name = "$$obj"
-    matches' <- local (withIndentation indent) (mapM (genMatchCode name) $ NEL.toList matches)
-    let matches'' = T.intercalate " else " matches'
-    return [i|(#{name} => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
-  genCode (Fun param body) = genFunCode param body
-  genCode (Block block _) = do
-    content <- genStmtsCode block
-    indent <- asks indentation
-    return [i|(() => {\n#{content}#{indent}})()|]
-  genCode (Debug expr _) = do
-    expr' <- genCode expr
-    return [i|console.debug(#{expr'})|]
-  genCode (ExtExpr (Ext code _)) = return code
-  genCode (Closure _ expr _) = genCode expr
+genExprCode :: Expr' -> Reader Indentation Text
+genExprCode (Literal _ lit) = return (genLitCode lit)
+genExprCode (Data _ tag exprs) = do
+  let tagged = [i|$tag: "#{tag}"|] :: Text
+  exprs' <- genIndexedPropsCode exprs
+  return $
+    if null exprs
+      then [i|({#{tagged}})|]
+      else [i|({#{tagged}, #{exprs'}})|]
+genExprCode (Record _ props) = do
+  props' <- genPropsCode (NonEmpty.toList props)
+  return [i|({#{props'}})|]
+genExprCode (Tuple _ exprs) = do
+  exprs' <- genIndexedPropsCode (NonEmpty.toList exprs)
+  return [i|({#{exprs'}})|]
+genExprCode (Var _ (Id _ name)) = return name
+genExprCode (Mut _ name expr) = do
+  expr' <- genExprCode expr
+  return [i|(#{name} = #{expr'})|]
+genExprCode (App _ f arg) = do
+  f' <- genExprCode f
+  arg' <- genExprCode arg
+  return [i|#{f'}(#{arg'})|]
+genExprCode (Access _ expr (Id _ prop)) = do
+  expr' <- genExprCode expr
+  return [i|#{expr'}.#{prop}|]
+genExprCode (Index _ expr ix) = do
+  expr' <- genExprCode expr
+  return [i|#{expr'}[#{ix}]|]
+genExprCode (Cond _ cond yes no) = do
+  cond' <- genExprCode cond
+  yes' <- genExprCode yes
+  no' <- genExprCode no
+  return [i|#{cond'} ? #{yes'} : #{no'}|]
+genExprCode (PatternMatch _ expr matches) = do
+  oldIndent <- ask
+  indent <- increaseIndentation
+  expr' <- withIndentation indent (genExprCode expr)
+  let name = "$$obj"
+  matches' <- withIndentation indent (mapM (genMatchCode name) $ NonEmpty.toList matches)
+  let matches'' = Text.intercalate " else " matches'
+  return [i|(#{name} => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
+genExprCode (Fun _ param body) = genFunCode param body
+genExprCode (Block _ block) = do
+  content <- genStmtsCode block
+  indent <- ask
+  return [i|(() => {\n#{content}#{indent}})()|]
+genExprCode (Debug _ expr) = do
+  expr' <- genExprCode expr
+  return [i|console.debug(#{expr'})|]
+genExprCode (External _ params code) = do
+  let params' = Text.concat $ map (\param -> [i|(#{param}) => |]) params
+  return [i|#{params'}#{code}|]
 
-instance CodeGens (Bind t Expr) Ctx where
-  genCode :: Bind t Expr -> Reader Ctx Text
-  genCode (Bind bder@(Id name _) _ expr) = do
-    name' <- withReaderT symNames (sanitize name)
-    expr' <- case expr of
-      (Closure _ fun@(Fun _ _) (Just self))
-        | self == bder ->
-            let optimized = optimize bder fun
-             in genCode (fromMaybe expr optimized)
-      _ -> genCode expr
-    return [i|const #{name'} = #{expr'};|]
+genBindCode :: Bind OfValue Typed -> Reader Indentation Text
+genBindCode (Bind binder' _ expr) = do
+  expr' <- genExprCode (fromMaybe expr $ tryOptimize binder' expr)
+  return [i|const #{binder'} = #{expr'};|]
 
-instance CodeGens Module Ctx where
-  genCode :: Module -> Reader Ctx Text
-  genCode (Module values _ _ optExpr) = do
-    defns <- fmap (T.intercalate "\n\n") (mapM genCode values)
-    case optExpr of
-      Nothing -> return defns
-      Just expr -> do
-        expr' <- genCode expr
-        return [i|#{defns}\n\n#{expr'};|]
+genModuleCode :: Module Typed -> Reader Indentation Text
+genModuleCode (Module values _ _ entry) = do
+  defns <- fmap (Text.intercalate "\n\n") (mapM genBindCode values)
+  case entry of
+    Nothing -> return defns
+    Just expr -> do
+      expr' <- genExprCode expr
+      return [i|#{defns}\n\n#{expr'};|]
 
-runGenCode :: (CodeGens t Ctx) => (Maybe Text) -> t -> Text
-runGenCode extraCode x =
-  let code =
-        runReader
-          (genCode x)
-          Ctx
-            { indentation = "",
-              separator = '$',
-              symNames =
-                M.fromList
-                  [ ('+', "$plus"),
-                    ('-', "$mnus"),
-                    ('*', "$ast"),
-                    ('/', "$sol"),
-                    ('%', "$pcnt"),
-                    ('^', "$hat"),
-                    ('|', "$bar"),
-                    ('&', "$amp"),
-                    ('<', "$lt"),
-                    ('>', "$gt"),
-                    ('=', "$eq"),
-                    (':', "$coln"),
-                    ('\\', "$bsol"),
-                    ('?', "$qust"),
-                    ('!', "$excl"),
-                    -- ('$', "$dllr"),
-                    ('@', "$at"),
-                    ('~', "$tild"),
-                    ('.', "$dot")
-                  ]
-            }
-   in T.intercalate "\n\n" (maybeToList extraCode ++ [code]) <> "\n"
+runCodegen :: Module Typed -> Text
+runCodegen mdule = runReader (genModuleCode mdule) ""

@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -Wno-x-partial #-}
 
-module Fine.Transform.ShuntingYard (runSy) where
+module Fine.Transform.ShuntingYard (runShuntingYard) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RWS.Strict (RWS, asks, get, gets, modify, runRWS, tell)
-import qualified Data.Map.Strict as M
+import qualified Data.Map.Strict as Map
 import Fine.Error
   ( Error (SameInfixPrecedence),
     Errors,
@@ -13,18 +13,17 @@ import Fine.Error
     collectWarning,
     errorUNREACHABLE,
   )
-import Fine.Syntax.Abstract (Expr (..))
-import Fine.Syntax.Common (Assoc (..), Fixity (..), Id, OpChain (..))
+import Fine.Syntax (Assoc (..), Chain (..), Expr (..), Fixity (..), Id, Pass (Parsed), range)
 import Fine.Transform.Common (Fixities)
 
-type SYStack = ([Expr], [Id])
+type SYStack = ([Expr Parsed], [Id])
 
 defaultFixity :: Fixity
 defaultFixity = Fixity LeftAssoc 9
 
 findFixity :: Id -> RWS Fixities Errors s Fixity
 findFixity var = do
-  maybeFix <- asks (M.lookup var)
+  maybeFix <- asks (Map.lookup var)
   case maybeFix of
     Just fix -> return fix
     Nothing -> do
@@ -34,31 +33,34 @@ findFixity var = do
 operatorStack :: SYStack -> [Id]
 operatorStack (_, ops) = ops
 
-modifyOperands :: (Monoid w) => ([Expr] -> [Expr]) -> RWS r w SYStack ()
+modifyOperands :: (Monoid w) => ([Expr Parsed] -> [Expr Parsed]) -> RWS r w SYStack ()
 modifyOperands f = modify $ \(opns, ops) -> (f opns, ops)
 
 modifyOperators :: (Monoid w) => ([Id] -> [Id]) -> RWS r w SYStack ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
-mkTopApp :: [Expr] -> Id -> [Expr]
-mkTopApp (right : left : rest) var = App (App (Var var) left) right : rest
+mkTopApp :: [Expr Parsed] -> Id -> [Expr Parsed]
+mkTopApp (right : left : rest) var =
+  let f = Var (range var) var
+      partial = App (range f <> range left) f left
+   in App (range partial <> range right) partial right : rest
 mkTopApp _ _ = errorUNREACHABLE
 
-consume :: [Expr] -> [Id] -> [Expr]
+consume :: [Expr Parsed] -> [Id] -> [Expr Parsed]
 consume = foldl mkTopApp
 
-continueWithCurr :: Id -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+continueWithCurr :: Id -> Chain -> RWS Fixities Errors SYStack (Expr Parsed)
 continueWithCurr curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
   modifyOperands (`mkTopApp` top) -- create app
   sy' curr chain
 
-continueWithChain :: Id -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+continueWithChain :: Id -> Chain -> RWS Fixities Errors SYStack (Expr Parsed)
 continueWithChain curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
-sy' :: Id -> OpChain Expr -> RWS Fixities Errors SYStack Expr
+sy' :: Id -> Chain -> RWS Fixities Errors SYStack (Expr Parsed)
 sy' curr chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators
@@ -79,14 +81,14 @@ sy' curr chain = do
         LT -> continueWithChain curr chain
 
 -- shunting yard when the next thing to handle is the operand
-sy :: OpChain Expr -> RWS Fixities Errors SYStack Expr
+sy :: Chain -> RWS Fixities Errors SYStack (Expr Parsed)
 sy (Operand expr) = do
   (operands, operators) <- get
   return $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
-runSy :: Fixities -> OpChain Expr -> (Expr, Errors)
-runSy _ (Operand expr) = (expr, mempty)
-runSy ctx (Operation left op chain) =
+runShuntingYard :: Fixities -> Chain -> (Expr Parsed, Errors)
+runShuntingYard _ (Operand expr) = (expr, mempty)
+runShuntingYard ctx (Operation left op chain) =
   let (expr, _, errors) = runRWS (sy chain) ctx ([left], [op])
    in (expr, errors)

@@ -25,11 +25,11 @@ source-repository head
 
 library
   exposed-modules:
+      Control.Monad.Trans.RS
       Control.Monad.Trans.RW
-      Control.Monad.Trans.State.Strict.Extra
       Control.Monad.Trans.SW
       Data.List.Extra
-      Data.List.NonEmpty2
+      Data.Tuple.Extra
       Fine.Codegen
       Fine.Codegen.Lit
       Fine.Codegen.Pattern
@@ -37,14 +37,13 @@ library
       Fine.Error
       Fine.Lexer
       Fine.Parser
-      Fine.Syntax.Abstract
-      Fine.Syntax.Common
-      Fine.Syntax.Concrete
+      Fine.Rename
+      Fine.Syntax
+      Fine.Syntax.Utils
       Fine.Transform
       Fine.Transform.Common
-      Fine.Transform.Expr
-      Fine.Transform.Pattern
       Fine.Transform.ShuntingYard
+      Fine.Transform.Terms
       Fine.Transform.Vars
   other-modules:
       Paths_fine_compiler
@@ -60,6 +59,9 @@ library
       FlexibleContexts
       FlexibleInstances
       QuasiQuotes
+      DataKinds
+      KindSignatures
+      TypeFamilies
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       array
@@ -87,6 +89,9 @@ executable fine-compiler-exe
       FlexibleContexts
       FlexibleInstances
       QuasiQuotes
+      DataKinds
+      KindSignatures
+      TypeFamilies
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
@@ -116,6 +121,9 @@ test-suite fine-compiler-test
       FlexibleContexts
       FlexibleInstances
       QuasiQuotes
+      DataKinds
+      KindSignatures
+      TypeFamilies
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
