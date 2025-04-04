@@ -105,7 +105,33 @@ Pattern : Prefix Patterns     { DataP (range $1 <> (range . NonEmpty.last) $2) $
 
 -- BLOCK
 
+Block : Prefix '=' Expr ';' Block             { Let False $1 $3 $5 }
+      | mut Prefix '=' Expr ';' Block         { Let True $2 $4 $6 }
+      | while Expr do '{' Block '}' ';' Block { Loop $2 $5 $8 }
+      | Expr ';' Block                        { Do $1 $3 }
+      | Expr                                  { Return $1 }
+
 -- EXPR
+
+Args : {- empty -}  { undefined }
+
+Record : {- empty -}  { undefined }
+
+Int : nat     { Literal (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
+    | nonnat  { Literal (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
+
+Expr ::                 { Expr Parsed }
+Expr : Prefix           { Var (range $1) $1 }
+     | '(' Args ')'     { if NonEmpty.length $2 == 1 then NonEmpty.head $2 else Tuple (range $1 <> range $3) $2 }
+     | '(' ')'          { Literal (range $1 <> range $2) Unit }
+     | '{' Expr '}'     { $2 }
+     | '{' Record '}'   { Record (range $1 <> range $3) $2 }
+     | do '{' Block '}' { Block (range $1 <> range $4) $3 }
+     | Int              { $1 }
+     | float            { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
+     | false            { Literal (range $1) (Bool False) }
+     | true             { Literal (range $1) (Bool True) }
+     | str              { Literal (range $1) (Str $ Text.tail $ Text.init $ tokenLexeme $1) }
 
 -- TYPE
 
