@@ -1,7 +1,6 @@
 module Main (main) where
 
 import Control.Monad (forM_)
-import Data.Text (Text)
 import qualified Data.Set as Set
 import qualified Data.Text.IO as TIO (readFile, writeFile)
 import Fine.Codegen (runCodegen)
