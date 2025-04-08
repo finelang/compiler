@@ -8,10 +8,10 @@ import GHC.Stack (HasCallStack)
 
 repeated :: (Ord a) => [a] -> [a]
 repeated xs = reverse (go xs empty)
-  where
-    go [] _ = []
-    go (y : ys) s | member y s = y : go ys s
-    go (y : ys) s = go ys (insert y s)
+ where
+  go [] _ = []
+  go (y : ys) s | member y s = y : go ys s
+  go (y : ys) s = go ys (insert y s)
 
 toNonEmptyPARTIAL :: (HasCallStack) => [a] -> NonEmpty a
 toNonEmptyPARTIAL xs = head xs :| tail xs

@@ -1,21 +1,21 @@
 module Fine.Transform.Terms (transformType, runExprTransformer) where
 
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
-import qualified Data.List.NonEmpty as NonEmpty
-import qualified Data.Set as Set
-import Fine.Error
-  ( Errors,
-    Warning (DebugKeywordUsage),
-    collectWarning,
-  )
-import Fine.Syntax
-  ( Block (..),
-    Expr (..),
-    Pass (Parsed, Transformed),
-    Pattern (..),
-    Type (..),
-    range,
-  )
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Set qualified as Set
+import Fine.Error (
+  Errors,
+  Warning (DebugKeywordUsage),
+  collectWarning,
+ )
+import Fine.Syntax (
+  Block (..),
+  Expr (..),
+  Pass (Parsed, Transformed),
+  Pattern (..),
+  Type (..),
+  range,
+ )
 import Fine.Transform.Common (Constructors, Fixities)
 import Fine.Transform.ShuntingYard (runShuntingYard)
 

@@ -2,22 +2,22 @@ module Fine.Codegen.TailRec (tryOptimize) where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (Reader, ReaderT (runReaderT), ask, asks, runReader)
-import qualified Data.Functor as Functor
+import Data.Functor qualified as Functor
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NonEmpty
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Maybe (catMaybes, fromJust, fromMaybe)
 import Data.Text (cons)
-import Fine.Syntax
-  ( Block (..),
-    Expr (..),
-    Id (Id),
-    Kind (KLit),
-    Lit (Bool),
-    LitT (UnitT),
-    Pass (Typed),
-    Range (NoRange),
-    Type (LiteralT),
-  )
+import Fine.Syntax (
+  Block (..),
+  Expr (..),
+  Id (Id),
+  Kind (KLit),
+  Lit (Bool),
+  LitT (UnitT),
+  Pass (Typed),
+  Range (NoRange),
+  Type (LiteralT),
+ )
 import Fine.Syntax.Utils (boundVars, flattenApp, flattenFun)
 
 type Expr' = Expr Typed
@@ -30,7 +30,7 @@ data Substt = Substt
   }
 
 replaceIn :: Expr' -> Reader Substt Expr'
-replaceIn expr@(Literal {}) = return expr
+replaceIn expr@(Literal{}) = return expr
 replaceIn (Data ext tag exprs) = Data ext tag <$> mapM replaceIn exprs
 replaceIn (Record ext props) = Record ext <$> (mapM . mapM) replaceIn props
 replaceIn (Tuple ext exprs) = Tuple ext <$> mapM replaceIn exprs
@@ -51,24 +51,24 @@ replaceIn fun@(Fun ext param body) = do
     then return fun
     else Fun ext param <$> replaceIn body
 replaceIn (Block ext' block') = Block ext' <$> inBlock block'
-  where
-    inBlock (Return expr) = Return <$> replaceIn expr
-    inBlock (Do action block) = Do <$> replaceIn action <*> inBlock block
-    inBlock (Let isMut binder expr block) = do
-      old <- asks oldVar
-      let blockAction = if old == binder then return else inBlock
-      Let isMut binder <$> replaceIn expr <*> blockAction block
-    inBlock block@(Void _) = return block
-    inBlock (Loop cond actions block) =
-      Loop <$> replaceIn cond <*> inBlock actions <*> inBlock block
+ where
+  inBlock (Return expr) = Return <$> replaceIn expr
+  inBlock (Do action block) = Do <$> replaceIn action <*> inBlock block
+  inBlock (Let isMut binder expr block) = do
+    old <- asks oldVar
+    let blockAction = if old == binder then return else inBlock
+    Let isMut binder <$> replaceIn expr <*> blockAction block
+  inBlock block@(Void _) = return block
+  inBlock (Loop cond actions block) =
+    Loop <$> replaceIn cond <*> inBlock actions <*> inBlock block
 replaceIn (PatternMatch ext expr matches) =
   PatternMatch ext <$> replaceIn expr <*> mapM inMatch matches
-  where
-    inMatch (patt, cont) = do
-      old <- asks oldVar
-      if old `elem` boundVars patt
-        then return (patt, cont)
-        else (,) patt <$> replaceIn cont
+ where
+  inMatch (patt, cont) = do
+    old <- asks oldVar
+    if old `elem` boundVars patt
+      then return (patt, cont)
+      else (,) patt <$> replaceIn cont
 replaceIn (Debug ext expr) = Debug ext <$> replaceIn expr
 replaceIn expr@(External _ _ _) = return expr
 

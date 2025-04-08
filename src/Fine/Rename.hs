@@ -4,24 +4,24 @@ import Control.Applicative ((<|>))
 import Control.Monad.Trans.RS (RS, ask, asks, get, local, put, runRS, withReader)
 import Data.Char (isSymbol, ord)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import qualified Data.Text as Text
-import Fine.Syntax
-  ( Bind (Bind),
-    Block (..),
-    Expr (..),
-    Id (Id),
-    Module (Module, moduleEntry, moduleValues),
-    Pass (Typed),
-    Pattern (..),
-    TypeOfBind (OfValue),
-    binder,
-  )
+import Data.Text qualified as Text
+import Fine.Syntax (
+  Bind (Bind),
+  Block (..),
+  Expr (..),
+  Id (Id),
+  Module (Module, moduleEntry, moduleValues),
+  Pass (Typed),
+  Pattern (..),
+  TypeOfBind (OfValue),
+  binder,
+ )
 import Fine.Syntax.Utils (boundVars)
 
 type Count = Integer
@@ -133,7 +133,7 @@ renameModule mdule@(Module values _ _ entry) = do
   values' <- withReader reader (mapM renameBind values)
   resetCount
   entry' <- withReader reader (mapM renameExpr entry)
-  return (mdule {moduleValues = values', moduleEntry = entry'})
+  return (mdule{moduleValues = values', moduleEntry = entry'})
 
 runRenamer :: InvalidNames -> Module Typed -> Module Typed
 runRenamer invalidNames mdule = runRS (renameModule mdule) (Map.empty, invalidNames) 0

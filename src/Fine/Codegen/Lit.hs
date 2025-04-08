@@ -2,7 +2,7 @@ module Fine.Codegen.Lit (genLitCode) where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Fine.Syntax (Lit (..))
 
 genLitCode :: Lit -> Text

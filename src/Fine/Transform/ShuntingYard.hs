@@ -4,15 +4,15 @@ module Fine.Transform.ShuntingYard (runShuntingYard) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.RWS.Strict (RWS, asks, get, gets, modify, runRWS, tell)
-import qualified Data.Map.Strict as Map
-import Fine.Error
-  ( Error (SameInfixPrecedence),
-    Errors,
-    Warning (MissingFixity),
-    collectError,
-    collectWarning,
-    errorUNREACHABLE,
-  )
+import Data.Map.Strict qualified as Map
+import Fine.Error (
+  Error (SameInfixPrecedence),
+  Errors,
+  Warning (MissingFixity),
+  collectError,
+  collectWarning,
+  errorUNREACHABLE,
+ )
 import Fine.Syntax (Assoc (..), Chain (..), Expr (..), Fixity (..), Id, Pass (Parsed), range)
 import Fine.Transform.Common (Fixities)
 

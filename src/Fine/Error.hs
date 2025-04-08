@@ -1,14 +1,14 @@
-module Fine.Error
-  ( Errors (..),
-    Warning (..),
-    Error (..),
-    collectError,
-    collectWarning,
-    errorTODO,
-    errorUNREACHABLE,
-    wrapWarning,
-    wrapError,
-  )
+module Fine.Error (
+  Errors (..),
+  Warning (..),
+  Error (..),
+  collectError,
+  collectWarning,
+  errorTODO,
+  errorUNREACHABLE,
+  wrapWarning,
+  wrapError,
+)
 where
 
 import Data.String.Interpolate (i)

@@ -1,30 +1,29 @@
-module Fine.Syntax
-  ( Range (..),
-    HasRange (..),
-    Id (..),
-    Pass (..),
-    Kind (..),
-    LitT (..),
-    Type (..),
-    typeExt,
-    Chain (..),
-    Lit (..),
-    Block (..),
-    Expr (..),
-    exprExt,
-    Pattern (..),
-    TypeOfBind (..),
-    Bind (..),
-    Assoc (..),
-    Fixity (..),
-    Defn (..),
-    ParsedModule (..),
-    Module (..),
-  )
+module Fine.Syntax (
+  Range (..),
+  HasRange (..),
+  Id (..),
+  Pass (..),
+  Kind (..),
+  LitT (..),
+  Type (..),
+  typeExt,
+  Chain (..),
+  Lit (..),
+  Block (..),
+  Expr (..),
+  exprExt,
+  Pattern (..),
+  TypeOfBind (..),
+  Bind (..),
+  Assoc (..),
+  Fixity (..),
+  Defn (..),
+  ParsedModule (..),
+  Module (..),
+)
 where
 
 import Data.List.NonEmpty (NonEmpty)
--- import Data.List.NonEmpty2 (NonEmpty2)
 import Data.Map.Strict (Map)
 import Data.String.Interpolate (i)
 import Data.Text (Text, unpack)

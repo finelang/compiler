@@ -4,7 +4,7 @@ import Data.List.NonEmpty (toList)
 import Data.Maybe (mapMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Fine.Codegen.Lit (genLitCode)
 import Fine.Syntax (Id (Id), Lit (Str), Pattern (..))
 
@@ -43,9 +43,9 @@ fromPattern (Discard _) = []
 
 fromPatternPath :: PatternPath -> ([PathPiece], PathEnd)
 fromPatternPath pattPath = go pattPath []
-  where
-    go (End ct) pieces = (reverse pieces, ct)
-    go (Continue piece pp) pieces = go pp (piece : pieces)
+ where
+  go (End ct) pieces = (reverse pieces, ct)
+  go (Continue piece pp) pieces = go pp (piece : pieces)
 
 genPathPieceCode :: PathPiece -> Text
 genPathPieceCode (PropTo name) = [i|.#{name}|]

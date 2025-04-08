@@ -4,22 +4,22 @@ import Control.Monad (forM_, unless)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
 import Data.List.Extra (repeated)
 import Data.Set (Set)
-import qualified Data.Set as Set
-import Fine.Error
-  ( Error (..),
-    Errors,
-    Warning (UnusedVar),
-    collectError,
-    collectWarning,
-  )
-import Fine.Syntax
-  ( Block (..),
-    Expr (..),
-    Id,
-    Pass (Transformed),
-    Pattern (..),
-    Type (..),
-  )
+import Data.Set qualified as Set
+import Fine.Error (
+  Error (..),
+  Errors,
+  Warning (UnusedVar),
+  collectError,
+  collectWarning,
+ )
+import Fine.Syntax (
+  Block (..),
+  Expr (..),
+  Id,
+  Pass (Transformed),
+  Pattern (..),
+  Type (..),
+ )
 import Fine.Syntax.Utils (boundVars)
 
 type Env = Set Id

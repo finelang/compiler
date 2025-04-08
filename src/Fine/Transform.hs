@@ -2,37 +2,37 @@ module Fine.Transform (runTransformer) where
 
 import Control.Monad (forM_, unless, when)
 import Control.Monad.Trans.SW (SW, gets, modify, runSW, tell)
-import qualified Data.List.NonEmpty as NonEmpty
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
-import qualified Data.Set as Set
-import Fine.Error
-  ( Error (..),
-    Errors (Errors),
-    Warning (UnusedVar),
-    collectError,
-    collectWarning,
-  )
-import Fine.Syntax
-  ( Bind (..),
-    Defn (..),
-    Expr (..),
-    Fixity (Fixity),
-    Id,
-    LitT (UnitT),
-    Module (Module),
-    ParsedModule (ParsedModule),
-    Pass (Parsed, Transformed),
-    Range (NoRange),
-    Type (..),
-    TypeOfBind (..),
-    binder,
-  )
+import Data.Set qualified as Set
+import Fine.Error (
+  Error (..),
+  Errors (Errors),
+  Warning (UnusedVar),
+  collectError,
+  collectWarning,
+ )
+import Fine.Syntax (
+  Bind (..),
+  Defn (..),
+  Expr (..),
+  Fixity (Fixity),
+  Id,
+  LitT (UnitT),
+  Module (Module),
+  ParsedModule (ParsedModule),
+  Pass (Parsed, Transformed),
+  Range (NoRange),
+  Type (..),
+  TypeOfBind (..),
+  binder,
+ )
 import Fine.Transform.Common (Constructors, Fixities)
 import Fine.Transform.Terms (runExprTransformer, transformType)
-import qualified Fine.Transform.Vars as Vars
+import Fine.Transform.Vars qualified as Vars
 
 data Env = Env
   { allValueBinders :: Set Id, -- all binders to make available for functions
@@ -51,13 +51,13 @@ initEnv [] = return ()
 initEnv (defn : defns) = do
   case defn of
     FixDefn _ _ -> return ()
-    Defn binder' _ -> modify (\st -> st {allValueBinders = Set.insert binder' (allValueBinders st)})
+    Defn binder' _ -> modify (\st -> st{allValueBinders = Set.insert binder' (allValueBinders st)})
     TypingDefn binder' type' -> do
       typings' <- gets typings
       if Map.member binder' typings'
         then tell (collectError $ RepeatedTyping binder')
-        else modify (\st -> st {typings = Map.insert binder' type' typings'})
-    TypeDefn (Bind binder' _ _) -> modify (\st -> st {allTypeBinders = Set.insert binder' (allTypeBinders st)})
+        else modify (\st -> st{typings = Map.insert binder' type' typings'})
+    TypeDefn (Bind binder' _ _) -> modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
     DataDefn (Bind binder' _ _) ctBinds -> do
       let ctors = NonEmpty.map binder ctBinds
       modify
@@ -103,7 +103,7 @@ handleExprVars bound expr = do
     forM_
       bound
       (\binder' -> when (Set.member binder' exprEnv) (tell $ collectError $ UsageBeforeInit binder'))
-  modify (\st -> st {usedValueBinders = Set.union exprEnv (usedValueBinders st)})
+  modify (\st -> st{usedValueBinders = Set.union exprEnv (usedValueBinders st)})
 
 handleTypeVars :: Maybe Id -> TransformedType -> SW Env Errors ()
 handleTypeVars bound type' = do
@@ -117,7 +117,7 @@ handleTypeVars bound type' = do
     forM_
       bound
       (\binder' -> when (Set.member binder' typeEnv) (tell $ collectError $ UsageBeforeInit binder'))
-  modify (\st -> st {usedTypeBinders = Set.union typeEnv (usedTypeBinders st)})
+  modify (\st -> st{usedTypeBinders = Set.union typeEnv (usedTypeBinders st)})
 
 transformValueBind :: Bind OfValue Parsed -> SW Env Errors (Bind OfValue Transformed)
 transformValueBind (Bind binder' type' value) = do
@@ -125,7 +125,7 @@ transformValueBind (Bind binder' type' value) = do
     current <- gets currentValueBinders
     if Set.member binder' current
       then tell (collectError $ AlreadyInScope binder')
-      else modify (\st -> st {currentValueBinders = Set.insert binder' current})
+      else modify (\st -> st{currentValueBinders = Set.insert binder' current})
   value' <- transformExpr value
   handleExprVars (Just binder') value'
   let type'' = transformType type'
@@ -138,7 +138,7 @@ transformTypeBind (Bind binder' kind type') = do
     current <- gets currentTypeBinders
     if Set.member binder' current
       then tell (collectError $ AlreadyInScope binder')
-      else modify (\st -> st {currentTypeBinders = Set.insert binder' current})
+      else modify (\st -> st{currentTypeBinders = Set.insert binder' current})
   let type'' = transformType type'
   handleTypeVars (Just binder') type''
   return (Bind binder' kind type'')
@@ -164,7 +164,7 @@ transformDefn (FixDefn fix@(Fixity _ prec) op) = do
   fixities' <- gets fixities
   if Map.member op fixities'
     then tell (collectError $ RepeatedFixity op)
-    else modify (\ctx -> ctx {fixities = Map.insert op fix fixities'})
+    else modify (\ctx -> ctx{fixities = Map.insert op fix fixities'})
   return []
 transformDefn (Defn binder' value) = do
   type' <- do
@@ -181,7 +181,7 @@ transformDefn (TypeDefn bind) = do
 transformDefn (DataDefn bind ctBinds) = do
   do
     let ctBinders' = NonEmpty.map binder ctBinds
-    modify (\st -> st {constructors = foldr Set.insert (constructors st) ctBinders'})
+    modify (\st -> st{constructors = foldr Set.insert (constructors st) ctBinders'})
   ctBinds' <- (mapM transformValueBind ctBinds)
   bind' <- transformTypeBind bind
   return (TBind bind' : (map VBind . NonEmpty.toList) ctBinds')

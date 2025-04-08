@@ -2,9 +2,9 @@ module Control.Monad.Trans.SW (module Control.Monad.Trans.SW) where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State.Strict (StateT)
-import qualified Control.Monad.Trans.State.Strict as State
+import Control.Monad.Trans.State.Strict qualified as State
 import Control.Monad.Trans.Writer.Strict (Writer)
-import qualified Control.Monad.Trans.Writer.Strict as Writer
+import Control.Monad.Trans.Writer.Strict qualified as Writer
 
 type SW s w a = StateT s (Writer w) a
 

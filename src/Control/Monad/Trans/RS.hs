@@ -2,9 +2,9 @@ module Control.Monad.Trans.RS (module Control.Monad.Trans.RS) where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT)
-import qualified Control.Monad.Trans.Reader as Reader
+import Control.Monad.Trans.Reader qualified as Reader
 import Control.Monad.Trans.State.Strict (State)
-import qualified Control.Monad.Trans.State.Strict as State
+import Control.Monad.Trans.State.Strict qualified as State
 
 type RS r s a = ReaderT r (State s) a
 

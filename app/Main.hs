@@ -1,13 +1,13 @@
 module Main (main) where
 
 import Control.Monad (forM_)
-import qualified Data.Set as Set
-import qualified Data.Text.IO as TIO (readFile, writeFile)
+import Data.Set qualified as Set
+import Data.Text.IO qualified as TIO (readFile, writeFile)
 import Fine.Codegen (runCodegen)
-import Fine.Rename (runRenamer)
 import Fine.Error (wrapError, wrapWarning)
 import Fine.Lexer (lexText)
 import Fine.Parser (parseTokens)
+import Fine.Rename (runRenamer)
 import Fine.Transform (runTransformer)
 import System.Environment (getArgs)
 

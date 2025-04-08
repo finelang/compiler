@@ -1,25 +1,25 @@
 module Fine.Codegen (runCodegen) where
 
 import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
-import qualified Data.List.NonEmpty as NonEmpty
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Maybe (fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Fine.Codegen.Lit (genLitCode)
 import Fine.Codegen.Pattern (extractCondsAndBinds)
 import Fine.Codegen.TailRec (tryOptimize)
-import Fine.Syntax
-  ( Bind (Bind),
-    Block (..),
-    Expr (..),
-    Id (Id),
-    Module (Module),
-    Pass (Typed),
-    Pattern (..),
-    Range (NoRange),
-    TypeOfBind (OfValue),
-  )
+import Fine.Syntax (
+  Bind (Bind),
+  Block (..),
+  Expr (..),
+  Id (Id),
+  Module (Module),
+  Pass (Typed),
+  Pattern (..),
+  Range (NoRange),
+  TypeOfBind (OfValue),
+ )
 
 type Indentation = Text
 
