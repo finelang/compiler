@@ -27,4 +27,4 @@ main = do
   forM_ warnings (putStrLn . wrapWarning)
   case result of
     Left errors -> forM_ errors (putStrLn . wrapError)
-    Right mdule -> print mdule >> TIO.writeFile outFilePath (runCodegen $ runRenamer Set.empty mdule)
+    Right mdule -> TIO.writeFile outFilePath (runCodegen $ runRenamer Set.empty mdule)

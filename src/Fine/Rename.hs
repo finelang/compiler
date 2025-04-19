@@ -2,7 +2,8 @@ module Fine.Rename (runRenamer) where
 
 import Control.Applicative ((<|>))
 import Control.Monad.Trans.RS (RS, ask, asks, get, local, put, runRS, withReader)
-import Data.Char (isSymbol, ord)
+import Data.Char (ord)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
@@ -12,14 +13,14 @@ import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Fine.Syntax (
-  Bind (Bind),
+  Bind (..),
+  BindType (OfExpr),
   Block (..),
   Expr (..),
-  Id (Id),
-  Module (Module, moduleEntry, moduleValues),
-  Pass (Typed),
+  Id (Id, Op),
+  Module (Module, moduleEntry, moduleExprs),
+  Pass (Transformed),
   Pattern (..),
-  TypeOfBind (OfValue),
   binder,
  )
 import Fine.Syntax.Utils (boundVars)
@@ -30,6 +31,9 @@ type Substts = Map Id Id
 
 resetCount :: RS r Count ()
 resetCount = put 0
+
+resumeCount :: Count -> RS r Count ()
+resumeCount = put
 
 withSubstt :: Id -> Id -> RS Substts s a -> RS Substts s a
 withSubstt old new = local (Map.insert old new)
@@ -45,10 +49,14 @@ rename (Id r name) = do
   count <- get
   put (count + 1)
   return (Id r [i|#{name}$#{count}|])
+rename op = return op -- operators are not renamed
 
-renameBlock :: Block Typed -> RS Substts Count (Block Typed)
+renameBlock :: Block Transformed -> RS Substts Count (Block Transformed)
 renameBlock (Return expr) = Return <$> renameExpr expr
 renameBlock (Do action block) = Do <$> renameExpr action <*> renameBlock block
+renameBlock (Mut var expr block) =
+  Mut <$> substt var <*> renameExpr expr <*> renameBlock block
+renameBlock (Debug expr block) = Debug <$> renameExpr expr <*> renameBlock block
 renameBlock (Let isMut bound value block) = do
   value' <- renameExpr value
   bound' <- rename bound
@@ -56,64 +64,76 @@ renameBlock (Let isMut bound value block) = do
   return (Let isMut bound' value' block')
 renameBlock (Loop cond actions block) =
   Loop <$> renameExpr cond <*> renameBlock actions <*> renameBlock block
-renameBlock block@(Void _) = return block
 
 renamePatt :: Pattern -> RS Substts Count Pattern
 renamePatt patt@(LiteralP _ _) = return patt
 renamePatt (DataP r tag patts) = DataP r tag <$> mapM renamePatt patts
 renamePatt (RecordP r props) = RecordP r <$> (mapM . mapM) renamePatt props
 renamePatt (TupleP r patts) = TupleP r <$> mapM renamePatt patts
-renamePatt (Capture r name) = Capture r <$> substt name
+renamePatt (Capture name) = Capture <$> substt name
 renamePatt patt@(Discard _) = return patt
 
-renameMatch :: (Pattern, Expr Typed) -> RS Substts Count (Pattern, Expr Typed)
+renameMatch :: (Pattern, Expr Transformed) -> RS Substts Count (Pattern, Expr Transformed)
 renameMatch (patt, expr) = do
+  count <- get
+  resetCount
   substts <- mapM (\var -> (,) var <$> rename var) (boundVars patt)
   patt' <- withSubstts substts (renamePatt patt)
   expr' <- withSubstts substts (renameExpr expr)
+  resumeCount count
   return (patt', expr')
 
-renameExpr :: Expr Typed -> RS Substts Count (Expr Typed)
+renameExpr :: Expr Transformed -> RS Substts Count (Expr Transformed)
 renameExpr expr@(Literal _ _) = return expr
 renameExpr (Data ext tag exprs) = Data ext tag <$> mapM renameExpr exprs
 renameExpr (Record ext props) = Record ext <$> (mapM . mapM) renameExpr props
 renameExpr (Tuple ext exprs) = Tuple ext <$> mapM renameExpr exprs
 renameExpr (Var ext name) = Var ext <$> substt name
-renameExpr (Mut ext name expr) = Mut ext <$> substt name <*> renameExpr expr
-renameExpr (App ext f arg) = App ext <$> renameExpr f <*> renameExpr arg
+renameExpr (App ext f args) = App ext <$> renameExpr f <*> mapM renameExpr args
+renameExpr (GenApp ext f typeArgs) = GenApp ext <$> renameExpr f <*> return typeArgs
 renameExpr (Access ext expr prop) = Access ext <$> renameExpr expr <*> return prop
 renameExpr (Index ext expr ix) = Index ext <$> renameExpr expr <*> return ix
 renameExpr (Cond ext cond yes no) =
   Cond ext <$> renameExpr cond <*> renameExpr yes <*> renameExpr no
-renameExpr (Fun ext param body) = do
-  param' <- rename param
-  body' <- withSubstt param param' (renameExpr body)
-  return (Fun ext param' body')
-renameExpr (Block ext block) = Block ext <$> renameBlock block
+renameExpr (Fun ext params body) = do
+  count <- get
+  resetCount
+  params' <- mapM rename params
+  let substts = NonEmpty.toList (NonEmpty.zip params params')
+  body' <- withSubstts substts $ case body of
+    Block ext' block -> Block ext' <$> renameBlock block
+    _ -> renameExpr body
+  resumeCount count
+  return (Fun ext params' body')
+renameExpr (GenFun ext typeParams body) = GenFun ext typeParams <$> renameExpr body
+renameExpr (Block ext block) = do
+  count <- get
+  resetCount
+  block' <- renameBlock block
+  resumeCount count
+  return (Block ext block')
 renameExpr (PatternMatch ext expr matches) =
   PatternMatch ext <$> renameExpr expr <*> mapM renameMatch matches
-renameExpr (Debug ext expr) = Debug ext <$> renameExpr expr
-renameExpr expr@(External _ _ _) = return expr
 
-renameBind :: Bind OfValue Typed -> RS Substts Count (Bind OfValue Typed)
-renameBind (Bind binder' type' expr) = do
+renameBind :: Bind OfExpr Transformed -> RS Substts Count (Bind OfExpr Transformed)
+renameBind (ExprBind binder' type' expr) = do
   binder'' <- substt binder'
-  resetCount
   expr' <- renameExpr expr
-  return (Bind binder'' type' expr')
+  return (ExprBind binder'' type' expr')
+renameBind (ForeignBind binder' type' code) = do
+  binder'' <- substt binder'
+  return (ForeignBind binder'' type' code)
 
 handleOperator :: Id -> Maybe Id
-handleOperator (Id r name) = do
-  let chars = Text.unpack name
-  if all isSymbol chars
-    then
-      let codes = map (Text.pack . show . ord) chars
-       in Just $ Id r $ Text.append "op$" $ Text.intercalate "_" codes
-    else Nothing
+handleOperator (Id _ _) = Nothing
+handleOperator (Op r name) =
+  let codes = map (Text.pack . show . ord) (Text.unpack name)
+   in Just $ Id r $ Text.append "op$" $ Text.intercalate "_" codes
 
 type InvalidNames = Set Text
 
 handleInvalid :: InvalidNames -> Id -> Maybe Id
+handleInvalid _ (Op _ _) = Nothing
 handleInvalid invalidNames (Id r name) =
   if Set.member name invalidNames
     then Just $ Id r $ Text.append "var$" name
@@ -124,16 +144,15 @@ tryCollectSubstt idn = do
   invalidNames <- ask
   return $ (,) idn <$> (handleOperator idn <|> handleInvalid invalidNames idn)
 
-renameModule :: Module Typed -> RS (Substts, InvalidNames) Count (Module Typed)
-renameModule mdule@(Module values _ _ entry) = do
+renameModule :: Module Transformed -> RS (Substts, InvalidNames) Count (Module Transformed)
+renameModule mdule@(Module exprs _ _ entry) = do
   substts <-
     (Map.fromList . catMaybes)
-      <$> withReader snd (mapM (tryCollectSubstt . binder) values)
+      <$> withReader snd (mapM (tryCollectSubstt . binder) exprs)
   let reader = Map.union substts . fst
-  values' <- withReader reader (mapM renameBind values)
-  resetCount
+  exprs' <- withReader reader (mapM renameBind exprs)
   entry' <- withReader reader (mapM renameExpr entry)
-  return (mdule{moduleValues = values', moduleEntry = entry'})
+  return (mdule{moduleExprs = exprs', moduleEntry = entry'})
 
-runRenamer :: InvalidNames -> Module Typed -> Module Typed
+runRenamer :: InvalidNames -> Module Transformed -> Module Transformed
 runRenamer invalidNames mdule = runRS (renameModule mdule) (Map.empty, invalidNames) 0

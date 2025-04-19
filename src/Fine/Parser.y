@@ -2,11 +2,14 @@
 {-# LANGUAGE NoStrictData #-}
 module Fine.Parser (parseTokens) where
 
+import Data.List.Extra (toNonEmptyPARTIAL)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
-import Fine.Lexer (Token (..), TokenType (..))
+import Fine.Lexer (Token (..))
+import qualified Fine.Lexer as Lex
 import Fine.Syntax
+import Fine.Syntax.Utils (mkDataDefn)
 }
 
 %name parseTokens
@@ -14,324 +17,240 @@ import Fine.Syntax
 %error { parseError }
 
 %token
-  ext     { Token ExtTok _ _ }
-  debug   { Token DebugTok _ _ }
-  run     { Token Run _ _ }
-  boolt   { Token BoolTTok _ _ }
-  do      { Token DoTok _ _ }
-  else    { Token Else _ _ }
-  false   { Token FalseTok _ _ }
-  forall  { Token ForallTok _ _ }
-  if      { Token If _ _ }
-  infix   { Token Infix _ _ }
-  infixl  { Token Infixl _ _ }
-  infixr  { Token Infixr _ _ }
-  intt    { Token IntTTok _ _ }
-  fn      { Token Fn _ _ }
-  floatt  { Token FloatTTok _ _ }
-  match   { Token Match _ _ }
-  mut     { Token MutTok _ _ }
-  strt    { Token StrTTok _ _ }
-  then    { Token Then _ _ }
-  true    { Token TrueTok _ _ }
-  type    { Token TypeTok _ _ }
-  while   { Token While _ _ }
-  with    { Token With _ _ }
-  discard { Token DiscardTok _ _ }
-  id      { Token IdTok _ _ }
-  str     { Token StrTok _ _ }
-  nat     { Token Nat _ _ }
-  nonnat  { Token NonNat _ _ }
-  float   { Token FloatTok _ _ }
-  '->'    { Token Arrow _ _ }
-  '<-'    { Token RArrow _ _ }
-  '='     { Token Eq _ _ }
-  '.'     { Token Dot _ _ }
-  '|'     { Token Bar _ _ }
-  '('     { Token Opar _ _ }
-  ')'     { Token Cpar _ _ }
-  '{'     { Token Obrace _ _ }
-  '}'     { Token Cbrace _ _ }
-  ';'     { Token Semi _ _ }
-  ':'     { Token Colon _ _ }
-  op      { Token Op _ _ }
-  ','     { Token Comma _ _ }
+  case      { Token Lex.Case _ _ }
+  debug     { Token Lex.Debug _ _ }
+  else      { Token Lex.Else _ _ }
+  foreign   { Token Lex.Foreign _ _ }
+  if        { Token Lex.If _ _ }
+  infix     { Token Lex.Infix _ _ }
+  infixl    { Token Lex.Infixl _ _ }
+  infixr    { Token Lex.Infixr _ _ }
+  mut       { Token Lex.Mut _ _ }
+  of        { Token Lex.Of _ _ }
+  run       { Token Lex.Run _ _ }
+  then      { Token Lex.Then _ _ }
+  type      { Token Lex.Type _ _ }
+  while     { Token Lex.While _ _ }
+  false     { Token Lex.FalseTok _ _ }
+  float     { Token Lex.Float _ _ }
+  int       { Token Lex.Int _ _ }
+  str       { Token Lex.Str _ _ }
+  true      { Token Lex.TrueTok _ _ }
+  bool      { Token Lex.Bool _ _ }
+  void      { Token Lex.Void _ _ }
+  discard   { Token Lex.Discard _ _ }
+  id        { Token Lex.Id _ _ }
+  capid     { Token Lex.CapId _ _ }
+  strlit    { Token Lex.StrLit _ _ }
+  nat       { Token Lex.Nat _ _ }
+  nonnat    { Token Lex.NonNat _ _ }
+  floatlit  { Token Lex.FloatLit _ _ }
+  '->'      { Token Lex.Arrow _ _ }
+  '<-'      { Token Lex.RArrow _ _ }
+  '='       { Token Lex.Eq _ _ }
+  '.'       { Token Lex.Dot _ _ }
+  ':'       { Token Lex.Colon _ _ }
+  op        { Token Lex.Op _ _ }
+  '('       { Token Lex.Opar _ _ }
+  ')'       { Token Lex.Cpar _ _ }
+  '{'       { Token Lex.Obrace _ _ }
+  '}'       { Token Lex.Cbrace _ _ }
+  '['       { Token Lex.Osquare _ _ }
+  ']'       { Token Lex.Csquare _ _ }
+  ','       { Token Lex.Comma _ _ }
+  ';'       { Token Lex.Semi _ _ }
 
 %%
 
-Module : {- empty -}  { undefined }
+Module : Defns Entry  { ParsedModule (reverse $1) $2 }
 
 -- COMMON
 
-Prefix : id { mkIdn $1 }
+Id : id { Id (range $1) (tokenLexeme $1) }
 
-Infix : op  { mkIdn $1 }
+Ct : capid  { Id (range $1) (tokenLexeme $1) }
+
+InfixOp : op  { Op (range $1) (tokenLexeme $1) }
+
+PrefixOp : '(' op ')' { Op (range $1 <> range $3) (tokenLexeme $2) }
+
+TopId : Id        { $1 }
+      | PrefixOp  { $1 }
+
+Params_ : Params_ ',' Id  { $3 : $1 }
+        | Id              { [$1] }
+
+Params : Params_  { toNonEmptyPARTIAL (reverse $1) }
+
+OptParams : Params      { $1 }
+          | {- empty -} { Id NoRange "_" :| [] }
 
 -- PATTERN
 
-Patterns_ : Patterns_ Pattern { $2 : $1 }
-          | Pattern           { [$1] }
-
-Patterns : Patterns_  { asNonEmpty (reverse $1) }
-
-PattArgs_ : PattArgs_ ',' Pattern { $3 : $1 }
+Patterns_ : Patterns_ ',' Pattern { $3 : $1 }
           | Pattern               { [$1] }
 
-PattArgs : PattArgs_  { asNonEmpty (reverse $1) }
+Patterns : Patterns_  { toNonEmptyPARTIAL (reverse $1) }
 
 IntPatt : nat     { LiteralP (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
         | nonnat  { LiteralP (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
 
-RecordPatt : PropPatts  { asNonEmpty (reverse $1) }
+PropPatterns : PropPatterns ',' PropPattern { $3 : $1 }
+             | PropPattern                  { [$1] }
 
-PropPatts : PropPatts ',' PropPatt  { $3 : $1 }
-          | PropPatt                { [$1] }
+PropPattern : Id '=' Pattern  { ($1, $3) }
+            | '=' Id          { ($2, Capture $2) }
 
-PropPatt : Prefix '=' Pattern { ($1, $3) }
-         | '=' Prefix         { ($2, Capture (range $2) $2) }
-
-Pattern : Prefix Patterns     { DataP (range $1 <> (range . NonEmpty.last) $2) $1 (NonEmpty.toList $2) }
-        | Prefix              { DataP (range $1) $1 [] }
-        | '(' PattArgs ')'    { if NonEmpty.length $2 == 1 then NonEmpty.head $2 else TupleP (range $1 <> range $3) $2 }
-        | '(' ')'             { LiteralP (range $1 <> range $2) Unit }
-        | '{' Pattern '}'     { $2 }
-        | '{' RecordPatt '}'  { RecordP (range $1 <> range $3) $2 }
-        | IntPatt             { $1 }
-        | float               { LiteralP (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
-        | false               { LiteralP (range $1) (Bool False) }
-        | true                { LiteralP (range $1) (Bool True) }
-        | str                 { LiteralP (range $1) (Str $ Text.tail $ Text.init $ tokenLexeme $1) }
-        | discard             { Discard (range $1) }
+Pattern : Ct                    { DataP (range $1) $1 [] }
+        | Ct '(' Patterns ')'   { DataP (range $1 <> range $4) $1 (NonEmpty.toList $3) }
+        | '(' Patterns ')'      { if NonEmpty.length $2 > 1 then TupleP (range $1 <> range $3) $2 else NonEmpty.head $2 }
+        | '(' ')'               { LiteralP (range $1 <> range $2) Unit }
+        | '{' PropPatterns '}'  { RecordP (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
+        | IntPatt               { $1 }
+        | floatlit              { LiteralP (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
+        | true                  { LiteralP (range $1) (Bool True) }
+        | false                 { LiteralP (range $1) (Bool False) }
+        | strlit                { LiteralP (range $1) (Str $ extractStr $1) }
+        | Id                    { Capture $1 }
+        | discard               { Discard (range $1) }
 
 -- BLOCK
 
-Block : Prefix '=' Expr ';' Block             { Let False $1 $3 $5 }
-      | mut Prefix '=' Expr ';' Block         { Let True $2 $4 $6 }
-      | while Expr do '{' Block '}' ';' Block { Loop $2 $5 $8 }
-      | Expr ';' Block                        { Do $1 $3 }
-      | Expr                                  { Return $1 }
+Block : Id '=' Expr ';' Block               { Let False $1 $3 $5 }
+      | mut Id '=' Expr ';' Block           { Let True $2 $4 $6 }
+      | Expr ';' Block                      { Do $1 $3 }
+      | Id '<-' Expr ';' Block              { Mut $1 $3 $5 }
+      | debug Expr ';' Block                { Debug $2 $4 }
+      | while Expr '{' Block '}' ';' Block  { Loop $2 $4 $7 }
+      | Expr                                { Return $1 }
 
 -- EXPR
-
-Args : {- empty -}  { undefined }
-
-Record : {- empty -}  { undefined }
 
 Int : nat     { Literal (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
     | nonnat  { Literal (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
 
-Expr ::                 { Expr Parsed }
-Expr : Prefix           { Var (range $1) $1 }
-     | '(' Args ')'     { if NonEmpty.length $2 == 1 then NonEmpty.head $2 else Tuple (range $1 <> range $3) $2 }
-     | '(' ')'          { Literal (range $1 <> range $2) Unit }
-     | '{' Expr '}'     { $2 }
-     | '{' Record '}'   { Record (range $1 <> range $3) $2 }
-     | do '{' Block '}' { Block (range $1 <> range $4) $3 }
-     | Int              { $1 }
-     | float            { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
-     | false            { Literal (range $1) (Bool False) }
-     | true             { Literal (range $1) (Bool True) }
-     | str              { Literal (range $1) (Str $ Text.tail $ Text.init $ tokenLexeme $1) }
+Props : Props ',' Prop  { $3 : $1 }
+      | Prop            { [$1] }
+
+Prop : Id '=' Expr  { ($1, $3) }
+     | '=' Id       { ($2, Var (range $2) $2) }
+
+Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
+       | Expr             { [$1] }
+
+Exprs : Exprs_  { toNonEmptyPARTIAL (reverse $1) }
+
+Matches : Matches Match { $2 : $1 }
+        | Match         { [$1] }
+
+Match : of Pattern '->' Expr  { ($2, $4) }
+
+Expr : Chain                            { tryUnchain $1 }
+     | if Expr then Expr else Expr      { Cond (range $1 <> range $6) $2 $4 $6 }
+     | '.' '(' OptParams ')' '->' Expr  { Fun (range $1 <> range $6) $3 $6 }
+     | '.' '[' Params ']' '->' Expr     { GenFun (range $1 <> range $6) $3 $6 }
+
+Chain : App               { Operand $1 }
+      | App InfixOp Chain { Operation $1 $2 $3 }
+
+App : App '(' Exprs ')' { App (range $1 <> range $4) $1 $3 }
+    | App '(' ')'       { App (range $1 <> range $3) $1 (Literal (range $2 <> range $3) Unit :| []) }
+    | App '[' Types ']' { GenApp (range $1 <> range $4) $1 $3 }
+    | App '.' Id        { Access (range $1 <> range $3) $1 $3 }
+    | App '.' nat       { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }
+    | Atom              { $1 }
+
+Atom ::                           { Expr Parsed }
+Atom : '(' Exprs ')'              { if NonEmpty.length $2 > 1 then Tuple (range $1 <> range $3) $2 else NonEmpty.head $2 }
+     | '(' ')'                    { Literal (range $1 <> range $2) Unit }
+     | '{' Block '}'               { tryUnblock (range $1 <> range $3) $2 }
+     | '{' Props '}'              { Record (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
+     | Int                        { $1 }
+     | floatlit                   { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
+     | true                       { Literal (range $1) (Bool True) }
+     | false                      { Literal (range $1) (Bool False) }
+     | strlit                     { Literal (range $1) (Str $ extractStr $1) }
+     | TopId                      { Var (range $1) $1 }
+     | Ct                         { Var (range $1) $1 }
+     | case Expr '{' Matches '}'  { PatternMatch (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
 
 -- TYPE
 
+PropTypes : PropTypes ',' PropType  { $3 : $1 }
+          | PropType                { [$1] }
+
+PropType : Id ':' Type  { ($1, $3) }
+
+Types_ : Types_ ',' Type  { $3 : $1 }
+       | Type             { [$1] }
+
+Types : Types_  { toNonEmptyPARTIAL (reverse $1) }
+
+Type : '.' '(' Types ')' '->' Type  { FunT (range $1 <> range $6) $3 $6 }
+     | '.' '(' ')' '->' Type        { FunT (range $1 <> range $5) (LiteralT (range $2 <> range $3) UnitT :| []) $5 }
+     | '.' '[' Params ']' '->' Type { Forall (range $1 <> range $6) $3 $6 }
+     | TApp                         { $1 }
+
+TApp : TApp '[' Types ']' { TApp (range $1 <> range $4) $1 $3 }
+     | TAtom              { $1 }
+
+TAtom ::                  { Type Parsed }
+TAtom : '(' Types ')'     { if NonEmpty.length $2 > 1 then TupleT (range $1 <> range $3) $2 else NonEmpty.head $2 }
+      | '{' PropTypes '}' { RecordT (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
+      | '(' ')'           { LiteralT (range $1 <> range $2) UnitT }
+      | bool              { LiteralT (range $1) BoolT }
+      | int               { LiteralT (range $1) IntT }
+      | str               { LiteralT (range $1) StrT }
+      | float             { LiteralT (range $1) FloatT }
+      | void              { VoidT (range $1) }
+      | Id                { TVar (range $1) $1 }
+      | Ct                { TVar (range $1) $1 }
+
 -- MODULE
 
---
+Entry : run Expr    { Just $2 }
+      | {- empty -} { Nothing }
 
+Defns : Defns Defn ';'  { $2 : $1 }
+      | {- empty -}     { [] }
 
+Defn : Fix PrefixOp                                     { FixDefn $1 $2 }
+     | type Id '[' Params ']' '=' Type                  { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
+     | type Id '=' Type                                 { TypeDefn (TypeBind $2 $4) }
+     | type Ct '[' Params ']' '{' Ctors '}'             { mkDataDefn $2 (Just $4) $7 }
+     | type Ct '{' Ctors '}'                            { mkDataDefn $2 Nothing $4 }
+     | TopId ':' Type                                   { TypingDefn $1 $3 }
+     | TopId '=' Expr                                   { Defn $1 $3 }
+     | TopId '[' Params ']' '=' Expr                    { Defn $1 (GenFun (range $2 <> range $6) $3 $6) }
+     | TopId '(' OptParams ')' '=' Expr                 { Defn $1 (Fun (range $2 <> range $6) $3 $6) }
+     | TopId '[' Params ']' '(' OptParams ')' '=' Expr  { Defn $1 (GenFun (range $2 <> range $9) $3 (Fun (range $5 <> range $9) $6 $9)) }
+     | Id InfixOp Id '=' Expr                           { Defn $2 (Fun (range $1 <> range $5) ($1 :| [$3]) $5) }
+     | foreign TopId '=' strlit                         { ForeignDefn $2 (extractStr $4) }
 
--- Params_ : Params_ Prefix  { $2 : $1 }
---         | Prefix          { [$1] }
+Ctors_ : Ctors_ Ctor  { $2 : $1 }
+       | Ctor         { [$1] }
 
--- Params : Params_  { asNonEmpty (reverse $1) }
+Ctors : Ctors_  { toNonEmptyPARTIAL (reverse $1) }
 
--- OptBar : '|'          {}
---        | {- empty -}  {}
+Ctor : Ct                               { ($1, Nothing) }
+     | Ct '(' Types ')'                 { ($1, Just $3) }
 
--- TopExpr : ext str { ExtExpr $ Ext (transformStr $ tokenLexeme $2) (range $1 <> range $2) }
---         | Expr    { $1 }
+Fix : Assoc nat { Fixity $1 (read $ Text.unpack $ tokenLexeme $2) }
 
--- Expr : NonMatchExpr { $1 }
---      | MatchExpr    { $1 }
-
--- NonMatchExpr : fn Params '->' Expr          { Fun $2 $4 (range $1 <> range $4) }
---              | if Expr then Expr else Expr  { Cond $2 $4 $6 (range $1 <> range $6) }
---              | Prefix '<-' Expr             { Mut $1 $3 }
---              | debug Expr                   { Debug $2 (range $1 <> range $2) }
---              | Chain                        { tryUnchain $1 }
-
--- MatchExpr : match Expr with OptBar Matches  { PatternMatch $2 $5 (range $1 <> (range . snd . NEL.last) $5) }
-
--- Matches_ : Matches_ '|' Match { $3 : $1 }
---          | Match              { [$1] }
-
--- Matches : Matches_  { asNonEmpty (reverse $1) }
-
--- Match : App '->' NonMatchExpr { ($1, $3) }
-
--- Chain : App             { Operand $1 }
---       | App Infix Chain { Operation $1 $2 $3 }
-
--- App : App Access  { App $1 $2 }
---     | Access      { $1 }
-
--- Access : Access '.' Prefix  { Access $1 $3 }
---        | Access '.' nat     { Index $1 (read $ T.unpack $ tokenLexeme $3) (range $1 <> range $3) }
---        | Atom               { $1 }
-
--- Atom : '(' Exprs ')'              { if length $2 == 1 then NEL.head $2 else mkTuple $2 (range $1 <> range $3) }
---      | '(' ')'                    { Literal Unit (range $1 <> range $2) }
---      | '{' Obj '}'                { Record $2 (range $1 <> range $3) }
---      | '{' Expr '}'               { $2 }
---      | do '{' Stmts ';' Expr '}'  { Block (asNonEmpty (reverse $3)) $5 (range $1 <> range $6) }
---      | Prefix                     { Var $1 }
---      | '(' op ')'                 { Var $ Id (tokenLexeme $2) (range $1 <> range $3) }
---      | Int                        { $1 }
---      | float                      { Literal (Float $ read $ T.unpack $ tokenLexeme $1) (range $1) }
---      | false                      { Literal (Bool False) (range $1) }
---      | true                       { Literal (Bool True) (range $1) }
---      | str                        { mkStr $1 }
---      | discard                    { Discard (range $1) }
-
--- Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
---        | Expr             { [$1] }
-
--- Exprs : Exprs_  { asNonEmpty (reverse $1) }
-
--- Int : nat     { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (range $1) }
---     | nonnat  { Literal (Int $ read $ T.unpack $ tokenLexeme $1) (range $1) }
-
--- Obj : Props { asNonEmpty (reverse $1) }
-
--- Props : Props ',' Prop  { $3 : $1 }
---       | Prop            { [$1] }
-
--- Prop : Prefix '=' Expr  { ($1, $3) }
---      | '=' Prefix       { ($2, Var $2) }
-
--- Stmts : Stmts ';' Stmt  { $3 : $1 }
---       | Stmt            { [$1] }
-
--- Stmt : Expr                           { Do $1 }
---      | Prefix OptTyping '=' Expr      { Let False $1 $2 $4 }
---      | mut Prefix OptTyping '=' Expr  { Let True $2 $3 $5 }
-
--- OptTyping : ':' Type    { Just $2 }
---           | {- empty -} { Nothing }
-
--- Type : forall Params '.' Type { Forall (kindedVars $2) $4 (range $1 <> range $4) }
---      | TApp '->' Type         { FunT $1 $3 }
---      | TApp                   { $1 }
-
--- TApp : TApp TAtom { TApp $1 $2 }
---      | TAtom      { $1 }
-
--- TAtom : '(' Types ')' { if length $2 == 1 then NEL.head $2 else mkTupleT $2 (range $1 <> range $3) }
---       | '(' ')'       { LiteralT UnitT (range $1 <> range $2) }
---       | '{' TObj '}'  { RecordT $2 (range $1 <> range $3) }
---       | Prefix        { TVar $1 }
---       | intt          { LiteralT IntT (range $1) }
---       | floatt        { LiteralT FloatT (range $1) }
---       | boolt         { LiteralT BoolT (range $1) }
---       | strt          { LiteralT StrT (range $1) }
-
--- Types_ : Types_ ',' Type  { $3 : $1 }
---        | Type             { [$1] }
-
--- Types : Types_  { asNonEmpty (reverse $1) }
-
--- TArgs_ : TArgs_ TAtom { $2 : $1 }
---        | {- empty -}  { [] }
-
--- TArgs : TArgs_  { reverse $1 }
-
--- TObj : TProps { asNonEmpty (reverse $1) }
-
--- TProps : TProps ',' TProp { $3 : $1 }
---        | TProp            { [$1] }
-
--- TProp : Prefix ':' Type { ($1, $3) }
-
--- Entry : run Expr    { Just $2 }
---       | {- empty -} { Nothing }
-
--- Defns : Defns Defn ';'  { $2 : $1 }
---       | {- empty -}     { [] }
-
--- Defn : Fix '(' op ')'                       { FixDefn $1 (Id (tokenLexeme $3) (range $2 <> range $4)) }
---      | type Prefix with OptBar Ctors        { mkDataDefn $2 [] $5 }
---      | type Prefix Params with OptBar Ctors { mkDataDefn $2 (NEL.toList $3) $6 }
---      | type Prefix '=' Type                 { TypeDefn (Bind $2 (KLit (range $2)) $4) }
---      | type Prefix Params '=' Type          { mkTypeDefn $2 $3 $5 }
---      | Prefix ':' Type                      { TypingDefn $1 $3 }
---      | '(' op ')' ':' Type                  { TypingDefn (Id (tokenLexeme $2) (range $1 <> range $3)) $5 }
---      | Prefix '=' TopExpr                   { Defn $1 $3 }
---      | Prefix Params '=' TopExpr            { Defn $1 (Fun $2 $4 (range $1 <> range $4)) }
---      | Prefix Infix Prefix '=' TopExpr      { Defn $2 (Fun ($1 :| [$3]) $5 (range $1 <> range $5)) }
-
--- Fix : Assoc nat { Fixity $1 (read $ T.unpack $ tokenLexeme $2) }
-
--- Assoc : infix   { NonAssoc }
---       | infixl  { LeftAssoc }
---       | infixr  { RightAssoc }
-
--- Ctors_ : Ctors_ '|' Ctor  { $3 : $1 }
---        | Ctor             { [$1] }
-
--- Ctors : Ctors_  { asNonEmpty (reverse $1) }
-
--- Ctor : Prefix TArgs { ($1, $2) }
+Assoc : infix   { NonAssoc }
+      | infixl  { LeftAssoc }
+      | infixr  { RightAssoc }
 
 {
-mkIdn tok = Id (range tok) (tokenLexeme tok)
+extractStr = Text.tail . Text.init . tokenLexeme
 
--- mkTuple (x :| (y : zs)) r = Tuple (NonEmpty2 x y zs) r
+tryUnchain (Operand expr) = expr
+tryUnchain (Operation left op (Operand right)) =
+  App (range left <> range right) (Var (range op) op) (left :| [right])
+tryUnchain chain = Chain (range chain) chain
 
--- mkTupleT (x :| (y : zs)) r = TupleT (NonEmpty2 x y zs) r
-
--- mkDataDefn tbder tparams ctors =
---   let tctor = mkTypeCtor tbder tparams
---       kind = mkFunK tparams (KLit $ range tbder)
---       retType = foldl TApp (TVar tbder) (map TVar tparams)
---       ctorBinds = NEL.map
---                 (\(ct, targs) -> Bind ct (mkForall tparams $ foldr FunT retType targs) (mkDataCtor ct targs))
---                 ctors
---    in DataDefn (Bind tbder kind tctor) ctorBinds
-
--- mkForall tparams type' = case tparams of
---   [] -> type'
---   (tp : tps) -> Forall (kindedVars (tp :| tps)) type' (range tp <> range type')
-
--- mkTypeCtor tbder tparams =
---   let tdata = TData tbder (map TVar tparams) (range tbder)
---    in case tparams of
---         [] -> tdata
---         (tparam : tparams') -> mkTFun (tparam :| tparams') tdata
-
--- mkDataCtor bder [] = Data bder [] InvalidRange
--- mkDataCtor bder targs =
---   let params = map (\ix -> Id (T.cons '_' $ T.pack $ show ix) InvalidRange) [0 .. (length targs - 1)]
---    in Fun (asNonEmpty params) (Data bder (map Var params) InvalidRange) InvalidRange
-
--- mkTypeDefn tbder tparams type' =
---   let type'' = mkTFun tparams type'
---       kind = mkFunK tparams (KLit $ range tbder)
---    in TypeDefn (Bind tbder kind type'')
-
--- mkTFun tparams type' = foldr TFun type' tparams
-
--- mkFunK tparams kind = foldr FunK kind (fmap (KLit . range) tparams)
-
--- transformStr = T.tail . T.init
-
--- kindedVars = NEL.map (\v -> (v, KLit $ range v))
-
-asNonEmpty (x : xs) = x :| xs
-
--- tryUnchain (Operand expr) = expr
--- tryUnchain (Operation left op (Operand right)) = App (App (Var op) left) right
--- tryUnchain chain = Chain chain
+tryUnblock _ (Return expr) = expr
+tryUnblock r block = Block r block
 
 parseError tokens = error . show . head $ tokens
 }

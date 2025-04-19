@@ -34,93 +34,97 @@ tokens :-
 
   $white+                     ;
   "--"\-*[^$symbol].*         ;
-  "#external"                 { mkt ExtTok }
-  "#debug"                    { mkt DebugTok }
-  "#run"                      { mkt Run }
-  "bool"                      { mkt BoolTTok }
-  "do"                        { mkt DoTok }
+  "bool"                      { mkt Bool }
+  "case"                      { mkt Case }
+  "debug"                     { mkt Debug }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
-  "forall"                    { mkt ForallTok }
+  "float"                     { mkt Float }
+  "foreign"                   { mkt Foreign }
   "if"                        { mkt If }
   "infix"                     { mkt Infix }
   "infixl"                    { mkt Infixl }
   "infixr"                    { mkt Infixr }
-  "int"                       { mkt IntTTok }
-  "fn"                        { mkt Fn }
-  "float"                     { mkt FloatTTok }
-  "match"                     { mkt Match }
-  "mut"                       { mkt MutTok }
-  "string"                    { mkt StrTTok }
+  "int"                       { mkt Int }
+  "mut"                       { mkt Mut }
+  "of"                        { mkt Of }
+  "run"                       { mkt Run }
+  "string"                    { mkt Str }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
-  "type"                      { mkt TypeTok }
+  "type"                      { mkt Type }
+  "void"                      { mkt Void }
   "while"                     { mkt While }
-  "with"                      { mkt With }
-  "_"+                        { mkt DiscardTok }
-  [$alpha][$alpha $digit]*    { mkt IdTok }
-  \" @string* \"              { mkt StrTok }
+  "_"+                        { mkt Discard }
+  [$small][$alpha $digit]*    { mkt Id }
+  [$large][$alpha $digit]*    { mkt CapId }
+  \" @string* \"              { mkt StrLit }
   @decimal                    { mkt Nat }
   "-" @decimal                { mkt NonNat }
-  "-"? @decimal "." @decimal  { mkt FloatTok }
+  "-"? @decimal "." @decimal  { mkt FloatLit }
   "->"                        { mkt Arrow }
   "<-"                        { mkt RArrow }
   "="                         { mkt Eq }
   "."                         { mkt Dot }
-  "|"                         { mkt Bar }
+  ":"                         { mkt Colon }
+  $opsymbol{1, 3}             { mkt Op }
   "("                         { mkt Opar } 
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
   "}"                         { mkt Cbrace }
-  ";"                         { mkt Semi }
-  ":"                         { mkt Colon }
-  $opsymbol{1, 3}             { mkt Op }
+  "["                         { mkt Osquare }
+  "]"                         { mkt Csquare }
   ","                         { mkt Comma }
+  ";"                         { mkt Semi }
 
 {
-data TokenType
-  = ExtTok
-  | DebugTok
-  | Run
-  | BoolTTok
-  | DoTok
+  data TokenType
+  -- keywords
+  = Case
+  | Debug
   | Else
-  | FalseTok
-  | ForallTok
+  | Foreign
   | If
   | Infix
   | Infixl
   | Infixr
-  | IntTTok
-  | Fn
-  | FloatTTok
-  | Match
-  | MutTok
-  | StrTTok
+  | Mut
+  | Of
+  | Run
   | Then
-  | TrueTok
-  | TypeTok
+  | Type
   | While
-  | With
-  | DiscardTok
-  | IdTok
-  | StrTok
+  -- identifiers
+  | FalseTok
+  | Float
+  | Int
+  | Str
+  | TrueTok
+  | Bool
+  | Void
+  | Discard
+  | Id
+  | CapId
+  -- literals
+  | StrLit
   | Nat
   | NonNat
-  | FloatTok
+  | FloatLit
+  -- symbols
   | Arrow
   | RArrow
   | Eq
   | Dot
-  | Bar
+  | Colon
+  | Op
   | Opar
   | Cpar
   | Obrace
   | Cbrace
-  | Semi
-  | Colon
-  | Op
+  | Osquare
+  | Csquare
   | Comma
+  | Semi
   deriving (Show)
 
 data TokenPosn = TokenPosn

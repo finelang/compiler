@@ -27,9 +27,13 @@ library
   import:
     options
   exposed-modules:
+    Control.Monad.ErrorCollector
+    Control.Monad.Trans.REC
     Control.Monad.Trans.RS
     Control.Monad.Trans.RW
+    Control.Monad.Trans.SEC
     Control.Monad.Trans.SW
+    Data.Errors
     Data.List.Extra
     Data.Tuple.Extra
     Fine.Codegen
@@ -44,8 +48,9 @@ library
     Fine.Syntax.Utils
     Fine.Transform
     Fine.Transform.Common
+    Fine.Transform.Expr
     Fine.Transform.ShuntingYard
-    Fine.Transform.Terms
+    Fine.Transform.Type
     Fine.Transform.Vars
   hs-source-dirs:
     src

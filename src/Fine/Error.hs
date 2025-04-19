@@ -1,9 +1,6 @@
 module Fine.Error (
-  Errors (..),
   Warning (..),
   Error (..),
-  collectError,
-  collectWarning,
   errorTODO,
   errorUNREACHABLE,
   wrapWarning,
@@ -28,7 +25,9 @@ hl x = [i|'#{show x}'|]
 
 data Error
   = UndefinedVar Id
+  | RepeatedVar Id
   | RepeatedCapture Id
+  | UnusedUniVar Id
   | AlreadyInScope Id
   | UsageBeforeInit Id
   | InvalidPrecedence Int Int Id
@@ -43,8 +42,12 @@ instance Show Error where
   show :: Error -> String
   show (UndefinedVar var) =
     [i|Variable #{hl var} is not defined.|]
+  show (RepeatedVar var) =
+    [i|Variable #{hl var} is repeated.|]
   show (RepeatedCapture var) =
     [i|Captured variable #{hl var} is repeated.|]
+  show (UnusedUniVar var) =
+    [i|Universally quantified variable #{hl var} is not used.|]
   show (AlreadyInScope var) =
     [i|Variable #{hl var} is already defined in the current scope.|]
   show (UsageBeforeInit var) =
@@ -89,19 +92,3 @@ warningPrefix = yellow "Warning: "
 
 wrapWarning :: Warning -> String
 wrapWarning wrn = [i|#{warningPrefix}#{wrn}|]
-
-data Errors = Errors [Error] [Warning]
-
-instance Semigroup Errors where
-  (<>) :: Errors -> Errors -> Errors
-  Errors e w <> Errors e' w' = Errors (e <> e') (w <> w')
-
-instance Monoid Errors where
-  mempty :: Errors
-  mempty = Errors [] []
-
-collectError :: Error -> Errors
-collectError err = Errors [err] []
-
-collectWarning :: Warning -> Errors
-collectWarning wrn = Errors [] [wrn]

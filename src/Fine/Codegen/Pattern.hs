@@ -6,7 +6,7 @@ import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Fine.Codegen.Lit (genLitCode)
-import Fine.Syntax (Id (Id), Lit (Str), Pattern (..))
+import Fine.Syntax (Id (idText), Lit (Str), Pattern (..))
 
 data PathEnd
   = Equals Lit
@@ -30,15 +30,15 @@ indexedPaths patts =
 
 fromPattern :: Pattern -> [PatternPath]
 fromPattern (LiteralP _ lit) = [End $ Equals lit]
-fromPattern (DataP _ (Id _ name) patts) =
-  let fromTag = Continue (PropTo "$tag") (End $ Equals $ Str name)
+fromPattern (DataP _ tag patts) =
+  let fromTag = Continue (PropTo "$tag") (End $ Equals $ Str $ idText tag)
    in fromTag : indexedPaths patts
 fromPattern (RecordP _ props) =
   foldMap
-    (\(Id _ name, patt) -> map (Continue $ PropTo name) (fromPattern patt))
+    (\(prop, patt) -> map (Continue $ PropTo $ idText prop) (fromPattern patt))
     props
 fromPattern (TupleP _ patts) = indexedPaths (toList patts)
-fromPattern (Capture _ var) = [End $ As var]
+fromPattern (Capture var) = [End $ As var]
 fromPattern (Discard _) = []
 
 fromPatternPath :: PatternPath -> ([PathPiece], PathEnd)

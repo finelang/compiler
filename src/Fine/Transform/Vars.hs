@@ -1,16 +1,18 @@
-module Fine.Transform.Vars (handleExprVars, handleTypeVars) where
+module Fine.Transform.Vars (handleTypeVars, handleExprVars) where
 
 import Control.Monad (forM_, unless)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
+import Data.Errors (Errors (Errors), error', warning)
 import Data.List.Extra (repeated)
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Text qualified as Text
 import Fine.Error (
-  Error (..),
-  Errors,
+  Error (RepeatedCapture, RepeatedVar, UndefinedVar, UnusedUniVar),
   Warning (UnusedVar),
-  collectError,
-  collectWarning,
+  errorUNREACHABLE,
  )
 import Fine.Syntax (
   Block (..),
@@ -19,104 +21,185 @@ import Fine.Syntax (
   Pass (Transformed),
   Pattern (..),
   Type (..),
+  idText,
  )
 import Fine.Syntax.Utils (boundVars)
 
-type Env = Set Id
+type Errors' = Errors Error Warning
 
-type FreeVars = Set Id
-
-checkDefined :: Id -> RW Env Errors ()
-checkDefined var = do
+check :: Id -> RW (Set Id) Errors' ()
+check var = do
   isDefined <- asks (Set.member var)
-  unless isDefined (tell $ collectError $ UndefinedVar var)
+  unless isDefined (tell $ error' $ UndefinedVar var)
 
 -- TYPE
 
 type Type' = Type Transformed
 
-typeFreeVars :: Type' -> RW Env Errors FreeVars
+typeFreeVars :: Type' -> RW (Set Id) Errors' (Set Id)
 typeFreeVars (LiteralT _ _) = return Set.empty
+typeFreeVars (VoidT _) = return Set.empty
 typeFreeVars (TupleT _ types) = Set.unions <$> mapM typeFreeVars types
 typeFreeVars (RecordT _ propTypes) = Set.unions <$> mapM (typeFreeVars . snd) propTypes
-typeFreeVars (FunT _ argt bodyt) = Set.union <$> typeFreeVars argt <*> typeFreeVars bodyt
-typeFreeVars (Forall _ (var, _) type') = do
-  typeVars <- withReader (Set.insert var) (typeFreeVars type')
-  unless (Set.member var typeVars) (tell $ collectWarning $ UnusedVar var)
-  return (Set.delete var typeVars)
+typeFreeVars (FunT _ argTypes bodyType) = do
+  argsVars <- Set.unions <$> mapM typeFreeVars argTypes
+  bodyVars <- typeFreeVars bodyType
+  return (Set.union argsVars bodyVars)
+typeFreeVars (Forall _ univars type') = do
+  let univarList = NonEmpty.toList univars
+  forM_ (repeated univarList) (tell . error' . RepeatedVar)
+  let univars' = Set.fromList univarList
+  typeVars <- withReader (Set.union univars') (typeFreeVars type')
+  forM_ (Set.difference univars' typeVars) (tell . error' . UnusedUniVar)
+  return (Set.difference typeVars univars')
 typeFreeVars (TData _ _ types) = Set.unions <$> mapM typeFreeVars types
-typeFreeVars (TVar _ var) = checkDefined var >> return (Set.singleton var)
-typeFreeVars (TApp _ tfun targ) = Set.union <$> typeFreeVars tfun <*> typeFreeVars targ
-typeFreeVars (TFun _ param tbody) = do
-  typeVars <- withReader (Set.insert param) (typeFreeVars tbody)
-  unless (Set.member param typeVars) (tell $ collectWarning $ UnusedVar param)
-  return (Set.delete param typeVars)
+typeFreeVars (TVar _ var) = check var >> return (Set.singleton var)
+typeFreeVars (TApp _ typeFun typeArgs) = do
+  funVars <- typeFreeVars typeFun
+  argsVars <- Set.unions <$> mapM typeFreeVars typeArgs
+  return (Set.union funVars argsVars)
+typeFreeVars (TFun _ typeParams typeBody) = do
+  let typeParamList = NonEmpty.toList typeParams
+  forM_ (repeated typeParamList) (tell . error' . RepeatedVar)
+  let typeParams' = Set.fromList typeParamList
+  typeVars <- withReader (Set.union typeParams') (typeFreeVars typeBody)
+  forM_ (Set.difference typeParams' typeVars) (tell . warning . UnusedVar)
+  return (Set.difference typeVars typeParams')
 
-handleTypeVars :: Env -> Type' -> (FreeVars, Errors)
-handleTypeVars vars type' = runRW (typeFreeVars type') vars
+handleTypeVars :: Set Id -> Type' -> (Set Id, [Error], [Warning])
+handleTypeVars vars type' =
+  let (free, Errors errs wrns) = runRW (typeFreeVars type') vars
+   in (free, errs, wrns)
 
 -- EXPR
+
+data Vars = Vars
+  { tVars :: Set Id,
+    vars :: Set Id
+  }
+
+emptyVars :: Vars
+emptyVars = Vars Set.empty Set.empty
+
+union' :: Vars -> Vars -> Vars
+union' (Vars tvs vs) (Vars tvs' vs') = Vars (Set.union tvs tvs') (Set.union vs vs')
+
+unions' :: (Foldable t) => t Vars -> Vars
+unions' = foldl union' emptyVars
+{-# SPECIALIZE unions' :: [Vars] -> Vars #-}
+{-# SPECIALIZE unions' :: NonEmpty Vars -> Vars #-}
+
+insertVar :: Id -> Vars -> Vars
+insertVar var (Vars tvs vs) = Vars tvs (Set.insert var vs)
+
+unionVars :: Set Id -> Vars -> Vars
+unionVars vars (Vars tvs vs) = Vars tvs (Set.union vars vs)
+
+unionTVars :: Set Id -> Vars -> Vars
+unionTVars tvars (Vars tvs vs) = Vars (Set.union tvars tvs) vs
+
+differenceVars :: Vars -> Set Id -> Vars
+differenceVars (Vars tvs vs) vars = Vars tvs (Set.difference vs vars)
+
+differenceTVars :: Vars -> Set Id -> Vars
+differenceTVars (Vars tvs vs) tvars = Vars (Set.difference tvs tvars) vs
+
+singleVar :: Id -> Vars
+singleVar var = insertVar var emptyVars
+
+memberVar :: Id -> Vars -> Bool
+memberVar var (Vars _ vs) = Set.member var vs
+
+deleteVar :: Id -> Vars -> Vars
+deleteVar var (Vars tvs vs) = Vars tvs (Set.delete var vs)
 
 type Block' = Block Transformed
 
 type Expr' = Expr Transformed
 
-blockFreeVars :: Block' -> RW Env Errors FreeVars
+blockFreeVars :: Block' -> RW Vars Errors' Vars
 blockFreeVars (Return expr) = exprFreeVars expr
-blockFreeVars (Do expr block) = Set.union <$> exprFreeVars expr <*> blockFreeVars block
-blockFreeVars (Let _ binder expr block) = do
+blockFreeVars (Do expr block) = union' <$> exprFreeVars expr <*> blockFreeVars block
+blockFreeVars (Mut var expr block) = do
+  withReader vars (check var)
   exprVars <- exprFreeVars expr
-  blockVars <- withReader (Set.insert binder) (blockFreeVars block)
-  unless (Set.member binder blockVars) (tell $ collectWarning $ UnusedVar binder)
-  return (Set.union exprVars (Set.delete binder blockVars))
+  blockVars <- blockFreeVars block
+  return (union' (insertVar var exprVars) blockVars)
+blockFreeVars (Debug expr block) = union' <$> exprFreeVars expr <*> blockFreeVars block
+blockFreeVars (Let _ binder' expr block) = do
+  exprVars <- exprFreeVars expr
+  blockVars <- withReader (insertVar binder') (blockFreeVars block)
+  unless (memberVar binder' blockVars) (tell $ warning $ UnusedVar binder')
+  return (union' exprVars (deleteVar binder' blockVars))
 blockFreeVars (Loop cond actions block) =
-  Set.unions <$> sequence [exprFreeVars cond, blockFreeVars actions, blockFreeVars block]
-blockFreeVars (Void _) = return Set.empty
+  unions' <$> sequence [exprFreeVars cond, blockFreeVars actions, blockFreeVars block]
 
-patternFreeVars :: Pattern -> RW Env Errors FreeVars
+patternFreeVars :: Pattern -> RW (Set Id) Errors' (Set Id)
 patternFreeVars (LiteralP _ _) = return Set.empty
 patternFreeVars (DataP _ tag patts) = do
   pattsVars <- Set.unions <$> mapM patternFreeVars patts
-  checkDefined tag
+  check tag
   return (Set.insert tag pattsVars)
 patternFreeVars (RecordP _ props) = Set.unions <$> mapM (patternFreeVars . snd) props
 patternFreeVars (TupleP _ patts) = Set.unions <$> mapM patternFreeVars patts
-patternFreeVars (Capture _ _) = return Set.empty
+patternFreeVars (Capture _) = return Set.empty
 patternFreeVars (Discard _) = return Set.empty
 
-matchFreeVars :: (Pattern, Expr') -> RW Env Errors FreeVars
+matchFreeVars :: (Pattern, Expr') -> RW Vars Errors' Vars
 matchFreeVars (patt, cont) = do
-  pattVars <- patternFreeVars patt
+  pattVars <- withReader vars (patternFreeVars patt)
   pattBound <- do
     let bound = boundVars patt
-    forM_ (repeated bound) (tell . collectError . RepeatedCapture)
+    forM_ (repeated bound) (tell . error' . RepeatedCapture)
     return (Set.fromList bound)
-  contVars <- withReader (Set.union pattBound) (exprFreeVars cont)
-  forM_ (Set.difference pattBound contVars) (tell . collectWarning . UnusedVar)
-  return (Set.union pattVars (Set.difference contVars pattBound))
+  contVars <- withReader (unionVars pattBound) (exprFreeVars cont)
+  forM_ (Set.difference pattBound (vars contVars)) (tell . warning . UnusedVar)
+  return (unionVars pattVars (differenceVars contVars pattBound))
 
-exprFreeVars :: Expr' -> RW Env Errors FreeVars
-exprFreeVars (Literal _ _) = return Set.empty
-exprFreeVars (Data _ _ exprs) = Set.unions <$> mapM exprFreeVars exprs
-exprFreeVars (Record _ props) = Set.unions <$> mapM (exprFreeVars . snd) props
-exprFreeVars (Tuple _ exprs) = Set.unions <$> mapM exprFreeVars exprs
-exprFreeVars (Var _ var) = checkDefined var >> return (Set.singleton var)
-exprFreeVars (Mut _ var expr) = checkDefined var >> Set.insert var <$> exprFreeVars expr
-exprFreeVars (App _ f arg) = Set.union <$> exprFreeVars f <*> exprFreeVars arg
+exprFreeVars :: Expr' -> RW Vars Errors' Vars
+exprFreeVars (Literal _ _) = return emptyVars
+exprFreeVars (Data _ _ exprs) = unions' <$> mapM exprFreeVars exprs
+exprFreeVars (Record _ props) = unions' <$> mapM (exprFreeVars . snd) props
+exprFreeVars (Tuple _ exprs) = unions' <$> mapM exprFreeVars exprs
+exprFreeVars (Var _ var) = withReader vars (check var) >> return (singleVar var)
+exprFreeVars (App _ f args) = do
+  fVars <- exprFreeVars f
+  argsVars <- unions' <$> mapM exprFreeVars args
+  return (union' fVars argsVars)
+exprFreeVars (GenApp _ genF typeArgs) = do
+  fVars <- exprFreeVars genF
+  argsVars <- Set.unions <$> withReader tVars (mapM typeFreeVars typeArgs)
+  return (unionTVars argsVars fVars)
 exprFreeVars (Access _ expr _) = exprFreeVars expr
 exprFreeVars (Index _ expr _) = exprFreeVars expr
-exprFreeVars (Cond _ cond yes no) = Set.unions <$> mapM exprFreeVars [cond, yes, no]
+exprFreeVars (Cond _ cond yes no) = unions' <$> mapM exprFreeVars [cond, yes, no]
 exprFreeVars (PatternMatch _ expr matches) = do
   exprVars <- exprFreeVars expr
-  matchesVars <- Set.unions <$> mapM matchFreeVars matches
-  return (Set.union exprVars matchesVars)
-exprFreeVars (Fun _ param body) = do
-  bodyVars <- withReader (Set.insert param) (exprFreeVars body)
-  unless (Set.member param bodyVars) (tell $ collectWarning $ UnusedVar param)
-  return (Set.delete param bodyVars)
+  matchesVars <- unions' <$> mapM matchFreeVars matches
+  return (union' exprVars matchesVars)
+exprFreeVars (Fun _ params body) = do
+  let paramList = NonEmpty.toList params
+  forM_ (repeated paramList) (tell . error' . RepeatedVar)
+  let params' = Set.fromList paramList
+  bodyVars <- withReader (unionVars params') (exprFreeVars body)
+  do
+    let unused = Set.difference (Set.filter relevant params') (vars bodyVars)
+    forM_ unused (tell . warning . UnusedVar)
+  return (differenceVars bodyVars params')
+ where
+  relevant var = case Text.uncons (idText var) of
+    Just (ch', _) -> ch' /= '_'
+    _ -> errorUNREACHABLE
+exprFreeVars (GenFun _ typeParams body) = do
+  let typeParamList = NonEmpty.toList typeParams
+  forM_ (repeated typeParamList) (tell . error' . RepeatedVar)
+  let typeParams' = Set.fromList typeParamList
+  bodyVars <- withReader (unionTVars typeParams') (exprFreeVars body)
+  forM_ (Set.difference typeParams' (tVars bodyVars)) (tell . warning . UnusedVar)
+  return (differenceTVars bodyVars typeParams')
 exprFreeVars (Block _ block) = blockFreeVars block
-exprFreeVars (Debug _ expr) = exprFreeVars expr
-exprFreeVars (External _ _ _) = return Set.empty
 
-handleExprVars :: Env -> Expr' -> (FreeVars, Errors)
-handleExprVars vars expr = runRW (exprFreeVars expr) vars
+handleExprVars :: Set Id -> Set Id -> Expr' -> (Set Id, Set Id, [Error], [Warning])
+handleExprVars vars tVars expr =
+  let (Vars tVars' vars', Errors errs wrns) = runRW (exprFreeVars expr) (Vars tVars vars)
+   in (vars', tVars', errs, wrns)

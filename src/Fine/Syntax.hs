@@ -1,7 +1,7 @@
 module Fine.Syntax (
   Range (..),
   HasRange (..),
-  Id (..),
+  Id (Id, Op, idText),
   Pass (..),
   Kind (..),
   LitT (..),
@@ -13,8 +13,9 @@ module Fine.Syntax (
   Expr (..),
   exprExt,
   Pattern (..),
-  TypeOfBind (..),
+  BindType (..),
   Bind (..),
+  binder,
   Assoc (..),
   Fixity (..),
   Defn (..),
@@ -23,11 +24,14 @@ module Fine.Syntax (
 )
 where
 
+import Data.Function (on)
+import Data.Kind qualified as HsKind
 import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map)
 import Data.String.Interpolate (i)
-import Data.Text (Text, unpack)
-import Data.Void (Void)
+import Data.Text (Text)
+import Data.Text qualified as Text
 
 -- RANGE
 
@@ -57,38 +61,43 @@ class HasRange t where
 
 -- IDENTIFIER
 
-data Id = Id Range Text
+data Id
+  = Id {idRange :: Range, idText :: Text}
+  | Op {idRange :: Range, idText :: Text}
 
 instance Eq Id where
   (==) :: Id -> Id -> Bool
-  (Id _ x) == (Id _ y) = x == y
+  (==) = (==) `on` idText
 
 instance Ord Id where
   compare :: Id -> Id -> Ordering
-  compare (Id _ x) (Id _ y) = compare x y
+  compare = compare `on` idText
 
 instance HasRange Id where
   range :: Id -> Range
-  range (Id r _) = r
+  range = idRange
 
 instance Show Id where
   show :: Id -> String
-  show (Id _ name) = unpack name
+  show = Text.unpack . idText
 
 -- PASS
 
-data Pass = Parsed | Transformed | Typed
+data Pass
+  = Parsed -- after parsing
+  | Transformed -- after transformation and semantic checking
+  | Typed -- after type checking/inference
 
 -- KIND
 
 data Kind
   = KLit Range
-  | FunK Kind Kind
+  | FunK (NonEmpty Kind) Kind -- type of type functions
 
 instance HasRange Kind where
   range :: Kind -> Range
   range (KLit r) = r
-  range (FunK left right) = range left <> range right
+  range (FunK left right) = range (NonEmpty.head left) <> range right
 
 -- TYPE
 
@@ -98,19 +107,25 @@ type family TypeX (p :: Pass) where
   TypeX Typed = (Range, Kind)
   TypeX _ = Range
 
+type family UniVar (p :: Pass) where
+  UniVar Typed = (Id, Kind)
+  UniVar _ = Id
+
 data Type (p :: Pass)
   = LiteralT (TypeX p) LitT
+  | VoidT (TypeX p)
   | TupleT (TypeX p) (NonEmpty (Type p))
   | RecordT (TypeX p) (NonEmpty (Id, Type p))
-  | FunT (TypeX p) (Type p) (Type p) -- type of a function from value -> value
-  | Forall (TypeX p) (Id, Kind) (Type p) -- type of function from type -> value
+  | FunT (TypeX p) (NonEmpty (Type p)) (Type p) -- type of a normal function
+  | Forall (TypeX p) (NonEmpty (UniVar p)) (Type p) -- type of a generic function
   | TData (TypeX p) Id [Type p]
   | TVar (TypeX p) Id
-  | TApp (TypeX p) (Type p) (Type p)
-  | TFun (TypeX p) Id (Type p) -- type function (for type constructors and type aliases)
+  | TApp (TypeX p) (Type p) (NonEmpty (Type p))
+  | TFun (TypeX p) (NonEmpty Id) (Type p) -- type function (for type constructors and type aliases)
 
 typeExt :: Type p -> TypeX p
 typeExt (LiteralT ext _) = ext
+typeExt (VoidT ext) = ext
 typeExt (TupleT ext _) = ext
 typeExt (RecordT ext _) = ext
 typeExt (FunT ext _ _) = ext
@@ -123,6 +138,14 @@ typeExt (TFun ext _ _) = ext
 instance HasRange (Type Parsed) where
   range :: Type Parsed -> Range
   range = typeExt
+
+instance HasRange (Type Transformed) where
+  range :: Type Transformed -> Range
+  range = typeExt
+
+instance HasRange (Type Typed) where
+  range :: Type Typed -> Range
+  range = fst . typeExt
 
 -- EXPR
 
@@ -142,43 +165,34 @@ data Lit
   | Str Text
   | Unit
 
-type family VoidX (p :: Pass) where
-  VoidX Parsed = Void
-  VoidX _ = ()
-
 data Block (p :: Pass)
   = Return (Expr p)
   | Do (Expr p) (Block p)
+  | Mut Id (Expr p) (Block p)
+  | Debug (Expr p) (Block p)
   | Let Bool Id (Expr p) (Block p)
   | Loop (Expr p) (Block p) (Block p)
-  | Void (VoidX p)
 
 type family ExprX (p :: Pass) where
   ExprX Typed = (Range, Type Typed)
   ExprX _ = Range
 
-type family CrtExprX (p :: Pass) where
-  CrtExprX Parsed = ()
-  CrtExprX _ = Void
-
-data Expr (p :: Pass)
-  = Literal (ExprX p) Lit
-  | Data (ExprX p) Id [Expr p]
-  | Record (ExprX p) (NonEmpty (Id, Expr p))
-  | Tuple (ExprX p) (NonEmpty (Expr p))
-  | Var (ExprX p) Id
-  | Mut (ExprX p) Id (Expr p)
-  | App (ExprX p) (Expr p) (Expr p)
-  | Access (ExprX p) (Expr p) Id
-  | Index (ExprX p) (Expr p) Int
-  | Cond (ExprX p) (Expr p) (Expr p) (Expr p)
-  | Fun (ExprX p) Id (Expr p)
-  | Block (ExprX p) (Block p)
-  | PatternMatch (ExprX p) (Expr p) (NonEmpty (Pattern, Expr p))
-  | Debug (ExprX p) (Expr p)
-  | External (ExprX p) [Id] Text
-  | -- Concrete only
-    Chain (ExprX p) (CrtExprX p) Chain
+data Expr (p :: Pass) where
+  Literal :: (ExprX p) -> Lit -> Expr p
+  Data :: (ExprX p) -> Id -> [Expr p] -> Expr p
+  Record :: (ExprX p) -> (NonEmpty (Id, Expr p)) -> Expr p
+  Tuple :: (ExprX p) -> (NonEmpty (Expr p)) -> Expr p
+  Var :: (ExprX p) -> Id -> Expr p
+  App :: (ExprX p) -> (Expr p) -> (NonEmpty (Expr p)) -> Expr p
+  GenApp :: (ExprX p) -> (Expr p) -> (NonEmpty (Type p)) -> Expr p
+  Access :: (ExprX p) -> (Expr p) -> Id -> Expr p
+  Index :: (ExprX p) -> (Expr p) -> Int -> Expr p
+  Cond :: (ExprX p) -> (Expr p) -> (Expr p) -> (Expr p) -> Expr p
+  Fun :: (ExprX p) -> (NonEmpty Id) -> (Expr p) -> Expr p
+  GenFun :: (ExprX p) -> (NonEmpty Id) -> (Expr p) -> Expr p
+  Block :: (ExprX p) -> (Block p) -> Expr p
+  PatternMatch :: (ExprX p) -> (Expr p) -> (NonEmpty (Pattern, Expr p)) -> Expr p
+  Chain :: Range -> Chain -> Expr Parsed
 
 exprExt :: Expr p -> ExprX p
 exprExt (Literal ext _) = ext
@@ -186,21 +200,28 @@ exprExt (Data ext _ _) = ext
 exprExt (Record ext _) = ext
 exprExt (Tuple ext _) = ext
 exprExt (Var ext _) = ext
-exprExt (Mut ext _ _) = ext
 exprExt (App ext _ _) = ext
+exprExt (GenApp ext _ _) = ext
 exprExt (Access ext _ _) = ext
 exprExt (Index ext _ _) = ext
 exprExt (Cond ext _ _ _) = ext
 exprExt (Fun ext _ _) = ext
+exprExt (GenFun ext _ _) = ext
 exprExt (Block ext _) = ext
 exprExt (PatternMatch ext _ _) = ext
-exprExt (Debug ext _) = ext
-exprExt (External ext _ _) = ext
-exprExt (Chain ext _ _) = ext
+exprExt (Chain ext _) = ext
 
 instance HasRange (Expr Parsed) where
   range :: Expr Parsed -> Range
   range = exprExt
+
+instance HasRange (Expr Transformed) where
+  range :: Expr Transformed -> Range
+  range = exprExt
+
+instance HasRange (Expr Typed) where
+  range :: Expr Typed -> Range
+  range = fst . exprExt
 
 -- PATTERN
 
@@ -209,7 +230,7 @@ data Pattern
   | DataP Range Id [Pattern]
   | RecordP Range (NonEmpty (Id, Pattern))
   | TupleP Range (NonEmpty Pattern)
-  | Capture Range Id
+  | Capture Id
   | Discard Range
 
 instance HasRange Pattern where
@@ -218,26 +239,23 @@ instance HasRange Pattern where
   range (DataP r _ _) = r
   range (RecordP r _) = r
   range (TupleP r _) = r
-  range (Capture r _) = r
+  range (Capture var) = range var
   range (Discard r) = r
 
 -- MODULE
 
-data TypeOfBind = OfValue | OfType
+data BindType = OfExpr | OfType
 
-type family BoundType (t :: TypeOfBind) (p :: Pass) where
-  BoundType OfValue p = Type p
-  BoundType OfType _ = Kind
+data Bind :: BindType -> Pass -> HsKind.Type where
+  ExprBind :: Id -> Type p -> Expr p -> Bind OfExpr p
+  TypeBind :: Id -> Type p -> Bind OfType p
+  -- binding for external code
+  ForeignBind :: Id -> Type p -> Text -> Bind OfExpr p
 
-type family BoundValue (t :: TypeOfBind) (p :: Pass) where
-  BoundValue OfValue p = Expr p
-  BoundValue OfType p = Type p
-
-data Bind (t :: TypeOfBind) (p :: Pass) = Bind
-  { binder :: Id,
-    boundType :: BoundType t p,
-    boundValue :: BoundValue t p
-  }
+binder :: Bind t p -> Id
+binder (ExprBind idn _ _) = idn
+binder (TypeBind idn _) = idn
+binder (ForeignBind idn _ _) = idn
 
 data Assoc = LeftAssoc | RightAssoc | NonAssoc
   deriving (Eq)
@@ -256,9 +274,10 @@ instance Show Fixity where
 
 data Defn
   = Defn Id (Expr Parsed)
+  | ForeignDefn Id Text
   | TypingDefn Id (Type Parsed)
   | TypeDefn (Bind OfType Parsed)
-  | DataDefn (Bind OfType Parsed) (NonEmpty (Bind OfValue Parsed))
+  | DataDefn (Bind OfType Parsed) (NonEmpty (Bind OfExpr Parsed))
   | FixDefn Fixity Id
 
 data ParsedModule
@@ -266,7 +285,7 @@ data ParsedModule
 
 data Module (p :: Pass)
   = Module
-  { moduleValues :: [Bind OfValue p],
+  { moduleExprs :: [Bind OfExpr p],
     moduleTypes :: [Bind OfType p],
     moduleFixities :: Map Id Fixity,
     moduleEntry :: Maybe (Expr p)
