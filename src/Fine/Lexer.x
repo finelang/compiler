@@ -37,6 +37,7 @@ tokens :-
   "bool"                      { mkt Bool }
   "case"                      { mkt Case }
   "debug"                     { mkt Debug }
+  "do"                        { mkt Do }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
   "float"                     { mkt Float }
@@ -46,6 +47,7 @@ tokens :-
   "infixl"                    { mkt Infixl }
   "infixr"                    { mkt Infixr }
   "int"                       { mkt Int }
+  "let"                       { mkt Let }
   "mut"                       { mkt Mut }
   "of"                        { mkt Of }
   "run"                       { mkt Run }
@@ -75,19 +77,20 @@ tokens :-
   "["                         { mkt Osquare }
   "]"                         { mkt Csquare }
   ","                         { mkt Comma }
-  ";"                         { mkt Semi }
 
 {
   data TokenType
   -- keywords
   = Case
   | Debug
+  | Do
   | Else
   | Foreign
   | If
   | Infix
   | Infixl
   | Infixr
+  | Let
   | Mut
   | Of
   | Run
@@ -124,7 +127,6 @@ tokens :-
   | Osquare
   | Csquare
   | Comma
-  | Semi
   deriving (Show)
 
 data TokenPosn = TokenPosn

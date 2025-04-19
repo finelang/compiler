@@ -19,12 +19,14 @@ import Fine.Syntax.Utils (mkDataDefn)
 %token
   case      { Token Lex.Case _ _ }
   debug     { Token Lex.Debug _ _ }
+  do        { Token Lex.Do _ _ }
   else      { Token Lex.Else _ _ }
   foreign   { Token Lex.Foreign _ _ }
   if        { Token Lex.If _ _ }
   infix     { Token Lex.Infix _ _ }
   infixl    { Token Lex.Infixl _ _ }
   infixr    { Token Lex.Infixr _ _ }
+  let       { Token Lex.Let _ _ }
   mut       { Token Lex.Mut _ _ }
   of        { Token Lex.Of _ _ }
   run       { Token Lex.Run _ _ }
@@ -58,7 +60,6 @@ import Fine.Syntax.Utils (mkDataDefn)
   '['       { Token Lex.Osquare _ _ }
   ']'       { Token Lex.Csquare _ _ }
   ','       { Token Lex.Comma _ _ }
-  ';'       { Token Lex.Semi _ _ }
 
 %%
 
@@ -116,13 +117,15 @@ Pattern : Ct                    { DataP (range $1) $1 [] }
 
 -- BLOCK
 
-Block : Id '=' Expr ';' Block               { Let False $1 $3 $5 }
-      | mut Id '=' Expr ';' Block           { Let True $2 $4 $6 }
-      | Expr ';' Block                      { Do $1 $3 }
-      | Id '<-' Expr ';' Block              { Mut $1 $3 $5 }
-      | debug Expr ';' Block                { Debug $2 $4 }
-      | while Expr '{' Block '}' ';' Block  { Loop $2 $4 $7 }
-      | Expr                                { Return $1 }
+Block : let Id '=' Expr BlockEnd          { Let False $2 $4 $5 }
+      | let mut Id '=' Expr BlockEnd      { Let True $3 $5 $6 }
+      | do Expr BlockEnd                  { Do $2 $3 }
+      | do Id '<-' Expr BlockEnd          { Mut $2 $4 $5 }
+      | debug Expr BlockEnd               { Debug $2 $3 }
+      | while Expr '{' Block '}' BlockEnd { Loop $2 $4 $6 }
+
+BlockEnd : Block      { $1 }
+         | then Expr  { Return $2 }
 
 -- EXPR
 
@@ -146,6 +149,7 @@ Matches : Matches Match { $2 : $1 }
 Match : of Pattern '->' Expr  { ($2, $4) }
 
 Expr : Chain                            { tryUnchain $1 }
+     | Block                            { Block NoRange $1 }
      | if Expr then Expr else Expr      { Cond (range $1 <> range $6) $2 $4 $6 }
      | '.' '(' OptParams ')' '->' Expr  { Fun (range $1 <> range $6) $3 $6 }
      | '.' '[' Params ']' '->' Expr     { GenFun (range $1 <> range $6) $3 $6 }
@@ -163,8 +167,8 @@ App : App '(' Exprs ')' { App (range $1 <> range $4) $1 $3 }
 Atom ::                           { Expr Parsed }
 Atom : '(' Exprs ')'              { if NonEmpty.length $2 > 1 then Tuple (range $1 <> range $3) $2 else NonEmpty.head $2 }
      | '(' ')'                    { Literal (range $1 <> range $2) Unit }
-     | '{' Block '}'               { tryUnblock (range $1 <> range $3) $2 }
      | '{' Props '}'              { Record (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
+     | '{' Expr '}'               { $2 }
      | Int                        { $1 }
      | floatlit                   { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
      | true                       { Literal (range $1) (Bool True) }
@@ -211,21 +215,21 @@ TAtom : '(' Types ')'     { if NonEmpty.length $2 > 1 then TupleT (range $1 <> r
 Entry : run Expr    { Just $2 }
       | {- empty -} { Nothing }
 
-Defns : Defns Defn ';'  { $2 : $1 }
-      | {- empty -}     { [] }
+Defns : Defns Defn  { $2 : $1 }
+      | {- empty -} { [] }
 
-Defn : Fix PrefixOp                                     { FixDefn $1 $2 }
-     | type Id '[' Params ']' '=' Type                  { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
-     | type Id '=' Type                                 { TypeDefn (TypeBind $2 $4) }
-     | type Ct '[' Params ']' '{' Ctors '}'             { mkDataDefn $2 (Just $4) $7 }
-     | type Ct '{' Ctors '}'                            { mkDataDefn $2 Nothing $4 }
-     | TopId ':' Type                                   { TypingDefn $1 $3 }
-     | TopId '=' Expr                                   { Defn $1 $3 }
-     | TopId '[' Params ']' '=' Expr                    { Defn $1 (GenFun (range $2 <> range $6) $3 $6) }
-     | TopId '(' OptParams ')' '=' Expr                 { Defn $1 (Fun (range $2 <> range $6) $3 $6) }
-     | TopId '[' Params ']' '(' OptParams ')' '=' Expr  { Defn $1 (GenFun (range $2 <> range $9) $3 (Fun (range $5 <> range $9) $6 $9)) }
-     | Id InfixOp Id '=' Expr                           { Defn $2 (Fun (range $1 <> range $5) ($1 :| [$3]) $5) }
-     | foreign TopId '=' strlit                         { ForeignDefn $2 (extractStr $4) }
+Defn : Fix PrefixOp                                         { FixDefn $1 $2 }
+     | type Id '[' Params ']' '=' Type                      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
+     | type Id '=' Type                                     { TypeDefn (TypeBind $2 $4) }
+     | type Ct '[' Params ']' '{' Ctors '}'                 { mkDataDefn $2 (Just $4) $7 }
+     | type Ct '{' Ctors '}'                                { mkDataDefn $2 Nothing $4 }
+     | let TopId ':' Type                                   { TypingDefn $2 $4 }
+     | let TopId '=' Expr                                   { Defn $2 $4 }
+     | let TopId '[' Params ']' '=' Expr                    { Defn $2 (GenFun (range $3 <> range $7) $4 $7) }
+     | let TopId '(' OptParams ')' '=' Expr                 { Defn $2 (Fun (range $3 <> range $7) $4 $7) }
+     | let TopId '[' Params ']' '(' OptParams ')' '=' Expr  { Defn $2 (GenFun (range $3 <> range $10) $4 (Fun (range $6 <> range $10) $7 $10)) }
+     | let Id InfixOp Id '=' Expr                           { Defn $3 (Fun (range $2 <> range $6) ($2 :| [$4]) $6) }
+     | let foreign TopId '=' strlit                         { ForeignDefn $3 (extractStr $5) }
 
 Ctors_ : Ctors_ Ctor  { $2 : $1 }
        | Ctor         { [$1] }
