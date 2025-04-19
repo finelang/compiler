@@ -53,6 +53,7 @@ genBlockCode (Return expr) = do
   expr' <- genExprCode expr
   indent <- ask
   return [i|#{indent}return #{expr'};\n|]
+genBlockCode Void = return Text.empty
 genBlockCode (Do stmt block) = do
   stmt' <- genExprCode stmt
   block' <- genBlockCode block

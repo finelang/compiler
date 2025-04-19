@@ -167,6 +167,7 @@ data Lit
 
 data Block (p :: Pass)
   = Return (Expr p)
+  | Void
   | Do (Expr p) (Block p)
   | Mut Id (Expr p) (Block p)
   | Debug (Expr p) (Block p)

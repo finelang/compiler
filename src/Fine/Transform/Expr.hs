@@ -19,6 +19,7 @@ type Errors' = Errors Error Warning
 
 transformBlock :: Block Parsed -> RW Fixities Errors' (Block Transformed)
 transformBlock (Return expr) = Return <$> transformExpr expr
+transformBlock Void = return Void
 transformBlock (Do action block) =
   Do <$> transformExpr action <*> transformBlock block
 transformBlock (Mut var expr block) =

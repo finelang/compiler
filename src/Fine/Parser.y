@@ -2,6 +2,7 @@
 {-# LANGUAGE NoStrictData #-}
 module Fine.Parser (parseTokens) where
 
+import Data.Function ((&))
 import Data.List.Extra (toNonEmptyPARTIAL)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NonEmpty
@@ -117,15 +118,19 @@ Pattern : Ct                    { DataP (range $1) $1 [] }
 
 -- BLOCK
 
-Block : let Id '=' Expr BlockEnd          { Let False $2 $4 $5 }
-      | let mut Id '=' Expr BlockEnd      { Let True $3 $5 $6 }
-      | do Expr BlockEnd                  { Do $2 $3 }
-      | do Id '<-' Expr BlockEnd          { Mut $2 $4 $5 }
-      | debug Expr BlockEnd               { Debug $2 $3 }
-      | while Expr '{' Block '}' BlockEnd { Loop $2 $4 $6 }
+Stmts : Stmts Stmt  { $2 : $1 }
+      | Stmt        { [$1] }
 
-BlockEnd : Block      { $1 }
-         | then Expr  { Return $2 }
+Stmt : let Id '=' Expr              { Let False $2 $4 }
+     | let mut Id '=' Expr          { Let True $3 $5 }
+     | do Expr                      { Do $2 }
+     | do Id '<-' Expr              { Mut $2 $4 }
+     | debug Expr                   { Debug $2 }
+     | while Expr '{' VoidBlock '}' { Loop $2 $4 }
+
+Block : Stmts then Expr { foldl' (&) (Return $3) $1 }
+
+VoidBlock : Stmts { foldl' (&) Void $1 }
 
 -- EXPR
 

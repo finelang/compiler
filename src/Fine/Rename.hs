@@ -53,6 +53,7 @@ rename op = return op -- operators are not renamed
 
 renameBlock :: Block Transformed -> RS Substts Count (Block Transformed)
 renameBlock (Return expr) = Return <$> renameExpr expr
+renameBlock block@Void = return block
 renameBlock (Do action block) = Do <$> renameExpr action <*> renameBlock block
 renameBlock (Mut var expr block) =
   Mut <$> substt var <*> renameExpr expr <*> renameBlock block

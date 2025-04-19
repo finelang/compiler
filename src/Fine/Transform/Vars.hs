@@ -119,6 +119,7 @@ type Expr' = Expr Transformed
 
 blockFreeVars :: Block' -> RW Vars Errors' Vars
 blockFreeVars (Return expr) = exprFreeVars expr
+blockFreeVars Void = return emptyVars
 blockFreeVars (Do expr block) = union' <$> exprFreeVars expr <*> blockFreeVars block
 blockFreeVars (Mut var expr block) = do
   withReader vars (check var)
