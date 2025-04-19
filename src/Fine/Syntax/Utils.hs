@@ -43,10 +43,10 @@ mkCtor optTParams retType (tag, optTypes) =
                 (FunT NoRange types retType)
                 (Fun NoRange (toNonEmptyPARTIAL params) $ Data NoRange tag $ map (Var NoRange) params)
         _ -> (retType, Data NoRange tag [])
-      type'' = case optTParams of
-        Just tparams -> Forall NoRange tparams type'
-        _ -> type'
-   in ExprBind tag type'' expr
+      (type'', expr') = case optTParams of
+        Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
+        _ -> (type', expr)
+   in ExprBind tag type'' expr'
 
 mkDataDefn ::
   Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, Maybe (NonEmpty (Type Parsed))) -> Defn

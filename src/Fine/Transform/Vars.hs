@@ -195,7 +195,6 @@ exprFreeVars (GenFun _ typeParams body) = do
   forM_ (repeated typeParamList) (tell . error' . RepeatedVar)
   let typeParams' = Set.fromList typeParamList
   bodyVars <- withReader (unionTVars typeParams') (exprFreeVars body)
-  forM_ (Set.difference typeParams' (tVars bodyVars)) (tell . warning . UnusedVar)
   return (differenceTVars bodyVars typeParams')
 exprFreeVars (Block _ block) = blockFreeVars block
 
