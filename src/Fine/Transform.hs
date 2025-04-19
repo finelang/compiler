@@ -5,7 +5,6 @@ import Control.Monad.Trans.SEC (SEC, fail', gets, modify, runSEC, warn)
 import Data.Either (partitionEithers)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -13,9 +12,7 @@ import Fine.Error (
   Error (
     AlreadyInScope,
     InvalidPrecedence,
-    MissingTyping,
     RepeatedFixity,
-    RepeatedTyping,
     UsageBeforeInit
   ),
   Warning (UnusedVar),
@@ -27,11 +24,9 @@ import Fine.Syntax (
   Expr (..),
   Fixity (Fixity),
   Id,
-  LitT (UnitT),
   Module (Module),
   ParsedModule (ParsedModule),
   Pass (Parsed, Transformed),
-  Range (NoRange),
   Type (..),
   binder,
  )
@@ -48,7 +43,6 @@ data Env = Env
     allTypeBinders :: Set Id, -- all binders to make available for type functions
     currentTypeBinders :: Set Id,
     usedTypeBinders :: Set Id,
-    typings :: Map Id (Type Parsed),
     fixities :: Fixities
   }
 
@@ -57,15 +51,8 @@ initEnv [] = return ()
 initEnv (defn : defns) = do
   case defn of
     FixDefn _ _ -> return ()
-    Defn binder' _ ->
-      modify (\st -> st{allExprBinders = Set.insert binder' (allExprBinders st)})
-    ForeignDefn binder' _ ->
-      modify (\st -> st{allExprBinders = Set.insert binder' (allExprBinders st)})
-    TypingDefn binder' type' -> do
-      typings' <- gets typings
-      if Map.member binder' typings'
-        then fail' (RepeatedTyping binder')
-        else modify (\st -> st{typings = Map.insert binder' type' typings'})
+    Defn bind ->
+      modify (\st -> st{allExprBinders = Set.insert (binder bind) (allExprBinders st)})
     TypeDefn (TypeBind binder' _) ->
       modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
     DataDefn (TypeBind binder' _) ctBinds -> do
@@ -161,15 +148,6 @@ transformExprBind bind = do
 
 -- MODULE
 
-tryFindType :: Id -> SEC Env Error w (Type Parsed)
-tryFindType binder' = do
-  optT <- gets (Map.lookup binder' . typings)
-  case optT of
-    Just t -> return t
-    Nothing -> fail' (MissingTyping binder') >> return errorType
- where
-  errorType = LiteralT NoRange UnitT
-
 transformDefn :: Defn -> SEC Env Error Warning [Either (Bind OfExpr Transformed) (Bind OfType Transformed)]
 transformDefn (FixDefn fix@(Fixity _ prec) op) = do
   unless (0 <= prec && prec < 10) (fail' $ InvalidPrecedence 0 10 op) -- TODO: read from some config
@@ -178,15 +156,9 @@ transformDefn (FixDefn fix@(Fixity _ prec) op) = do
     then fail' (RepeatedFixity op)
     else modify (\ctx -> ctx{fixities = Map.insert op fix fixities'})
   return []
-transformDefn (Defn binder' value) = do
-  type' <- tryFindType binder'
-  bind <- transformExprBind (ExprBind binder' type' value)
-  return [Left bind]
-transformDefn (ForeignDefn binder' code) = do
-  type' <- tryFindType binder'
-  bind <- transformExprBind (ForeignBind binder' type' code)
-  return [Left bind]
-transformDefn (TypingDefn _ _) = return []
+transformDefn (Defn bind) = do
+  bind' <- transformExprBind bind
+  return [Left bind']
 transformDefn (TypeDefn bind) = do
   bind' <- transformTypeBind bind
   return [Right bind']
@@ -218,5 +190,5 @@ transformModule (ParsedModule defns entry) = do
 runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Transformed), [Warning])
 runTransformer mdule =
   let env =
-        Env Set.empty Set.empty Set.empty Set.empty Set.empty Set.empty Map.empty Map.empty
+        Env Set.empty Set.empty Set.empty Set.empty Set.empty Set.empty Map.empty
    in runSEC (transformModule mdule) env

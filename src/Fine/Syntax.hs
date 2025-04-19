@@ -273,9 +273,7 @@ instance Show Fixity where
   show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
 
 data Defn
-  = Defn Id (Expr Parsed)
-  | ForeignDefn Id Text
-  | TypingDefn Id (Type Parsed)
+  = Defn (Bind OfExpr Parsed)
   | TypeDefn (Bind OfType Parsed)
   | DataDefn (Bind OfType Parsed) (NonEmpty (Bind OfExpr Parsed))
   | FixDefn Fixity Id

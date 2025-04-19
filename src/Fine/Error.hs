@@ -33,10 +33,6 @@ data Error
   | InvalidPrecedence Int Int Id
   | RepeatedFixity Id
   | SameInfixPrecedence (Id, Fixity) (Id, Fixity)
-  | InvalidPattern Range
-  | DiscardUsage Range
-  | RepeatedTyping Id
-  | MissingTyping Id
 
 instance Show Error where
   show :: Error -> String
@@ -58,14 +54,6 @@ instance Show Error where
     [i|Fixity definition for #{hl var} is repeated.|]
   show (SameInfixPrecedence _ _) =
     errorTODO
-  show (InvalidPattern _) =
-    [i|This expression is not a valid pattern.|]
-  show (DiscardUsage _) =
-    [i|The 'discard' identifier can only be used inside patterns.|]
-  show (RepeatedTyping var) =
-    [i|A typing for #{hl var} already exists.|]
-  show (MissingTyping var) =
-    [i|Missing typing for #{hl var}.|]
 
 errorPrefix :: String
 errorPrefix = red "Error: "

@@ -1,5 +1,6 @@
-module Fine.Syntax.Utils (boundVars, isFunction, mkDataDefn) where
+module Fine.Syntax.Utils (boundVars, isFunction, mkDataDefn, mkExprDefn) where
 
+import Data.Functor qualified as Functor
 import Data.List.Extra (toNonEmptyPARTIAL)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
@@ -7,7 +8,7 @@ import Data.String.Interpolate (i)
 import Fine.Syntax (
   Bind (ExprBind, TypeBind),
   BindType (..),
-  Defn (DataDefn),
+  Defn (DataDefn, Defn),
   Expr (Data, Fun, GenFun, Var),
   Id (Id),
   Pass (Parsed),
@@ -63,3 +64,13 @@ mkDataDefn ctTag optTParams ctors =
             (TData NoRange ctTag $ map (\param -> TVar (range param) param) $ NonEmpty.toList tparams)
         _ -> TData NoRange ctTag []
    in DataDefn tBind ctBinds
+
+mkExprDefn :: Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, Type Parsed) -> Type Parsed -> Expr Parsed -> Defn
+mkExprDefn binder optTParams typedParams retType body =
+  let (params, types) = Functor.unzip typedParams
+      type' = FunT NoRange types retType
+      expr = Fun NoRange params body
+      (type'', expr') = case optTParams of
+        Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
+        _ -> (type', expr)
+   in Defn (ExprBind binder type'' expr')

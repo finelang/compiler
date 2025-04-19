@@ -9,7 +9,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
-import Fine.Syntax.Utils (mkDataDefn)
+import Fine.Syntax.Utils (mkDataDefn, mkExprDefn)
 }
 
 %name parseTokens
@@ -218,18 +218,24 @@ Entry : run Expr    { Just $2 }
 Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
-Defn : Fix PrefixOp                                         { FixDefn $1 $2 }
-     | type Id '[' Params ']' '=' Type                      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
-     | type Id '=' Type                                     { TypeDefn (TypeBind $2 $4) }
-     | type Ct '[' Params ']' '{' Ctors '}'                 { mkDataDefn $2 (Just $4) $7 }
-     | type Ct '{' Ctors '}'                                { mkDataDefn $2 Nothing $4 }
-     | let TopId ':' Type                                   { TypingDefn $2 $4 }
-     | let TopId '=' Expr                                   { Defn $2 $4 }
-     | let TopId '[' Params ']' '=' Expr                    { Defn $2 (GenFun (range $3 <> range $7) $4 $7) }
-     | let TopId '(' OptParams ')' '=' Expr                 { Defn $2 (Fun (range $3 <> range $7) $4 $7) }
-     | let TopId '[' Params ']' '(' OptParams ')' '=' Expr  { Defn $2 (GenFun (range $3 <> range $10) $4 (Fun (range $6 <> range $10) $7 $10)) }
-     | let Id InfixOp Id '=' Expr                           { Defn $3 (Fun (range $2 <> range $6) ($2 :| [$4]) $6) }
-     | let foreign TopId '=' strlit                         { ForeignDefn $3 (extractStr $5) }
+Defn : Fix PrefixOp                                                   { FixDefn $1 $2 }
+     | type Id '[' Params ']' '=' Type                                { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
+     | type Id '=' Type                                               { TypeDefn (TypeBind $2 $4) }
+     | type Ct '[' Params ']' '{' Ctors '}'                           { mkDataDefn $2 (Just $4) $7 }
+     | type Ct '{' Ctors '}'                                          { mkDataDefn $2 Nothing $4 }
+     | let TopId ':' Type '=' Expr                                    { Defn (ExprBind $2 $4 $6) }
+     | let foreign TopId ':' Type '=' strlit                          { Defn (ForeignBind $3 $5 (extractStr $7)) }
+     | let TopId '[' Params ']' ':' Type '=' Expr                     { Defn (ExprBind $2 (Forall NoRange $4 $7) (GenFun NoRange $4 $9)) }
+     | let TopId '(' TypedParams ')' ':' Type '=' Expr                { mkExprDefn $2 Nothing $4 $7 $9 }
+     | let TopId '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr { mkExprDefn $2 (Just $4) $7 $10 $12 }
+
+TypedParams_ : TypedParams_ ',' TypedParam  { $3 : $1 }
+             | TypedParam                   { [$1] }
+
+TypedParam: Id ':' Type { ($1, $3) }
+
+TypedParams : TypedParams_  { toNonEmptyPARTIAL (reverse $1) }
+            | {- empty -}   { (Id NoRange "_", LiteralT NoRange UnitT) :| [] }
 
 Ctors_ : Ctors_ Ctor  { $2 : $1 }
        | Ctor         { [$1] }
