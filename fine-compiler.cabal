@@ -35,10 +35,11 @@ library
     Control.Monad.Trans.SW
     Data.Errors
     Data.List.Extra
+    Data.List.NonEmpty.Extra
     Data.Tuple.Extra
     Fine.Codegen
     Fine.Codegen.Lit
-    Fine.Codegen.Pattern
+    Fine.Codegen.Ready
     Fine.Codegen.TailRec
     Fine.Error
     Fine.Lexer

@@ -11,7 +11,6 @@ module Fine.Syntax (
   Lit (..),
   Block (..),
   Expr (..),
-  exprExt,
   Pattern (..),
   BindType (..),
   Bind (..),
@@ -32,6 +31,7 @@ import Data.Map.Strict (Map)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Void (Void)
 
 -- RANGE
 
@@ -87,6 +87,7 @@ data Phase
   = Parsed -- after parsing
   | Transformed -- after transformation and semantic checking
   | Typed -- after type checking/inference
+  | Ready -- ready for codegen
 
 -- KIND
 
@@ -165,6 +166,11 @@ data Lit
   | Str Text
   | Unit
 
+-- for AST only available at 'Ready' phase
+type family ReadyX (p :: Phase) where
+  ReadyX Ready = ()
+  ReadyX _ = Void
+
 data Block (p :: Phase)
   = Return (Expr p)
   | Void
@@ -173,56 +179,60 @@ data Block (p :: Phase)
   | Debug (Expr p) (Block p)
   | Let Bool Id (Expr p) (Block p)
   | Loop (Expr p) (Block p) (Block p)
+  | If (ReadyX p) (Expr p) (Block p) (Block p)
 
 type family ExprX (p :: Phase) where
+  ExprX Ready = ()
   ExprX Typed = (Range, Type Typed)
   ExprX _ = Range
 
-data Expr (p :: Phase) where
-  Literal :: (ExprX p) -> Lit -> Expr p
-  Data :: (ExprX p) -> Id -> [Expr p] -> Expr p
-  Record :: (ExprX p) -> (NonEmpty (Id, Expr p)) -> Expr p
-  Tuple :: (ExprX p) -> (NonEmpty (Expr p)) -> Expr p
-  Var :: (ExprX p) -> Id -> Expr p
-  App :: (ExprX p) -> (Expr p) -> (NonEmpty (Expr p)) -> Expr p
-  GenApp :: (ExprX p) -> (Expr p) -> (NonEmpty (Type p)) -> Expr p
-  Access :: (ExprX p) -> (Expr p) -> Id -> Expr p
-  Index :: (ExprX p) -> (Expr p) -> Int -> Expr p
-  Cond :: (ExprX p) -> (Expr p) -> (Expr p) -> (Expr p) -> Expr p
-  Fun :: (ExprX p) -> (NonEmpty Id) -> (Expr p) -> Expr p
-  GenFun :: (ExprX p) -> (NonEmpty Id) -> (Expr p) -> Expr p
-  Block :: (ExprX p) -> (Block p) -> Expr p
-  PatternMatching :: (ExprX p) -> (Expr p) -> (NonEmpty (Pattern, Expr p)) -> Expr p
-  Chain :: Range -> Chain -> Expr Parsed
+-- for AST available until 'Ready' phase
+type family NonReadyX (p :: Phase) where
+  NonReadyX Ready = Void
+  NonReadyX Typed = (Range, Type Typed)
+  NonReadyX _ = Range
 
-exprExt :: Expr p -> ExprX p
-exprExt (Literal ext _) = ext
-exprExt (Data ext _ _) = ext
-exprExt (Record ext _) = ext
-exprExt (Tuple ext _) = ext
-exprExt (Var ext _) = ext
-exprExt (App ext _ _) = ext
-exprExt (GenApp ext _ _) = ext
-exprExt (Access ext _ _) = ext
-exprExt (Index ext _ _) = ext
-exprExt (Cond ext _ _ _) = ext
-exprExt (Fun ext _ _) = ext
-exprExt (GenFun ext _ _) = ext
-exprExt (Block ext _) = ext
-exprExt (PatternMatching ext _ _) = ext
-exprExt (Chain ext _) = ext
+-- for CST only
+type family ParsedX (p :: Phase) where
+  ParsedX Parsed = Range
+  ParsedX _ = Void
+
+data Expr (p :: Phase)
+  = Literal (ExprX p) Lit
+  | Data (ExprX p) Id [Expr p]
+  | Record (ExprX p) (NonEmpty (Id, Expr p))
+  | Tuple (ExprX p) (NonEmpty (Expr p))
+  | Var (ExprX p) Id
+  | App (ExprX p) (Expr p) (NonEmpty (Expr p))
+  | GenApp (NonReadyX p) (Expr p) (NonEmpty (Type p))
+  | Access (ExprX p) (Expr p) Id
+  | Index (ExprX p) (Expr p) Int
+  | Cond (ExprX p) (Expr p) (Expr p) (Expr p)
+  | Fun (ExprX p) (NonEmpty Id) (Expr p)
+  | GenFun (NonReadyX p) (NonEmpty Id) (Expr p)
+  | Block (ExprX p) (Block p)
+  | PatternMatching (NonReadyX p) (Expr p) (NonEmpty (Pattern, Expr p))
+  | Chain (ParsedX p) Chain
+  | Conj (ReadyX p) (NonEmpty (Expr p))
+  | Equals (ReadyX p) (Expr p) (Expr p)
 
 instance HasRange (Expr Parsed) where
   range :: Expr Parsed -> Range
-  range = exprExt
-
-instance HasRange (Expr Transformed) where
-  range :: Expr Transformed -> Range
-  range = exprExt
-
-instance HasRange (Expr Typed) where
-  range :: Expr Typed -> Range
-  range = fst . exprExt
+  range (Literal r _) = r
+  range (Data r _ _) = r
+  range (Record r _) = r
+  range (Tuple r _) = r
+  range (Var r _) = r
+  range (App r _ _) = r
+  range (GenApp r _ _) = r
+  range (Access r _ _) = r
+  range (Index r _ _) = r
+  range (Cond r _ _ _) = r
+  range (Fun r _ _) = r
+  range (GenFun r _ _) = r
+  range (Block r _) = r
+  range (PatternMatching r _ _) = r
+  range (Chain r _) = r
 
 -- PATTERN
 
@@ -247,11 +257,15 @@ instance HasRange Pattern where
 
 data BindType = OfExpr | OfType
 
+type family BoundType (p :: Phase) where
+  BoundType Ready = ()
+  BoundType p = Type p
+
 data Bind :: BindType -> Phase -> HsKind.Type where
-  ExprBind :: Id -> Type p -> Expr p -> Bind OfExpr p
-  TypeBind :: Id -> Type p -> Bind OfType p
+  ExprBind :: Id -> BoundType p -> Expr p -> Bind OfExpr p
+  TypeBind :: Id -> BoundType p -> Bind OfType p
   -- binding for external code
-  ForeignBind :: Id -> Type p -> Text -> Bind OfExpr p
+  ForeignBind :: Id -> BoundType p -> Text -> Bind OfExpr p
 
 binder :: Bind t p -> Id
 binder (ExprBind idn _ _) = idn
@@ -282,10 +296,18 @@ data Defn
 data ParsedModule
   = ParsedModule [Defn] (Maybe (Expr Parsed))
 
+type family ModuleTypes (p :: Phase) where
+  ModuleTypes Ready = ()
+  ModuleTypes p = [Bind OfType p]
+
+type family ModuleFixities (p :: Phase) where
+  ModuleFixities Ready = ()
+  ModuleFixities _ = Map Id Fixity
+
 data Module (p :: Phase)
   = Module
   { moduleExprs :: [Bind OfExpr p],
-    moduleTypes :: [Bind OfType p],
-    moduleFixities :: Map Id Fixity,
+    moduleTypes :: ModuleTypes p,
+    moduleFixities :: ModuleFixities p,
     moduleEntry :: Maybe (Expr p)
   }
