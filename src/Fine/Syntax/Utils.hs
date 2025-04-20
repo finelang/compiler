@@ -1,16 +1,15 @@
 module Fine.Syntax.Utils (boundVars, isFunction, mkDataDefn, mkExprDefn) where
 
 import Data.Functor qualified as Functor
-import Data.List.Extra (toNonEmptyPARTIAL)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.String.Interpolate (i)
+
 import Fine.Syntax (
   Bind (ExprBind, TypeBind),
   BindType (..),
   Defn (DataDefn, Defn),
   Expr (Data, Fun, GenFun, Var),
-  Id (Id),
+  Id,
   Pattern (..),
   Phase (Parsed),
   Range (NoRange),
@@ -31,17 +30,14 @@ isFunction (Fun _ _ _) = True
 isFunction (GenFun _ _ body) = isFunction body
 isFunction _ = False
 
-mkParams :: Int -> [Id]
-mkParams len = map (\n -> Id NoRange [i|param#{n}|]) [1 .. len]
-
-mkCtor :: Maybe (NonEmpty Id) -> Type Parsed -> (Id, Maybe (NonEmpty (Type Parsed))) -> Bind OfExpr Parsed
-mkCtor optTParams retType (tag, optTypes) =
-  let (type', expr) = case optTypes of
-        Just types ->
-          let params = mkParams (NonEmpty.length types)
+mkCtor :: Maybe (NonEmpty Id) -> Type Parsed -> (Id, Maybe (NonEmpty (Id, Type Parsed))) -> Bind OfExpr Parsed
+mkCtor optTParams retType (tag, optTypedParams) =
+  let (type', expr) = case optTypedParams of
+        Just typedParams ->
+          let (params, types) = Functor.unzip typedParams
            in (,)
                 (FunT NoRange types retType)
-                (Fun NoRange (toNonEmptyPARTIAL params) $ Data NoRange tag $ map (Var NoRange) params)
+                (Fun NoRange params $ Data NoRange tag $ map (Var NoRange) $ NonEmpty.toList params)
         _ -> (retType, Data NoRange tag [])
       (type'', expr') = case optTParams of
         Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
@@ -49,7 +45,7 @@ mkCtor optTParams retType (tag, optTypes) =
    in ExprBind tag type'' expr'
 
 mkDataDefn ::
-  Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, Maybe (NonEmpty (Type Parsed))) -> Defn
+  Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, Maybe (NonEmpty (Id, Type Parsed))) -> Defn
 mkDataDefn ctTag optTParams ctors =
   let tc :: Type Parsed
       tc = TVar (range ctTag) ctTag

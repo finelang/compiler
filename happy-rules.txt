@@ -132,7 +132,7 @@ Grammar
 	Ctors_ -> Ctor                                     (123)
 	Ctors -> Ctors_                                    (124)
 	Ctor -> Ct                                         (125)
-	Ctor -> Ct '(' Types ')'                           (126)
+	Ctor -> Ct '(' TypedParams ')'                     (126)
 	Fix -> Assoc nat                                   (127)
 	Assoc -> infix                                     (128)
 	Assoc -> infixl                                    (129)
@@ -1985,7 +1985,7 @@ State 101
 State 102
 
 	Ctor -> Ct .                                        (rule 125)
-	Ctor -> Ct . '(' Types ')'                          (rule 126)
+	Ctor -> Ct . '(' TypedParams ')'                    (rule 126)
 
 	capid          reduce using rule 125
 	'('            shift, and enter state 165
@@ -2953,26 +2953,15 @@ State 164
 
 State 165
 
-	Ctor -> Ct '(' . Types ')'                          (rule 126)
+	Ctor -> Ct '(' . TypedParams ')'                    (rule 126)
 
-	float          shift, and enter state 93
-	int            shift, and enter state 94
-	str            shift, and enter state 95
-	bool           shift, and enter state 96
-	void           shift, and enter state 97
 	id             shift, and enter state 16
-	capid          shift, and enter state 17
-	'.'            shift, and enter state 98
-	'('            shift, and enter state 99
-	'{'            shift, and enter state 100
+	')'            reduce using rule 121
 
-	Id             goto state 88
-	Ct             goto state 89
-	Types_         goto state 107
-	Types          goto state 188
-	Type           goto state 109
-	TApp           goto state 91
-	TAtom          goto state 92
+	Id             goto state 132
+	TypedParams_   goto state 133
+	TypedParam     goto state 134
+	TypedParams    goto state 188
 
 State 166
 
@@ -3243,7 +3232,7 @@ State 187
 
 State 188
 
-	Ctor -> Ct '(' Types . ')'                          (rule 126)
+	Ctor -> Ct '(' TypedParams . ')'                    (rule 126)
 
 	')'            shift, and enter state 234
 
@@ -3885,7 +3874,7 @@ State 233
 
 State 234
 
-	Ctor -> Ct '(' Types ')' .                          (rule 126)
+	Ctor -> Ct '(' TypedParams ')' .                    (rule 126)
 
 	capid          reduce using rule 126
 	'}'            reduce using rule 126

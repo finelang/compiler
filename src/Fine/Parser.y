@@ -247,8 +247,8 @@ Ctors_ : Ctors_ Ctor  { $2 : $1 }
 
 Ctors : Ctors_  { toNonEmptyPARTIAL (reverse $1) }
 
-Ctor : Ct                               { ($1, Nothing) }
-     | Ct '(' Types ')'                 { ($1, Just $3) }
+Ctor : Ct                     { ($1, Nothing) }
+     | Ct '(' TypedParams ')' { ($1, Just $3) }
 
 Fix : Assoc nat { Fixity $1 (read $ Text.unpack $ tokenLexeme $2) }
 
