@@ -19,8 +19,8 @@ import Fine.Syntax (
   Expr (..),
   Id (Id, Op),
   Module (Module, moduleEntry, moduleExprs),
-  Pass (Transformed),
   Pattern (..),
+  Phase (Transformed),
   binder,
  )
 import Fine.Syntax.Utils (boundVars)
@@ -113,8 +113,8 @@ renameExpr (Block ext block) = do
   block' <- renameBlock block
   resumeCount count
   return (Block ext block')
-renameExpr (PatternMatch ext expr matches) =
-  PatternMatch ext <$> renameExpr expr <*> mapM renameMatch matches
+renameExpr (PatternMatching ext expr matches) =
+  PatternMatching ext <$> renameExpr expr <*> mapM renameMatch matches
 
 renameBind :: Bind OfExpr Transformed -> RS Substts Count (Bind OfExpr Transformed)
 renameBind (ExprBind binder' type' expr) = do

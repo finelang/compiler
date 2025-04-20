@@ -26,7 +26,7 @@ import Fine.Syntax (
   Id,
   Module (Module),
   ParsedModule (ParsedModule),
-  Pass (Parsed, Transformed),
+  Phase (Parsed, Transformed),
   Type (..),
   binder,
  )

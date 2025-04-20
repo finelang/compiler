@@ -181,7 +181,7 @@ Atom : '(' Exprs ')'              { if NonEmpty.length $2 > 1 then Tuple (range 
      | strlit                     { Literal (range $1) (Str $ extractStr $1) }
      | TopId                      { Var (range $1) $1 }
      | Ct                         { Var (range $1) $1 }
-     | case Expr '{' Matches '}'  { PatternMatch (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
+     | case Expr '{' Matches '}'  { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
 
 -- TYPE
 

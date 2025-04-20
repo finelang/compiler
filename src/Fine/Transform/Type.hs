@@ -1,7 +1,7 @@
 module Fine.Transform.Type (transformType) where
 
 import Data.List.NonEmpty qualified as NonEmpty
-import Fine.Syntax (Pass (Parsed, Transformed), Type (..))
+import Fine.Syntax (Phase (Parsed, Transformed), Type (..))
 
 transformType :: Type Parsed -> Type Transformed
 transformType (LiteralT ext lit) = LiteralT ext lit

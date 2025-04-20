@@ -12,7 +12,7 @@ import Fine.Error (
   Warning (MissingFixity),
   errorUNREACHABLE,
  )
-import Fine.Syntax (Assoc (..), Chain (..), Expr (..), Fixity (..), Id, Pass (Parsed), range)
+import Fine.Syntax (Assoc (..), Chain (..), Expr (..), Fixity (..), Id, Phase (Parsed), range)
 import Fine.Transform.Common (Fixities)
 
 type Errors' = Errors Error Warning

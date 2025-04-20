@@ -2,7 +2,7 @@ module Fine.Syntax (
   Range (..),
   HasRange (..),
   Id (Id, Op, idText),
-  Pass (..),
+  Phase (..),
   Kind (..),
   LitT (..),
   Type (..),
@@ -83,7 +83,7 @@ instance Show Id where
 
 -- PASS
 
-data Pass
+data Phase
   = Parsed -- after parsing
   | Transformed -- after transformation and semantic checking
   | Typed -- after type checking/inference
@@ -103,15 +103,15 @@ instance HasRange Kind where
 
 data LitT = IntT | FloatT | BoolT | StrT | UnitT
 
-type family TypeX (p :: Pass) where
+type family TypeX (p :: Phase) where
   TypeX Typed = (Range, Kind)
   TypeX _ = Range
 
-type family UniVar (p :: Pass) where
+type family UniVar (p :: Phase) where
   UniVar Typed = (Id, Kind)
   UniVar _ = Id
 
-data Type (p :: Pass)
+data Type (p :: Phase)
   = LiteralT (TypeX p) LitT
   | VoidT (TypeX p)
   | TupleT (TypeX p) (NonEmpty (Type p))
@@ -165,7 +165,7 @@ data Lit
   | Str Text
   | Unit
 
-data Block (p :: Pass)
+data Block (p :: Phase)
   = Return (Expr p)
   | Void
   | Do (Expr p) (Block p)
@@ -174,11 +174,11 @@ data Block (p :: Pass)
   | Let Bool Id (Expr p) (Block p)
   | Loop (Expr p) (Block p) (Block p)
 
-type family ExprX (p :: Pass) where
+type family ExprX (p :: Phase) where
   ExprX Typed = (Range, Type Typed)
   ExprX _ = Range
 
-data Expr (p :: Pass) where
+data Expr (p :: Phase) where
   Literal :: (ExprX p) -> Lit -> Expr p
   Data :: (ExprX p) -> Id -> [Expr p] -> Expr p
   Record :: (ExprX p) -> (NonEmpty (Id, Expr p)) -> Expr p
@@ -192,7 +192,7 @@ data Expr (p :: Pass) where
   Fun :: (ExprX p) -> (NonEmpty Id) -> (Expr p) -> Expr p
   GenFun :: (ExprX p) -> (NonEmpty Id) -> (Expr p) -> Expr p
   Block :: (ExprX p) -> (Block p) -> Expr p
-  PatternMatch :: (ExprX p) -> (Expr p) -> (NonEmpty (Pattern, Expr p)) -> Expr p
+  PatternMatching :: (ExprX p) -> (Expr p) -> (NonEmpty (Pattern, Expr p)) -> Expr p
   Chain :: Range -> Chain -> Expr Parsed
 
 exprExt :: Expr p -> ExprX p
@@ -209,7 +209,7 @@ exprExt (Cond ext _ _ _) = ext
 exprExt (Fun ext _ _) = ext
 exprExt (GenFun ext _ _) = ext
 exprExt (Block ext _) = ext
-exprExt (PatternMatch ext _ _) = ext
+exprExt (PatternMatching ext _ _) = ext
 exprExt (Chain ext _) = ext
 
 instance HasRange (Expr Parsed) where
@@ -247,7 +247,7 @@ instance HasRange Pattern where
 
 data BindType = OfExpr | OfType
 
-data Bind :: BindType -> Pass -> HsKind.Type where
+data Bind :: BindType -> Phase -> HsKind.Type where
   ExprBind :: Id -> Type p -> Expr p -> Bind OfExpr p
   TypeBind :: Id -> Type p -> Bind OfType p
   -- binding for external code
@@ -282,7 +282,7 @@ data Defn
 data ParsedModule
   = ParsedModule [Defn] (Maybe (Expr Parsed))
 
-data Module (p :: Pass)
+data Module (p :: Phase)
   = Module
   { moduleExprs :: [Bind OfExpr p],
     moduleTypes :: [Bind OfType p],

@@ -18,8 +18,8 @@ import Fine.Syntax (
   Block (..),
   Expr (..),
   Id,
-  Pass (Transformed),
   Pattern (..),
+  Phase (Transformed),
   Type (..),
   idText,
  )
@@ -174,7 +174,7 @@ exprFreeVars (GenApp _ genF typeArgs) = do
 exprFreeVars (Access _ expr _) = exprFreeVars expr
 exprFreeVars (Index _ expr _) = exprFreeVars expr
 exprFreeVars (Cond _ cond yes no) = unions' <$> mapM exprFreeVars [cond, yes, no]
-exprFreeVars (PatternMatch _ expr matches) = do
+exprFreeVars (PatternMatching _ expr matches) = do
   exprVars <- exprFreeVars expr
   matchesVars <- unions' <$> mapM matchFreeVars matches
   return (union' exprVars matchesVars)

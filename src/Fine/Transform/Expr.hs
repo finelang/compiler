@@ -8,7 +8,7 @@ import Fine.Error (Error, Warning (DebugKeywordUsage))
 import Fine.Syntax (
   Block (..),
   Expr (..),
-  Pass (Parsed, Transformed),
+  Phase (Parsed, Transformed),
   range,
  )
 import Fine.Transform.Common (Fixities)
@@ -51,11 +51,11 @@ transformExpr (Index ext expr ix) = do
   return (Index ext expr' ix)
 transformExpr (Cond ext cond yes no) =
   Cond ext <$> transformExpr cond <*> transformExpr yes <*> transformExpr no
-transformExpr (PatternMatch ext expr matches) = do
+transformExpr (PatternMatching ext expr matches) = do
   expr' <- transformExpr expr
   let patts = NonEmpty.map fst matches
   conts' <- mapM (transformExpr . snd) matches
-  return (PatternMatch ext expr' (NonEmpty.zip patts conts'))
+  return (PatternMatching ext expr' (NonEmpty.zip patts conts'))
 transformExpr (Fun ext params body) = Fun ext params <$> transformExpr body
 transformExpr (GenFun ext typeParams body) = GenFun ext typeParams <$> transformExpr body
 transformExpr (Block ext block') = Block ext <$> transformBlock block'

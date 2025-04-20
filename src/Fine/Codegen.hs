@@ -15,8 +15,8 @@ import Fine.Syntax (
   Expr (..),
   Id (Id),
   Module (Module),
-  Pass (Transformed),
   Pattern (..),
+  Phase (Transformed),
   Range (NoRange),
   idText,
  )
@@ -146,7 +146,7 @@ genExprCode (Cond _ cond yes no) = do
   yes' <- genExprCode yes
   no' <- genExprCode no
   return [i|#{cond'} ? #{yes'} : #{no'}|]
-genExprCode (PatternMatch _ expr matches) = do
+genExprCode (PatternMatching _ expr matches) = do
   oldIndent <- ask
   indent <- increaseIndentation
   expr' <- withIndentation indent (genExprCode expr)

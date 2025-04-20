@@ -14,7 +14,7 @@ module Fine.Codegen.TailRec () where
 --   Kind (KLit),
 --   Lit (Bool),
 --   LitT (UnitT),
---   Pass (Typed),
+--   Phase (Typed),
 --   Range (NoRange),
 --   Type (LiteralT),
 --  )
@@ -68,8 +68,8 @@ module Fine.Codegen.TailRec () where
 --   inBlock block@Void = return block
 --   inBlock (Loop cond actions block) =
 --     Loop <$> replaceIn cond <*> inBlock actions <*> inBlock block
--- replaceIn (PatternMatch ext expr matches) =
---   PatternMatch ext <$> replaceIn expr <*> mapM inMatch matches
+-- replaceIn (PatternMatching ext expr matches) =
+--   PatternMatching ext <$> replaceIn expr <*> mapM inMatch matches
 --  where
 --   inMatch (patt, cont) = do
 --     old <- asks oldVar
@@ -136,7 +136,7 @@ module Fine.Codegen.TailRec () where
 --    in Block invalidX block
 
 -- tryTransformBranches :: Expr' -> RM Expr'
--- tryTransformBranches (PatternMatch ext expr matches) = do
+-- tryTransformBranches (PatternMatching ext expr matches) = do
 --   ctx <- ask
 --   let (patts, branches) = Functor.unzip matches
 --   let recsTransformed = fmap (\cont -> runReaderT (tryTransformRecBranch cont) ctx) branches
@@ -148,7 +148,7 @@ module Fine.Codegen.TailRec () where
 --               (\cont optCont -> fromMaybe (transformNonRecBranch cont) optCont)
 --               branches
 --               recsTransformed
---        in return (PatternMatch ext expr (NonEmpty.zip patts allTransformed))
+--        in return (PatternMatching ext expr (NonEmpty.zip patts allTransformed))
 -- tryTransformBranches (Cond ext cond yes no) = do
 --   ctx <- ask
 --   let branches = [yes, no]
