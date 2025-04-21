@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Fine.Syntax (
   Range (..),
   HasRange (..),
@@ -88,12 +90,14 @@ data Phase
   | Transformed -- after transformation and semantic checking
   | Typed -- after type checking/inference
   | Ready -- ready for codegen
+  deriving (Show)
 
 -- KIND
 
 data Kind
   = KLit Range
   | FunK (NonEmpty Kind) Kind -- type of type functions
+  deriving (Show)
 
 instance HasRange Kind where
   range :: Kind -> Range
@@ -103,6 +107,7 @@ instance HasRange Kind where
 -- TYPE
 
 data LitT = IntT | FloatT | BoolT | StrT | UnitT
+  deriving (Show)
 
 type family TypeX (p :: Phase) where
   TypeX Typed = (Range, Kind)
@@ -123,6 +128,8 @@ data Type (p :: Phase)
   | TVar (TypeX p) Id
   | TApp (TypeX p) (Type p) (NonEmpty (Type p))
   | TFun (TypeX p) (NonEmpty Id) (Type p) -- type function (for type constructors and type aliases)
+
+deriving instance (Show (TypeX p), Show (UniVar p)) => Show (Type p)
 
 typeExt :: Type p -> TypeX p
 typeExt (LiteralT ext _) = ext
@@ -154,6 +161,8 @@ data Chain
   = Operand (Expr Parsed)
   | Operation (Expr Parsed) Id Chain
 
+deriving instance (Show (Expr Parsed)) => Show Chain
+
 instance HasRange Chain where
   range :: Chain -> Range
   range (Operand expr) = range expr
@@ -165,6 +174,7 @@ data Lit
   | Bool Bool
   | Str Text
   | Unit
+  deriving (Show)
 
 -- for AST only available at 'Ready' phase
 type family ReadyX (p :: Phase) where
@@ -180,6 +190,8 @@ data Block (p :: Phase)
   | Let Bool Id (Expr p) (Block p)
   | Loop (Expr p) (Block p) (Block p)
   | If (ReadyX p) (Expr p) (Block p) (Block p)
+
+deriving instance (Show (ReadyX p), Show (Expr p)) => Show (Block p)
 
 type family ExprX (p :: Phase) where
   ExprX Ready = ()
@@ -216,6 +228,15 @@ data Expr (p :: Phase)
   | Conj (ReadyX p) (NonEmpty (Expr p))
   | Equals (ReadyX p) (Expr p) (Expr p)
 
+deriving instance
+  ( Show (ExprX p),
+    Show (NonReadyX p),
+    Show (ParsedX p),
+    Show (ReadyX p),
+    Show (Type p)
+  ) =>
+  Show (Expr p)
+
 instance HasRange (Expr Parsed) where
   range :: Expr Parsed -> Range
   range (Literal r _) = r
@@ -243,6 +264,7 @@ data Pattern
   | TupleP Range (NonEmpty Pattern)
   | Capture Id
   | Discard Range
+  deriving (Show)
 
 instance HasRange Pattern where
   range :: Pattern -> Range
@@ -256,6 +278,7 @@ instance HasRange Pattern where
 -- MODULE
 
 data BindType = OfExpr | OfType
+  deriving (Show)
 
 type family BoundType (p :: Phase) where
   BoundType Ready = ()
@@ -266,6 +289,8 @@ data Bind :: BindType -> Phase -> HsKind.Type where
   TypeBind :: Id -> BoundType p -> Bind OfType p
   -- binding for external code
   ForeignBind :: Id -> BoundType p -> Text -> Bind OfExpr p
+
+deriving instance (Show (BoundType p), Show (Expr p)) => Show (Bind t p)
 
 binder :: Bind t p -> Id
 binder (ExprBind idn _ _) = idn
@@ -311,3 +336,11 @@ data Module (p :: Phase)
     moduleFixities :: ModuleFixities p,
     moduleEntry :: Maybe (Expr p)
   }
+
+deriving instance
+  ( Show (ModuleFixities p),
+    Show (ModuleTypes p),
+    Show (BoundType p),
+    Show (Expr p)
+  ) =>
+  Show (Module p)
