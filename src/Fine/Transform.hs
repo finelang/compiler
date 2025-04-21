@@ -10,7 +10,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Fine.Error (
   Error (
-    AlreadyInScope,
+    AlreadyDefined,
     InvalidPrecedence,
     RepeatedFixity,
     UsageBeforeInit
@@ -86,7 +86,7 @@ transformTypeBind (TypeBind binder' type') = do
   do
     current <- gets currentTypeBinders
     if Set.member binder' current
-      then fail' (AlreadyInScope binder')
+      then fail' (AlreadyDefined binder')
       else modify (\st -> st{currentTypeBinders = Set.insert binder' current})
   let type'' = transformType type'
   handleTypeVars (Just binder') type''
@@ -132,7 +132,7 @@ transformExprBind bind = do
     let binder' = binder bind
     current <- gets currentExprBinders
     if Set.member binder' current
-      then fail' (AlreadyInScope binder')
+      then fail' (AlreadyDefined binder')
       else modify (\st -> st{currentExprBinders = Set.insert binder' current})
   case bind of
     ExprBind binder' type' expr -> do

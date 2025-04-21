@@ -10,7 +10,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Fine.Error (
-  Error (RepeatedCapture, RepeatedVar, UndefinedVar, UnusedUniVar),
+  Error (AlreadyDefined, RepeatedCapture, UndefinedVar, UnusedUniVar),
   Warning (UnusedVar),
   errorUNREACHABLE,
  )
@@ -47,7 +47,7 @@ typeFreeVars (FunT _ argTypes bodyType) = do
   return (Set.union argsVars bodyVars)
 typeFreeVars (Forall _ univars type') = do
   let univarList = NonEmpty.toList univars
-  forM_ (repeated univarList) (tell . error' . RepeatedVar)
+  forM_ (repeated univarList) (tell . error' . AlreadyDefined)
   let univars' = Set.fromList univarList
   typeVars <- withReader (Set.union univars') (typeFreeVars type')
   forM_ (Set.difference univars' typeVars) (tell . error' . UnusedUniVar)
@@ -60,7 +60,7 @@ typeFreeVars (TApp _ typeFun typeArgs) = do
   return (Set.union funVars argsVars)
 typeFreeVars (TFun _ typeParams typeBody) = do
   let typeParamList = NonEmpty.toList typeParams
-  forM_ (repeated typeParamList) (tell . error' . RepeatedVar)
+  forM_ (repeated typeParamList) (tell . error' . AlreadyDefined)
   let typeParams' = Set.fromList typeParamList
   typeVars <- withReader (Set.union typeParams') (typeFreeVars typeBody)
   forM_ (Set.difference typeParams' typeVars) (tell . warning . UnusedVar)
@@ -180,7 +180,7 @@ exprFreeVars (PatternMatching _ expr matches) = do
   return (union' exprVars matchesVars)
 exprFreeVars (Fun _ params body) = do
   let paramList = NonEmpty.toList params
-  forM_ (repeated paramList) (tell . error' . RepeatedVar)
+  forM_ (repeated paramList) (tell . error' . AlreadyDefined)
   let params' = Set.fromList paramList
   bodyVars <- withReader (unionVars params') (exprFreeVars body)
   do
@@ -193,7 +193,7 @@ exprFreeVars (Fun _ params body) = do
     _ -> errorUNREACHABLE
 exprFreeVars (GenFun _ typeParams body) = do
   let typeParamList = NonEmpty.toList typeParams
-  forM_ (repeated typeParamList) (tell . error' . RepeatedVar)
+  forM_ (repeated typeParamList) (tell . error' . AlreadyDefined)
   let typeParams' = Set.fromList typeParamList
   bodyVars <- withReader (unionTVars typeParams') (exprFreeVars body)
   return (differenceTVars bodyVars typeParams')
