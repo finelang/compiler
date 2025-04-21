@@ -1,4 +1,4 @@
-module Fine.Syntax.Utils (boundVars, isFunction, mkDataDefn, mkExprDefn) where
+module Fine.Syntax.Utils (boundVars, isFunction, isCtor, mkDataDefn, mkExprDefn) where
 
 import Data.Functor qualified as Functor
 import Data.List.NonEmpty (NonEmpty)
@@ -29,6 +29,12 @@ isFunction :: Expr p -> Bool
 isFunction (Fun _ _ _) = True
 isFunction (GenFun _ _ body) = isFunction body
 isFunction _ = False
+
+isCtor :: Expr p -> Bool
+isCtor (Data _ _ _) = True
+isCtor (Fun _ _ body) = isCtor body
+isCtor (GenFun _ _ body) = isCtor body
+isCtor _ = False
 
 mkCtor :: Maybe (NonEmpty Id) -> Type Parsed -> (Id, Maybe (NonEmpty (Id, Type Parsed))) -> Bind OfExpr Parsed
 mkCtor optTParams retType (tag, optTypedParams) =

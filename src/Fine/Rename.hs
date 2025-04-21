@@ -23,7 +23,7 @@ import Fine.Syntax (
   Phase (Transformed),
   binder,
  )
-import Fine.Syntax.Utils (boundVars)
+import Fine.Syntax.Utils (boundVars, isCtor)
 
 type Count = Integer
 
@@ -80,7 +80,9 @@ renameMatch (patt, expr) = do
   resetCount
   substts <- mapM (\var -> (,) var <$> rename var) (boundVars patt)
   patt' <- withSubstts substts (renamePatt patt)
-  expr' <- withSubstts substts (renameExpr expr)
+  expr' <- withSubstts substts $ case expr of
+    Block ext block -> Block ext <$> renameBlock block
+    _ -> renameExpr expr
   resumeCount count
   return (patt', expr')
 
@@ -119,7 +121,7 @@ renameExpr (PatternMatching ext expr matches) =
 renameBind :: Bind OfExpr Transformed -> RS Substts Count (Bind OfExpr Transformed)
 renameBind (ExprBind binder' type' expr) = do
   binder'' <- substt binder'
-  expr' <- renameExpr expr
+  expr' <- (if isCtor expr then return else renameExpr) expr
   return (ExprBind binder'' type' expr')
 renameBind (ForeignBind binder' type' code) = do
   binder'' <- substt binder'
