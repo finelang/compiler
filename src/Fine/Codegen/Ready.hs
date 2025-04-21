@@ -1,9 +1,8 @@
 module Fine.Codegen.Ready (getModuleReady) where
 
-import Data.Either (partitionEithers, rights)
+import Data.Either (partitionEithers)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.List.NonEmpty.Extra (unsnoc)
 import Fine.Syntax (
   Bind (ExprBind, ForeignBind),
   BindType (OfExpr),
@@ -73,8 +72,7 @@ type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) af
 
 transformMatches :: Expr Ready -> (NonEmpty (Pattern, Expr Ready)) -> Block Ready
 transformMatches matched matches =
-  let (matches', (lastPattern, lastCont)) = unsnoc matches
-      ifStmts = (flip map) matches' $ \(pattern, cont) ->
+  let ifStmts = (flip NonEmpty.map) matches $ \(pattern, cont) ->
         let paths = extractPaths pattern
             (conds, lets') = partitionEithers $ map (applyPath matched) paths
             ifBlock = mergeToExpr lets' cont
@@ -82,10 +80,7 @@ transformMatches matched matches =
               [] -> Literal () (Bool True)
               (c : cs) -> Conj () (c :| cs)
          in If () cond ifBlock
-      -- last match turns into a simple block because PM should be exhaustive
-      lastLets = rights $ map (applyPath matched) $ extractPaths lastPattern
-      lastBlock = mergeToExpr lastLets lastCont
-   in foldr ($) lastBlock ifStmts
+   in foldr ($) Void ifStmts
  where
   mergeToExpr stmts (Block _ block) = foldr ($) block stmts
   mergeToExpr stmts expr = foldr ($) (Return expr) stmts
@@ -117,12 +112,9 @@ getExprReady (Cond _ cond yes no) =
 getExprReady (PatternMatching _ expr matches) =
   let expr' = getExprReady expr
       matches' = (NonEmpty.map . fmap) getExprReady matches
-      block = case expr' of
-        Var _ _ -> transformMatches expr' matches'
-        _ ->
-          let matchedId = Id NoRange "$$matched"
-              matched = Var () matchedId
-           in Let False matchedId expr' $ transformMatches matched matches'
+      matchedId = Id NoRange "$$matched"
+      matched = Var () matchedId
+      block = Let False matchedId expr' $ transformMatches matched matches'
    in Block () block
 getExprReady (Fun _ params body) = Fun () params (getExprReady body)
 getExprReady (GenFun _ _ body) = getExprReady body
