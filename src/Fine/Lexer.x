@@ -65,7 +65,6 @@ tokens :-
   "-" @decimal                { mkt NonNat }
   "-"? @decimal "." @decimal  { mkt FloatLit }
   "->"                        { mkt Arrow }
-  "<-"                        { mkt RArrow }
   "="                         { mkt Eq }
   "."                         { mkt Dot }
   ":"                         { mkt Colon }
@@ -115,7 +114,6 @@ tokens :-
   | FloatLit
   -- symbols
   | Arrow
-  | RArrow
   | Eq
   | Dot
   | Colon

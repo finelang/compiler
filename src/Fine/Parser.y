@@ -49,7 +49,6 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn)
   nonnat    { Token Lex.NonNat _ _ }
   floatlit  { Token Lex.FloatLit _ _ }
   '->'      { Token Lex.Arrow _ _ }
-  '<-'      { Token Lex.RArrow _ _ }
   '='       { Token Lex.Eq _ _ }
   '.'       { Token Lex.Dot _ _ }
   ':'       { Token Lex.Colon _ _ }
@@ -124,7 +123,7 @@ Stmts : Stmts Stmt  { $2 : $1 }
 Stmt : let Id '=' Expr              { Let False $2 $4 }
      | let mut Id '=' Expr          { Let True $3 $5 }
      | do Expr                      { Do $2 }
-     | do Id '<-' Expr              { Mut $2 $4 }
+     | Id '=' Expr                  { Mut $1 $3 }
      | debug Expr                   { Debug $2 }
      | while Expr '{' VoidBlock '}' { Loop $2 $4 }
 
