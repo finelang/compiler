@@ -18,18 +18,17 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn)
 %error { parseError }
 
 %token
-  case      { Token Lex.Case _ _ }
   debug     { Token Lex.Debug _ _ }
-  do        { Token Lex.Do _ _ }
   else      { Token Lex.Else _ _ }
+  fn        { Token Lex.Fn _ _ }
   foreign   { Token Lex.Foreign _ _ }
   if        { Token Lex.If _ _ }
   infix     { Token Lex.Infix _ _ }
   infixl    { Token Lex.Infixl _ _ }
   infixr    { Token Lex.Infixr _ _ }
   let       { Token Lex.Let _ _ }
+  match     { Token Lex.Match _ _ }
   mut       { Token Lex.Mut _ _ }
-  of        { Token Lex.Of _ _ }
   run       { Token Lex.Run _ _ }
   then      { Token Lex.Then _ _ }
   type      { Token Lex.Type _ _ }
@@ -60,6 +59,7 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn)
   '['       { Token Lex.Osquare _ _ }
   ']'       { Token Lex.Csquare _ _ }
   ','       { Token Lex.Comma _ _ }
+  ';'       { Token Lex.Semi _ _ }
 
 %%
 
@@ -117,17 +117,20 @@ Pattern : Ct                    { DataP (range $1) $1 [] }
 
 -- BLOCK
 
+OptSemi : ';'         {}
+        | {- empty -} {}
+
 Stmts : Stmts Stmt  { $2 : $1 }
       | Stmt        { [$1] }
 
-Stmt : let Id '=' Expr              { Let False $2 $4 }
-     | let mut Id '=' Expr          { Let True $3 $5 }
-     | do Expr                      { Do $2 }
-     | Id '=' Expr                  { Mut $1 $3 }
-     | debug Expr                   { Debug $2 }
-     | while Expr '{' VoidBlock '}' { Loop $2 $4 }
+Stmt : let Id '=' Expr ';'                  { Let False $2 $4 }
+     | let mut Id '=' Expr ';'              { Let True $3 $5 }
+     | Expr ';'                             { Do $1 }
+     | Id '=' Expr ';'                      { Mut $1 $3 }
+     | debug Expr ';'                       { Debug $2 }
+     | while Expr '{' VoidBlock '}' OptSemi { Loop $2 $4 }
 
-Block : Stmts then Expr { foldl' (&) (Return $3) $1 }
+Block : Stmts Expr { foldl' (&) (Return $2) $1 }
 
 VoidBlock : Stmts { foldl' (&) Void $1 }
 
@@ -147,16 +150,15 @@ Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
 
 Exprs : Exprs_  { toNonEmptyPARTIAL (reverse $1) }
 
-Matches : Matches Match { $2 : $1 }
-        | Match         { [$1] }
+Matches : Matches ';' Match { $3 : $1 }
+        | Match             { [$1] }
 
-Match : of Pattern '->' Expr  { ($2, $4) }
+Match : Pattern '->' Expr { ($1, $3) }
 
-Expr : Chain                            { tryUnchain $1 }
-     | Block                            { Block NoRange $1 }
-     | if Expr then Expr else Expr      { Cond (range $1 <> range $6) $2 $4 $6 }
-     | '.' '(' OptParams ')' '->' Expr  { Fun (range $1 <> range $6) $3 $6 }
-     | '.' '[' Params ']' '->' Expr     { GenFun (range $1 <> range $6) $3 $6 }
+Expr : Chain                          { tryUnchain $1 }
+     | if Expr then Expr else Expr    { Cond (range $1 <> range $6) $2 $4 $6 }
+     | fn '(' OptParams ')' '->' Expr { Fun (range $1 <> range $6) $3 $6 }
+     | fn '[' Params ']' '->' Expr    { GenFun (range $1 <> range $6) $3 $6 }
 
 Chain : App               { Operand $1 }
       | App InfixOp Chain { Operation $1 $2 $3 }
@@ -172,6 +174,7 @@ Atom ::                           { Expr Parsed }
 Atom : '(' Exprs ')'              { if NonEmpty.length $2 > 1 then Tuple (range $1 <> range $3) $2 else NonEmpty.head $2 }
      | '(' ')'                    { Literal (range $1 <> range $2) Unit }
      | '{' Props '}'              { Record (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
+     | '{' Block '}'              { Block (range $1 <> range $3) $2 }
      | '{' Expr '}'               { $2 }
      | Int                        { $1 }
      | floatlit                   { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
@@ -180,7 +183,7 @@ Atom : '(' Exprs ')'              { if NonEmpty.length $2 > 1 then Tuple (range 
      | strlit                     { Literal (range $1) (Str $ extractStr $1) }
      | TopId                      { Var (range $1) $1 }
      | Ct                         { Var (range $1) $1 }
-     | case Expr '{' Matches '}'  { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
+     | match Expr '{' Matches '}' { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
 
 -- TYPE
 
@@ -194,9 +197,9 @@ Types_ : Types_ ',' Type  { $3 : $1 }
 
 Types : Types_  { toNonEmptyPARTIAL (reverse $1) }
 
-Type : '.' '(' Types ')' '->' Type  { FunT (range $1 <> range $6) $3 $6 }
-     | '.' '(' ')' '->' Type        { FunT (range $1 <> range $5) (LiteralT (range $2 <> range $3) UnitT :| []) $5 }
-     | '.' '[' Params ']' '->' Type { Forall (range $1 <> range $6) $3 $6 }
+Type : fn '(' Types ')' '->' Type   { FunT (range $1 <> range $6) $3 $6 }
+     | fn '(' ')' '->' Type         { FunT (range $1 <> range $5) (LiteralT (range $2 <> range $3) UnitT :| []) $5 }
+     | fn '[' Params ']' '->' Type  { Forall (range $1 <> range $6) $3 $6 }
      | TApp                         { $1 }
 
 TApp : TApp '[' Types ']' { TApp (range $1 <> range $4) $1 $3 }

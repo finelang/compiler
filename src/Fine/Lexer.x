@@ -35,12 +35,11 @@ tokens :-
   $white+                     ;
   "--"\-*[^$symbol].*         ;
   "bool"                      { mkt Bool }
-  "case"                      { mkt Case }
   "debug"                     { mkt Debug }
-  "do"                        { mkt Do }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
   "float"                     { mkt Float }
+  "fn"                        { mkt Fn }
   "foreign"                   { mkt Foreign }
   "if"                        { mkt If }
   "infix"                     { mkt Infix }
@@ -48,8 +47,8 @@ tokens :-
   "infixr"                    { mkt Infixr }
   "int"                       { mkt Int }
   "let"                       { mkt Let }
+  "match"                     { mkt Match }
   "mut"                       { mkt Mut }
-  "of"                        { mkt Of }
   "run"                       { mkt Run }
   "string"                    { mkt Str }
   "then"                      { mkt Then }
@@ -76,22 +75,22 @@ tokens :-
   "["                         { mkt Osquare }
   "]"                         { mkt Csquare }
   ","                         { mkt Comma }
+  ";"                         { mkt Semi }
 
 {
   data TokenType
   -- keywords
-  = Case
-  | Debug
-  | Do
+  = Debug
   | Else
+  | Fn
   | Foreign
   | If
   | Infix
   | Infixl
   | Infixr
   | Let
+  | Match
   | Mut
-  | Of
   | Run
   | Then
   | Type
@@ -125,6 +124,7 @@ tokens :-
   | Osquare
   | Csquare
   | Comma
+  | Semi
   deriving (Show)
 
 data TokenPosn = TokenPosn
