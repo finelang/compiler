@@ -86,6 +86,9 @@ Params : Params_  { toNonEmptyPARTIAL (reverse $1) }
 OptParams : Params      { $1 }
           | {- empty -} { Id NoRange "_" :| [] }
 
+OptSemi : ';'         {}
+        | {- empty -} {}
+
 -- PATTERN
 
 Patterns_ : Patterns_ ',' Pattern { $3 : $1 }
@@ -117,9 +120,6 @@ Pattern : Ct                    { DataP (range $1) $1 [] }
 
 -- BLOCK
 
-OptSemi : ';'         {}
-        | {- empty -} {}
-
 Stmts : Stmts Stmt  { $2 : $1 }
       | Stmt        { [$1] }
 
@@ -150,8 +150,8 @@ Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
 
 Exprs : Exprs_  { toNonEmptyPARTIAL (reverse $1) }
 
-Matches : Matches ';' Match { $3 : $1 }
-        | Match             { [$1] }
+Matches : Matches Match ';' { $2 : $1 }
+        | Match ';'         { [$1] }
 
 Match : Pattern '->' Expr { ($1, $3) }
 
@@ -222,8 +222,8 @@ TAtom : '(' Types ')'     { if NonEmpty.length $2 > 1 then TupleT (range $1 <> r
 Entry : run Expr    { Just $2 }
       | {- empty -} { Nothing }
 
-Defns : Defns Defn  { $2 : $1 }
-      | {- empty -} { [] }
+Defns : Defns Defn OptSemi  { $2 : $1 }
+      | {- empty -}         { [] }
 
 Defn : Fix PrefixOp                                                   { FixDefn $1 $2 }
      | type Id '[' Params ']' '=' Type                                { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
@@ -244,8 +244,8 @@ TypedParam: Id ':' Type { ($1, $3) }
 TypedParams : TypedParams_  { toNonEmptyPARTIAL (reverse $1) }
             | {- empty -}   { (Id NoRange "_", LiteralT NoRange UnitT) :| [] }
 
-Ctors_ : Ctors_ Ctor  { $2 : $1 }
-       | Ctor         { [$1] }
+Ctors_ : Ctors_ Ctor OptSemi  { $2 : $1 }
+       | Ctor OptSemi         { [$1] }
 
 Ctors : Ctors_  { toNonEmptyPARTIAL (reverse $1) }
 
