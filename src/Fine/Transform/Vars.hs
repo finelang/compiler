@@ -1,16 +1,17 @@
-module Fine.Transform.Vars (handleTypeVars, handleExprVars) where
+module Fine.Transform.Vars (handleTypeVars, handleExprVars, alreadyDefined) where
 
-import Control.Monad (forM_, unless)
+import Control.Monad (forM_, unless, when)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
 import Data.Errors (Errors (Errors), error', warning)
-import Data.List.Extra (repeated)
+
+import Data.List (group, sort)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Fine.Error (
-  Error (AlreadyDefined, RepeatedCapture, UndefinedVar, UnusedUniVar),
+  Error (AlreadyDefined, UndefinedVar, UnusedUniVar, UsageBeforeInit),
   Warning (UnusedVar),
   errorUNREACHABLE,
  )
@@ -23,7 +24,14 @@ import Fine.Syntax (
   Type (..),
   idText,
  )
-import Fine.Syntax.Utils (boundVars)
+import Fine.Syntax.Utils (isFunction)
+
+alreadyDefined :: [Id] -> [Error]
+alreadyDefined xs = (concat . map mkErr . group . sort) xs
+ where
+  mkErr [] = []
+  mkErr [_] = []
+  mkErr (y : ys) = map (AlreadyDefined y) ys
 
 type Errors' = Errors Error Warning
 
@@ -47,7 +55,7 @@ typeFreeVars (FunT _ argTypes bodyType) = do
   return (Set.union argsVars bodyVars)
 typeFreeVars (Forall _ univars type') = do
   let univarList = NonEmpty.toList univars
-  forM_ (repeated univarList) (tell . error' . AlreadyDefined)
+  forM_ (alreadyDefined univarList) (tell . error')
   let univars' = Set.fromList univarList
   typeVars <- withReader (Set.union univars') (typeFreeVars type')
   forM_ (Set.difference univars' typeVars) (tell . error' . UnusedUniVar)
@@ -60,7 +68,7 @@ typeFreeVars (TApp _ typeFun typeArgs) = do
   return (Set.union funVars argsVars)
 typeFreeVars (TFun _ typeParams typeBody) = do
   let typeParamList = NonEmpty.toList typeParams
-  forM_ (repeated typeParamList) (tell . error' . AlreadyDefined)
+  forM_ (alreadyDefined typeParamList) (tell . error')
   let typeParams' = Set.fromList typeParamList
   typeVars <- withReader (Set.union typeParams') (typeFreeVars typeBody)
   forM_ (Set.difference typeParams' typeVars) (tell . warning . UnusedVar)
@@ -117,6 +125,23 @@ type Block' = Block Transformed
 
 type Expr' = Expr Transformed
 
+patternBoundVars :: Pattern -> [Id]
+patternBoundVars (LiteralP _ _) = []
+patternBoundVars (DataP _ _ patts) = concatMap patternBoundVars patts
+patternBoundVars (RecordP _ props) = foldMap (patternBoundVars . snd) props
+patternBoundVars (TupleP _ patts) = foldMap patternBoundVars patts
+patternBoundVars (Capture idn) = [idn]
+patternBoundVars (Discard _) = []
+
+blockBoundVars :: Block' -> [Id]
+blockBoundVars (Return _) = []
+blockBoundVars Void = []
+blockBoundVars (Do _ block) = blockBoundVars block
+blockBoundVars (Mut _ _ block) = blockBoundVars block
+blockBoundVars (Debug _ block) = blockBoundVars block
+blockBoundVars (Let _ binder _ block) = binder : blockBoundVars block
+blockBoundVars (Loop _ _ block) = blockBoundVars block
+
 blockFreeVars :: Block' -> RW Vars Errors' Vars
 blockFreeVars (Return expr) = exprFreeVars expr
 blockFreeVars Void = return emptyVars
@@ -128,7 +153,10 @@ blockFreeVars (Mut var expr block) = do
   return (union' (insertVar var exprVars) blockVars)
 blockFreeVars (Debug expr block) = union' <$> exprFreeVars expr <*> blockFreeVars block
 blockFreeVars (Let _ binder' expr block) = do
-  exprVars <- exprFreeVars expr
+  exprVars <- withReader (insertVar binder') (exprFreeVars expr)
+  when
+    (not (isFunction expr) && memberVar binder' exprVars)
+    (tell $ error' $ UsageBeforeInit binder')
   blockVars <- withReader (insertVar binder') (blockFreeVars block)
   unless (memberVar binder' blockVars) (tell $ warning $ UnusedVar binder')
   return (union' exprVars (deleteVar binder' blockVars))
@@ -149,13 +177,17 @@ patternFreeVars (Discard _) = return Set.empty
 matchFreeVars :: (Pattern, Expr') -> RW Vars Errors' Vars
 matchFreeVars (patt, cont) = do
   pattVars <- withReader vars (patternFreeVars patt)
-  pattBound <- do
-    let bound = boundVars patt
-    forM_ (repeated bound) (tell . error' . RepeatedCapture)
-    return (Set.fromList bound)
-  contVars <- withReader (unionVars pattBound) (exprFreeVars cont)
-  forM_ (Set.difference pattBound (vars contVars)) (tell . warning . UnusedVar)
-  return (unionVars pattVars (differenceVars contVars pattBound))
+  let pattBound = patternBoundVars patt
+  let pattBound' = Set.fromList pattBound
+  contVars <- case cont of
+    Block _ block -> do
+      forM_ (alreadyDefined $ pattBound ++ blockBoundVars block) (tell . error')
+      withReader (unionVars pattBound') (blockFreeVars block)
+    _ -> do
+      forM_ (alreadyDefined pattBound) (tell . error')
+      withReader (unionVars pattBound') (exprFreeVars cont)
+  forM_ (Set.difference pattBound' (vars contVars)) (tell . warning . UnusedVar)
+  return (unionVars pattVars (differenceVars contVars pattBound'))
 
 exprFreeVars :: Expr' -> RW Vars Errors' Vars
 exprFreeVars (Literal _ _) = return emptyVars
@@ -180,9 +212,14 @@ exprFreeVars (PatternMatching _ expr matches) = do
   return (union' exprVars matchesVars)
 exprFreeVars (Fun _ params body) = do
   let paramList = NonEmpty.toList params
-  forM_ (repeated paramList) (tell . error' . AlreadyDefined)
   let params' = Set.fromList paramList
-  bodyVars <- withReader (unionVars params') (exprFreeVars body)
+  bodyVars <- case body of
+    Block _ block -> do
+      forM_ (alreadyDefined $ paramList ++ blockBoundVars block) (tell . error')
+      withReader (unionVars params') (blockFreeVars block)
+    _ -> do
+      forM_ (alreadyDefined paramList) (tell . error')
+      withReader (unionVars params') (exprFreeVars body)
   do
     let unused = Set.difference (Set.filter relevant params') (vars bodyVars)
     forM_ unused (tell . warning . UnusedVar)
@@ -193,11 +230,13 @@ exprFreeVars (Fun _ params body) = do
     _ -> errorUNREACHABLE
 exprFreeVars (GenFun _ typeParams body) = do
   let typeParamList = NonEmpty.toList typeParams
-  forM_ (repeated typeParamList) (tell . error' . AlreadyDefined)
+  forM_ (alreadyDefined typeParamList) (tell . error')
   let typeParams' = Set.fromList typeParamList
   bodyVars <- withReader (unionTVars typeParams') (exprFreeVars body)
   return (differenceTVars bodyVars typeParams')
-exprFreeVars (Block _ block) = blockFreeVars block
+exprFreeVars (Block _ block) = do
+  forM_ (alreadyDefined $ blockBoundVars block) (tell . error')
+  blockFreeVars block
 
 handleExprVars :: Set Id -> Set Id -> Expr' -> (Set Id, Set Id, [Error], [Warning])
 handleExprVars vars tVars expr =

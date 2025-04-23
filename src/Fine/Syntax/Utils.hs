@@ -1,4 +1,4 @@
-module Fine.Syntax.Utils (boundVars, isFunction, isCtor, mkDataDefn, mkExprDefn) where
+module Fine.Syntax.Utils (isFunction, isCtor, mkDataDefn, mkExprDefn) where
 
 import Data.Functor qualified as Functor
 import Data.List.NonEmpty (NonEmpty)
@@ -10,20 +10,11 @@ import Fine.Syntax (
   Defn (DataDefn, Defn),
   Expr (Data, Fun, GenFun, Var),
   Id,
-  Pattern (..),
   Phase (Parsed),
   Range (NoRange),
   Type (Forall, FunT, TApp, TData, TFun, TVar),
   range,
  )
-
-boundVars :: Pattern -> [Id]
-boundVars (LiteralP _ _) = []
-boundVars (DataP _ _ patts) = concatMap boundVars patts
-boundVars (RecordP _ props) = foldMap (boundVars . snd) props
-boundVars (TupleP _ patts) = foldMap boundVars patts
-boundVars (Capture idn) = [idn]
-boundVars (Discard _) = []
 
 isFunction :: Expr p -> Bool
 isFunction (Fun _ _ _) = True

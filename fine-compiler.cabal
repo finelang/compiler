@@ -37,14 +37,14 @@ library
     Data.List.Extra
     Data.List.NonEmpty.Extra
     Data.Tuple.Extra
-    Fine.Codegen
-    Fine.Codegen.Lit
+    Fine.Codegen.Js
     Fine.Codegen.Ready
+    Fine.Codegen.Rename
     Fine.Codegen.TailRec
+    Fine.Codegen.Wasm
     Fine.Error
     Fine.Lexer
     Fine.Parser
-    Fine.Rename
     Fine.Syntax
     Fine.Syntax.Utils
     Fine.Transform

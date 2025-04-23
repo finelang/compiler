@@ -1,13 +1,11 @@
 module Main (main) where
 
 import Control.Monad (forM_)
-import Data.Set qualified as Set
 import Data.Text.IO qualified as TIO (readFile, writeFile)
-import Fine.Codegen (runCodegen)
+import Fine.Codegen.Js (runCodegen)
 import Fine.Error (wrapError, wrapWarning)
 import Fine.Lexer (lexText)
 import Fine.Parser (parseTokens)
-import Fine.Rename (runRenamer)
 import Fine.Transform (runTransformer)
 import System.Environment (getArgs)
 
@@ -24,8 +22,11 @@ main = do
   code <- TIO.readFile inFilePath
   let parsed = parseTokens $ lexText code
   let (result, warnings) = runTransformer parsed
-  forM_ warnings (putStrLn . wrapWarning)
+  let warn = forM_ warnings (putStrLn . wrapWarning)
   case result of
-    Left errors -> forM_ errors (putStrLn . wrapError)
-    Right mdule ->
-      print mdule >> TIO.writeFile outFilePath (runCodegen $ runRenamer Set.empty mdule)
+    Left errors -> do
+      forM_ errors (putStrLn . wrapError)
+      warn
+    Right mdule -> do
+      warn
+      print mdule >> TIO.writeFile outFilePath (runCodegen mdule)

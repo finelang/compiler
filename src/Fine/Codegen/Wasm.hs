@@ -1,0 +1,3 @@
+module Fine.Codegen.Wasm () where
+
+-- some day, maybe...

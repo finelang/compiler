@@ -25,9 +25,8 @@ hl x = [i|'#{show x}'|]
 
 data Error
   = UndefinedVar Id
-  | RepeatedCapture Id
   | UnusedUniVar Id
-  | AlreadyDefined Id
+  | AlreadyDefined Id Id
   | UsageBeforeInit Id
   | InvalidPrecedence Int Int Id
   | RepeatedFixity Id
@@ -37,12 +36,10 @@ instance Show Error where
   show :: Error -> String
   show (UndefinedVar var) =
     [i|Variable #{hl var} is not defined.|]
-  show (RepeatedCapture var) =
-    [i|Captured variable #{hl var} is repeated.|]
   show (UnusedUniVar var) =
     [i|Universally quantified variable #{hl var} is not used.|]
-  show (AlreadyDefined var) =
-    [i|Variable #{hl var} is already defined.|]
+  show (AlreadyDefined _ repeated) =
+    [i|Variable #{hl repeated} is already defined.|]
   show (UsageBeforeInit var) =
     [i|Variable #{hl var} cannot be read during its own initialization.|]
   show (InvalidPrecedence lb ub var) =

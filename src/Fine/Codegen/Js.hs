@@ -1,4 +1,4 @@
-module Fine.Codegen (runCodegen) where
+module Fine.Codegen.Js (runCodegen) where
 
 import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
 import Data.List.NonEmpty (NonEmpty)
@@ -6,14 +6,15 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Fine.Codegen.Lit (genLitCode)
 import Fine.Codegen.Ready (getModuleReady)
+import Fine.Codegen.Rename (runRenamer)
 import Fine.Syntax (
   Bind (ExprBind, ForeignBind),
   BindType (OfExpr),
   Block (..),
   Expr (..),
   Id (Id),
+  Lit (..),
   Module (Module),
   Phase (Ready, Transformed),
   Range (NoRange),
@@ -35,6 +36,14 @@ increaseIndentation = do
 type Expr' = Expr Ready
 
 type Block' = Block Ready
+
+genLitCode :: Lit -> Text
+genLitCode (Int v) = Text.pack $ show v
+genLitCode (Float v) = Text.pack $ show v
+genLitCode (Bool True) = "true"
+genLitCode (Bool False) = "false"
+genLitCode (Str s) = [i|"#{s}"|]
+genLitCode (Unit) = "undefined"
 
 genPropCode :: (Id, Expr') -> Reader Indentation Text
 genPropCode (prop, value) = do
@@ -94,21 +103,6 @@ genStmtsCode block = do
   indent <- increaseIndentation
   withIndentation indent (genBlockCode block)
 
--- genMatchCode :: Text -> (Pattern, Expr') -> Reader Indentation Text
--- genMatchCode name (patt, expr) = do
---   oldIndent <- ask
---   indent <- increaseIndentation
---   let (conds, binds) = extractCondsAndBinds name patt
---   let cond = if null conds then "true" else Text.intercalate " && " conds
---   let binds' = Text.concat $ map (\stmt -> [i|#{indent}#{stmt};\n|]) binds
---   case expr of
---     Block _ block -> do
---       stmts <- genStmtsCode block
---       return [i|if (#{cond}) {\n#{binds'}#{stmts}#{oldIndent}}|]
---     _ -> do
---       expr' <- withIndentation indent (genExprCode expr)
---       return [i|if (#{cond}) {\n#{binds'}#{indent}return #{expr'};\n#{oldIndent}}|]
-
 genFunCode :: NonEmpty Id -> Expr' -> Reader Indentation Text
 genFunCode params body =
   let params' = Text.intercalate "," $ map idText $ NonEmpty.toList params
@@ -152,14 +146,6 @@ genExprCode (Cond _ cond yes no) = do
   yes' <- genExprCode yes
   no' <- genExprCode no
   return [i|#{cond'} ? #{yes'} : #{no'}|]
--- genExprCode (PatternMatching _ expr matches) = do
---   oldIndent <- ask
---   indent <- increaseIndentation
---   expr' <- withIndentation indent (genExprCode expr)
---   let name = "$$obj"
---   matches' <- withIndentation indent (mapM (genMatchCode name) $ NonEmpty.toList matches)
---   let matches'' = Text.intercalate " else " matches'
---   return [i|(#{name} => {\n#{indent}#{matches''}\n#{oldIndent}})(#{expr'})|]
 genExprCode (Fun _ params body) = genFunCode params body
 genExprCode (Block _ block) = do
   content <- genStmtsCode block
@@ -191,4 +177,10 @@ genModuleCode (Module values _ _ entry) = do
       return [i|#{defns}\n\n#{expr'};\n|]
 
 runCodegen :: Module Typed -> Text
-runCodegen mdule = runReader (genModuleCode $ getModuleReady mdule) ""
+runCodegen mdule =
+  let renamed = runRenamer reservedJsWords mdule
+      ready = getModuleReady renamed
+   in runReader (genModuleCode ready) ""
+
+reservedJsWords :: [Text]
+reservedJsWords = [] -- TODO: fill
