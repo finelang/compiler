@@ -24,7 +24,7 @@ import Fine.Syntax (
   Type (..),
   idText,
  )
-import Fine.Syntax.Utils (isFunction)
+import Fine.Syntax.Utils (isFunction, patternBoundVars)
 
 alreadyDefined :: [Id] -> [Error]
 alreadyDefined xs = (concat . map mkErr . group . sort) xs
@@ -125,14 +125,6 @@ type Block' = Block Transformed
 
 type Expr' = Expr Transformed
 
-patternBoundVars :: Pattern -> [Id]
-patternBoundVars (LiteralP _ _) = []
-patternBoundVars (DataP _ _ patts) = concatMap patternBoundVars patts
-patternBoundVars (RecordP _ props) = foldMap (patternBoundVars . snd) props
-patternBoundVars (TupleP _ patts) = foldMap patternBoundVars patts
-patternBoundVars (Capture idn) = [idn]
-patternBoundVars (Discard _) = []
-
 blockBoundVars :: Block' -> [Id]
 blockBoundVars (Return _) = []
 blockBoundVars Void = []
@@ -141,6 +133,7 @@ blockBoundVars (Mut _ _ block) = blockBoundVars block
 blockBoundVars (Debug _ block) = blockBoundVars block
 blockBoundVars (Let _ binder _ block) = binder : blockBoundVars block
 blockBoundVars (Loop _ _ block) = blockBoundVars block
+blockBoundVars (LetPatt _ patt _ block) = patternBoundVars patt ++ blockBoundVars block
 
 blockFreeVars :: Block' -> RW Vars Errors' Vars
 blockFreeVars (Return expr) = exprFreeVars expr
@@ -162,6 +155,12 @@ blockFreeVars (Let _ binder' expr block) = do
   return (union' exprVars (deleteVar binder' blockVars))
 blockFreeVars (Loop cond actions block) =
   unions' <$> sequence [exprFreeVars cond, blockFreeVars actions, blockFreeVars block]
+blockFreeVars (LetPatt _ patt expr block) = do
+  exprVars <- exprFreeVars expr
+  let pattBound = Set.fromList (patternBoundVars patt)
+  blockVars <- withReader (unionVars pattBound) (blockFreeVars block)
+  forM_ (Set.difference pattBound $ vars blockVars) (tell . warning . UnusedVar)
+  return (union' exprVars $ differenceVars blockVars pattBound)
 
 patternFreeVars :: Pattern -> RW (Set Id) Errors' (Set Id)
 patternFreeVars (LiteralP _ _) = return Set.empty

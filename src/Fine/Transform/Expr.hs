@@ -31,6 +31,8 @@ transformBlock (Let isMut binder value block) =
   Let isMut binder <$> transformExpr value <*> transformBlock block
 transformBlock (Loop cond actions block) =
   Loop <$> transformExpr cond <*> transformBlock actions <*> transformBlock block
+transformBlock (LetPatt _ patt expr block) =
+  LetPatt () patt <$> transformExpr expr <*> transformBlock block
 
 transformExpr :: Expr Parsed -> RW Fixities Errors' (Expr Transformed)
 transformExpr (Literal ext lit) = return (Literal ext lit)

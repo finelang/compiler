@@ -176,10 +176,13 @@ data Lit
   | Unit
   deriving (Show)
 
--- for AST only available at 'Ready' phase
 type family ReadyX (p :: Phase) where
   ReadyX Ready = ()
   ReadyX _ = Void
+
+type family NonReadyX (p :: Phase) where
+  NonReadyX Ready = Void
+  NonReadyX _ = ()
 
 data Block (p :: Phase)
   = Return (Expr p)
@@ -190,19 +193,19 @@ data Block (p :: Phase)
   | Let Bool Id (Expr p) (Block p)
   | Loop (Expr p) (Block p) (Block p)
   | If (ReadyX p) (Expr p) (Block p) (Block p)
+  | LetPatt (NonReadyX p) Pattern (Expr p) (Block p)
 
-deriving instance (Show (ReadyX p), Show (Expr p)) => Show (Block p)
+deriving instance (Show (ReadyX p), Show (NonReadyX p), Show (Expr p)) => Show (Block p)
 
 type family ExprX (p :: Phase) where
   ExprX Ready = ()
   ExprX Typed = (Range, Type Typed)
   ExprX _ = Range
 
--- for AST available until 'Ready' phase
-type family NonReadyX (p :: Phase) where
-  NonReadyX Ready = Void
-  NonReadyX Typed = (Range, Type Typed)
-  NonReadyX _ = Range
+type family NonReadyExprX (p :: Phase) where
+  NonReadyExprX Ready = Void
+  NonReadyExprX Typed = (Range, Type Typed)
+  NonReadyExprX _ = Range
 
 -- for CST only
 type family ParsedX (p :: Phase) where
@@ -216,23 +219,24 @@ data Expr (p :: Phase)
   | Tuple (ExprX p) (NonEmpty (Expr p))
   | Var (ExprX p) Id
   | App (ExprX p) (Expr p) (NonEmpty (Expr p))
-  | GenApp (NonReadyX p) (Expr p) (NonEmpty (Type p))
+  | GenApp (NonReadyExprX p) (Expr p) (NonEmpty (Type p))
   | Access (ExprX p) (Expr p) Id
   | Index (ExprX p) (Expr p) Int
   | Cond (ExprX p) (Expr p) (Expr p) (Expr p)
   | Fun (ExprX p) (NonEmpty Id) (Expr p)
-  | GenFun (NonReadyX p) (NonEmpty Id) (Expr p)
+  | GenFun (NonReadyExprX p) (NonEmpty Id) (Expr p)
   | Block (ExprX p) (Block p)
-  | PatternMatching (NonReadyX p) (Expr p) (NonEmpty (Pattern, Expr p))
+  | PatternMatching (NonReadyExprX p) (Expr p) (NonEmpty (Pattern, Expr p))
   | Chain (ParsedX p) Chain
   | Conj (ReadyX p) (NonEmpty (Expr p))
   | Equals (ReadyX p) (Expr p) (Expr p)
 
 deriving instance
   ( Show (ExprX p),
-    Show (NonReadyX p),
+    Show (NonReadyExprX p),
     Show (ParsedX p),
     Show (ReadyX p),
+    Show (NonReadyX p),
     Show (Type p)
   ) =>
   Show (Expr p)

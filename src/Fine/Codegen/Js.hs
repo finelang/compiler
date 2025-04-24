@@ -43,7 +43,7 @@ genLitCode (Float v) = Text.pack $ show v
 genLitCode (Bool True) = "true"
 genLitCode (Bool False) = "false"
 genLitCode (Str s) = [i|"#{s}"|]
-genLitCode (Unit) = "undefined"
+genLitCode (Unit) = "null"
 
 genPropCode :: (Id, Expr') -> Reader Indentation Text
 genPropCode (prop, value) = do

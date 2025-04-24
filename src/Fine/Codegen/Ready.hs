@@ -1,6 +1,6 @@
 module Fine.Codegen.Ready (getModuleReady) where
 
-import Data.Either (partitionEithers)
+import Data.Either (partitionEithers, rights)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
 import Fine.Syntax (
@@ -9,12 +9,13 @@ import Fine.Syntax (
   Block (..),
   Expr (..),
   Id (Id, idText),
-  Lit (Bool, Str),
+  Lit (Bool, Str, Unit),
   Module (Module),
   Pattern (..),
   Phase (Ready, Transformed),
   Range (NoRange),
  )
+import Fine.Syntax.Utils (patternBoundVars)
 
 data PathEnd
   = EqualsTo (Expr Ready)
@@ -53,8 +54,8 @@ type Stmt = Block Ready -> Block Ready
 
 type Cond = Expr Ready
 
-applyPath :: Expr Ready -> PatternPath -> Either Cond Stmt
-applyPath matched path =
+applyPath :: Bool -> Expr Ready -> PatternPath -> Either Cond Stmt
+applyPath mut matched path =
   let (pieces, end) = splitPath path []
       matched' = foldl' applyPiece matched pieces
    in applyEnd matched' end
@@ -66,15 +67,21 @@ applyPath matched path =
   applyPiece expr (IndexTo ix) = Index () expr ix
 
   applyEnd expr (EqualsTo expr') = Left (Equals () expr expr')
-  applyEnd expr (Is var) = Right (Let False var expr)
+  applyEnd expr (Is var) = Right $ (if mut then Mut else Let False) var expr
 
 type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) after typer impl
+
+matchedIdn :: Id
+matchedIdn = Id NoRange "$$matched"
+
+matchedVar :: Expr Ready
+matchedVar = Var () matchedIdn
 
 transformMatches :: Expr Ready -> (NonEmpty (Pattern, Expr Ready)) -> Block Ready
 transformMatches matched matches =
   let ifStmts = (flip NonEmpty.map) matches $ \(pattern, cont) ->
         let paths = extractPaths pattern
-            (conds, lets') = partitionEithers $ map (applyPath matched) paths
+            (conds, lets') = partitionEithers $ map (applyPath False matched) paths
             ifBlock = mergeToExpr lets' cont
             cond = case conds of
               [] -> Literal () (Bool True)
@@ -96,6 +103,17 @@ getBlockReady (Let isMut binder value block) =
   Let isMut binder (getExprReady value) (getBlockReady block)
 getBlockReady (Loop cond actions block) =
   Loop (getExprReady cond) (getBlockReady actions) (getBlockReady block)
+getBlockReady (LetPatt _ patt expr block) =
+  let expr' = getExprReady expr
+      block' = getBlockReady block
+   in case patternBoundVars patt of
+        [] -> Do expr' block'
+        vars ->
+          let lets = map (\var -> Let True var $ Literal () Unit) vars
+              paths = extractPaths patt
+              stmts = rights $ map (applyPath True matchedVar) paths
+              setterBlock = foldr ($) Void (Let False matchedIdn expr' : stmts)
+           in foldr ($) (Do (Block () setterBlock) block') lets
 
 getExprReady :: Expr Typed -> Expr Ready
 getExprReady (Literal _ lit) = Literal () lit
@@ -112,9 +130,7 @@ getExprReady (Cond _ cond yes no) =
 getExprReady (PatternMatching _ expr matches) =
   let expr' = getExprReady expr
       matches' = (NonEmpty.map . fmap) getExprReady matches
-      matchedId = Id NoRange "$$matched"
-      matched = Var () matchedId
-      block = Let False matchedId expr' $ transformMatches matched matches'
+      block = Let False matchedIdn expr' $ transformMatches matchedVar matches'
    in Block () block
 getExprReady (Fun _ params body) = Fun () params (getExprReady body)
 getExprReady (GenFun _ _ body) = getExprReady body

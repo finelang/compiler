@@ -105,18 +105,20 @@ PropPatterns : PropPatterns ',' PropPattern { $3 : $1 }
 PropPattern : Id '=' Pattern  { ($1, $3) }
             | '=' Id          { ($2, Capture $2) }
 
-Pattern : Ct                    { DataP (range $1) $1 [] }
-        | Ct '(' Patterns ')'   { DataP (range $1 <> range $4) $1 (NonEmpty.toList $3) }
-        | '(' Patterns ')'      { if NonEmpty.length $2 > 1 then TupleP (range $1 <> range $3) $2 else NonEmpty.head $2 }
-        | '(' ')'               { LiteralP (range $1 <> range $2) Unit }
-        | '{' PropPatterns '}'  { RecordP (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
-        | IntPatt               { $1 }
-        | floatlit              { LiteralP (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
-        | true                  { LiteralP (range $1) (Bool True) }
-        | false                 { LiteralP (range $1) (Bool False) }
-        | strlit                { LiteralP (range $1) (Str $ extractStr $1) }
-        | Id                    { Capture $1 }
-        | discard               { Discard (range $1) }
+Pattern : Ct          { DataP (range $1) $1 [] }
+        | '(' ')'     { LiteralP (range $1 <> range $2) Unit }
+        | IntPatt     { $1 }
+        | floatlit    { LiteralP (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
+        | true        { LiteralP (range $1) (Bool True) }
+        | false       { LiteralP (range $1) (Bool False) }
+        | strlit      { LiteralP (range $1) (Str $ extractStr $1) }
+        | Id          { Capture $1 }
+        | discard     { Discard (range $1) }
+        | DeepPattern { $1 }
+
+DeepPattern : Ct '(' Patterns ')'   { DataP (range $1 <> range $4) $1 (NonEmpty.toList $3) }
+            | '(' Patterns ')'      { if NonEmpty.length $2 > 1 then TupleP (range $1 <> range $3) $2 else NonEmpty.head $2 }
+            | '{' PropPatterns '}'  { RecordP (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
 
 -- BLOCK
 
@@ -125,6 +127,7 @@ Stmts : Stmts Stmt  { $2 : $1 }
 
 Stmt : let Id '=' Expr ';'                  { Let False $2 $4 }
      | let mut Id '=' Expr ';'              { Let True $3 $5 }
+     | let DeepPattern '=' Expr ';'         { LetPatt () $2 $4 }
      | Expr ';'                             { Do $1 }
      | Id '=' Expr ';'                      { Mut $1 $3 }
      | debug Expr ';'                       { Debug $2 }

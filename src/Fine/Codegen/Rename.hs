@@ -38,6 +38,8 @@ renameBlock (Let isMut bound value block) =
   Let isMut <$> substt bound <*> renameExpr value <*> renameBlock block
 renameBlock (Loop cond actions block) =
   Loop <$> renameExpr cond <*> renameBlock actions <*> renameBlock block
+renameBlock (LetPatt _ patt expr block) =
+  LetPatt () <$> renamePatt patt <*> renameExpr expr <*> renameBlock block
 
 renamePatt :: Pattern -> Reader Substts Pattern
 renamePatt patt@(LiteralP _ _) = return patt
