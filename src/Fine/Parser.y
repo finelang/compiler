@@ -23,9 +23,6 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn)
   fn        { Token Lex.Fn _ _ }
   foreign   { Token Lex.Foreign _ _ }
   if        { Token Lex.If _ _ }
-  infix     { Token Lex.Infix _ _ }
-  infixl    { Token Lex.Infixl _ _ }
-  infixr    { Token Lex.Infixr _ _ }
   let       { Token Lex.Let _ _ }
   match     { Token Lex.Match _ _ }
   mut       { Token Lex.Mut _ _ }
@@ -48,10 +45,24 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn)
   nonnat    { Token Lex.NonNat _ _ }
   floatlit  { Token Lex.FloatLit _ _ }
   '->'      { Token Lex.Arrow _ _ }
-  '='       { Token Lex.Eq _ _ }
+  '='       { Token Lex.Assign _ _ }
   '.'       { Token Lex.Dot _ _ }
   ':'       { Token Lex.Colon _ _ }
-  op        { Token Lex.Op _ _ }
+  '&&'      { Token Lex.And _ _ }
+  '||'      { Token Lex.Or _ _ }
+  '<='      { Token Lex.Le _ _ }
+  '>='      { Token Lex.Ge _ _ }
+  '@'       { Token Lex.Ccat _ _ }
+  '@@'      { Token Lex.SpaceCcat _ _ }
+  '=='      { Token Lex.Eq _ _ }
+  '!='      { Token Lex.Neq _ _ }
+  '>'       { Token Lex.Gt _ _ }
+  '<'       { Token Lex.Lt _ _ }
+  '+'       { Token Lex.Add _ _ }
+  '-'       { Token Lex.Sub _ _ }
+  '*'       { Token Lex.Mult _ _ }
+  '/'       { Token Lex.Div _ _ }
+  '%'       { Token Lex.Rest _ _ }
   '('       { Token Lex.Opar _ _ }
   ')'       { Token Lex.Cpar _ _ }
   '{'       { Token Lex.Obrace _ _ }
@@ -60,6 +71,12 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn)
   ']'       { Token Lex.Csquare _ _ }
   ','       { Token Lex.Comma _ _ }
   ';'       { Token Lex.Semi _ _ }
+
+%right '||'
+%right '&&'
+%nonassoc '<=' '>=' '==' '!=' '<' '>'
+%left '+' '-' %right '@' '@@'
+%left '*' '/' '%'
 
 %%
 
@@ -70,13 +87,6 @@ Module : Defns Entry  { ParsedModule (reverse $1) $2 }
 Id : id { Id (range $1) (tokenLexeme $1) }
 
 Ct : capid  { Id (range $1) (tokenLexeme $1) }
-
-InfixOp : op  { Op (range $1) (tokenLexeme $1) }
-
-PrefixOp : '(' op ')' { Op (range $1 <> range $3) (tokenLexeme $2) }
-
-TopId : Id        { $1 }
-      | PrefixOp  { $1 }
 
 Params_ : Params_ ',' Id  { $3 : $1 }
         | Id              { [$1] }
@@ -158,13 +168,27 @@ Matches : Matches Match ';' { $2 : $1 }
 
 Match : Pattern '->' Expr { ($1, $3) }
 
-Expr : Chain                          { tryUnchain $1 }
+Expr : Bin                            { $1 }
      | if Expr then Expr else Expr    { Cond (range $1 <> range $6) $2 $4 $6 }
      | fn '(' OptParams ')' '->' Expr { Fun (range $1 <> range $6) $3 $6 }
      | fn '[' Params ']' '->' Expr    { GenFun (range $1 <> range $6) $3 $6 }
 
-Chain : App               { Operand $1 }
-      | App InfixOp Chain { Operation $1 $2 $3 }
+Bin : Bin '&&' Bin  { Bin (range $1 <> range $3) And $1 $3 }
+    | Bin '||' Bin  { Bin (range $1 <> range $3) Or $1 $3 }
+    | Bin '<=' Bin  { Bin (range $1 <> range $3) Le $1 $3 }
+    | Bin '>=' Bin  { Bin (range $1 <> range $3) Ge $1 $3 }
+    | Bin '==' Bin  { Bin (range $1 <> range $3) Eq $1 $3 }
+    | Bin '!=' Bin  { Bin (range $1 <> range $3) Neq $1 $3 }
+    | Bin '>' Bin   { Bin (range $1 <> range $3) Gt $1 $3 }
+    | Bin '<' Bin   { Bin (range $1 <> range $3) Lt $1 $3 }
+    | Bin '+' Bin   { Bin (range $1 <> range $3) Add $1 $3 }
+    | Bin '-' Bin   { Bin (range $1 <> range $3) Sub $1 $3 }
+    | Bin '*' Bin   { Bin (range $1 <> range $3) Mult $1 $3 }
+    | Bin '/' Bin   { Bin (range $1 <> range $3) Div $1 $3 }
+    | Bin '%' Bin   { Bin (range $1 <> range $3) Rest $1 $3 }
+    | Bin '@' Bin   { Bin (range $1 <> range $3) Concat $1 $3 }
+    | Bin '@@' Bin  { Bin (range $1 <> range $3) Concat $1 (Bin NoRange Concat (Literal NoRange (Str " ")) $3) }
+    | App           { $1 }
 
 App : App '(' Exprs ')' { App (range $1 <> range $4) $1 $3 }
     | App '(' ')'       { App (range $1 <> range $3) $1 (Literal (range $2 <> range $3) Unit :| []) }
@@ -184,7 +208,7 @@ Atom : '(' Exprs ')'              { if NonEmpty.length $2 > 1 then Tuple (range 
      | true                       { Literal (range $1) (Bool True) }
      | false                      { Literal (range $1) (Bool False) }
      | strlit                     { Literal (range $1) (Str $ extractStr $1) }
-     | TopId                      { Var (range $1) $1 }
+     | Id                         { Var (range $1) $1 }
      | Ct                         { Var (range $1) $1 }
      | match Expr '{' Matches '}' { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
 
@@ -228,16 +252,15 @@ Entry : run Expr    { Just $2 }
 Defns : Defns Defn OptSemi  { $2 : $1 }
       | {- empty -}         { [] }
 
-Defn : Fix PrefixOp                                                   { FixDefn $1 $2 }
-     | type Id '[' Params ']' '=' Type                                { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
-     | type Id '=' Type                                               { TypeDefn (TypeBind $2 $4) }
-     | type Ct '[' Params ']' '{' Ctors '}'                           { mkDataDefn $2 (Just $4) $7 }
-     | type Ct '{' Ctors '}'                                          { mkDataDefn $2 Nothing $4 }
-     | let TopId ':' Type '=' Expr                                    { Defn (ExprBind $2 $4 $6) }
-     | let foreign TopId ':' Type '=' strlit                          { Defn (ForeignBind $3 $5 (extractStr $7)) }
-     | let TopId '[' Params ']' ':' Type '=' Expr                     { Defn (ExprBind $2 (Forall NoRange $4 $7) (GenFun NoRange $4 $9)) }
-     | let TopId '(' TypedParams ')' ':' Type '=' Expr                { mkExprDefn $2 Nothing $4 $7 $9 }
-     | let TopId '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr { mkExprDefn $2 (Just $4) $7 $10 $12 }
+Defn : type Id '[' Params ']' '=' Type                              { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
+     | type Id '=' Type                                             { TypeDefn (TypeBind $2 $4) }
+     | type Ct '[' Params ']' '{' Ctors '}'                         { mkDataDefn $2 (Just $4) $7 }
+     | type Ct '{' Ctors '}'                                        { mkDataDefn $2 Nothing $4 }
+     | let Id ':' Type '=' Expr                                     { Defn (ExprBind $2 $4 $6) }
+     | let foreign Id ':' Type '=' strlit                           { Defn (ForeignBind $3 $5 (extractStr $7)) }
+     | let Id '[' Params ']' ':' Type '=' Expr                      { Defn (ExprBind $2 (Forall NoRange $4 $7) (GenFun NoRange $4 $9)) }
+     | let Id '(' TypedParams ')' ':' Type '=' Expr                 { mkExprDefn $2 Nothing $4 $7 $9 }
+     | let Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr  { mkExprDefn $2 (Just $4) $7 $10 $12 }
 
 TypedParams_ : TypedParams_ ',' TypedParam  { $3 : $1 }
              | TypedParam                   { [$1] }
@@ -255,19 +278,8 @@ Ctors : Ctors_  { toNonEmptyPARTIAL (reverse $1) }
 Ctor : Ct                     { ($1, Nothing) }
      | Ct '(' TypedParams ')' { ($1, Just $3) }
 
-Fix : Assoc nat { Fixity $1 (read $ Text.unpack $ tokenLexeme $2) }
-
-Assoc : infix   { NonAssoc }
-      | infixl  { LeftAssoc }
-      | infixr  { RightAssoc }
-
 {
 extractStr = Text.tail . Text.init . tokenLexeme
-
-tryUnchain (Operand expr) = expr
-tryUnchain (Operation left op (Operand right)) =
-  App (range left <> range right) (Var (range op) op) (left :| [right])
-tryUnchain chain = Chain (range chain) chain
 
 tryUnblock _ (Return expr) = expr
 tryUnblock r block = Block r block

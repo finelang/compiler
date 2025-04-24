@@ -12,7 +12,6 @@ $whitechar    = [ \t\n\r\f\v]
 $special      = [\(\)\,\;\[\]\`\{\}]
 $digit        = 0-9
 $ascsymbol    = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
-$opsymbol     = [$ascsymbol \:] # [\# \.]
 $symbol       = $ascsymbol # [$special \_\:\"\']
 $large        = [A-Z \xc0-\xd6 \xd8-\xde]
 $small        = [a-z \xdf-\xf6 \xf8-\xff \_]
@@ -42,9 +41,6 @@ tokens :-
   "fn"                        { mkt Fn }
   "foreign"                   { mkt Foreign }
   "if"                        { mkt If }
-  "infix"                     { mkt Infix }
-  "infixl"                    { mkt Infixl }
-  "infixr"                    { mkt Infixr }
   "int"                       { mkt Int }
   "let"                       { mkt Let }
   "match"                     { mkt Match }
@@ -64,10 +60,24 @@ tokens :-
   "-" @decimal                { mkt NonNat }
   "-"? @decimal "." @decimal  { mkt FloatLit }
   "->"                        { mkt Arrow }
-  "="                         { mkt Eq }
+  "="                         { mkt Assign }
   "."                         { mkt Dot }
   ":"                         { mkt Colon }
-  $opsymbol{1, 3}             { mkt Op }
+  "&&"                        { mkt And }
+  "||"                        { mkt Or }
+  "@@"                        { mkt SpaceCcat }
+  "@"                         { mkt Ccat }
+  "<="                        { mkt Le }
+  ">="                        { mkt Ge }
+  "=="                        { mkt Eq }
+  "!="                        { mkt Neq }
+  "<"                         { mkt Lt }
+  ">"                         { mkt Gt }
+  "+"                         { mkt Add }
+  "-"                         { mkt Sub }
+  "*"                         { mkt Mult }
+  "/"                         { mkt Div }
+  "%"                         { mkt Rest }
   "("                         { mkt Opar } 
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
@@ -85,9 +95,6 @@ tokens :-
   | Fn
   | Foreign
   | If
-  | Infix
-  | Infixl
-  | Infixr
   | Let
   | Match
   | Mut
@@ -113,10 +120,13 @@ tokens :-
   | FloatLit
   -- symbols
   | Arrow
-  | Eq
+  | Assign
   | Dot
   | Colon
-  | Op
+  | And | Or
+  | Ccat | SpaceCcat
+  | Le | Lt | Ge | Gt | Eq | Neq
+  | Add | Sub | Mult | Div | Rest
   | Opar
   | Cpar
   | Obrace

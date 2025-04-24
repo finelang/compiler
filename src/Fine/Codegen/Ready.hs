@@ -3,17 +3,20 @@ module Fine.Codegen.Ready (getModuleReady) where
 import Data.Either (partitionEithers, rights)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.List.NonEmpty.Extra (unsnoc)
 import Fine.Syntax (
   Bind (ExprBind, ForeignBind),
   BindType (OfExpr),
   Block (..),
   Expr (..),
-  Id (Id, idText),
+  Id (Id),
   Lit (Bool, Str, Unit),
   Module (Module),
+  Op (And, Eq),
   Pattern (..),
   Phase (Ready, Transformed),
   Range (NoRange),
+  idText,
  )
 import Fine.Syntax.Utils (patternBoundVars)
 
@@ -66,7 +69,7 @@ applyPath mut matched path =
   applyPiece expr (PropTo prop) = Access () expr prop
   applyPiece expr (IndexTo ix) = Index () expr ix
 
-  applyEnd expr (EqualsTo expr') = Left (Equals () expr expr')
+  applyEnd expr (EqualsTo expr') = Left (Bin () Eq expr expr')
   applyEnd expr (Is var) = Right $ (if mut then Mut else Let False) var expr
 
 type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) after typer impl
@@ -85,7 +88,7 @@ transformMatches matched matches =
             ifBlock = mergeToExpr lets' cont
             cond = case conds of
               [] -> Literal () (Bool True)
-              (c : cs) -> Conj () (c :| cs)
+              (c : cs) -> let (cs', c') = unsnoc (c :| cs) in foldr (Bin () And) c' cs'
          in If () cond ifBlock
    in foldr ($) Void ifStmts
  where
@@ -121,6 +124,7 @@ getExprReady (Data _ tag exprs) = Data () tag (map getExprReady exprs)
 getExprReady (Record _ props) = Record () $ (fmap . fmap) getExprReady props
 getExprReady (Tuple _ exprs) = Tuple () (NonEmpty.map getExprReady exprs)
 getExprReady (Var _ var) = Var () var
+getExprReady (Bin _ op left right) = Bin () op (getExprReady left) (getExprReady right)
 getExprReady (App _ f args) = App () (getExprReady f) (NonEmpty.map getExprReady args)
 getExprReady (GenApp _ f _) = getExprReady f
 getExprReady (Access _ expr prop) = Access () (getExprReady expr) prop
@@ -141,5 +145,5 @@ getBindReady (ExprBind binder _ expr) = ExprBind binder () (getExprReady expr)
 getBindReady (ForeignBind binder _ code) = ForeignBind binder () code
 
 getModuleReady :: Module Typed -> Module Ready
-getModuleReady (Module values _ _ entry) =
-  Module (map getBindReady values) () () (fmap getExprReady entry)
+getModuleReady (Module values _ entry) =
+  Module (map getBindReady values) () (fmap getExprReady entry)

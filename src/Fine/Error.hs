@@ -10,7 +10,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax (Fixity, Id, Range)
+import Fine.Syntax (Id, Range)
 import GHC.Stack (HasCallStack)
 import String.ANSI (red, yellow)
 
@@ -28,9 +28,6 @@ data Error
   | UnusedUniVar Id
   | AlreadyDefined Id Id
   | UsageBeforeInit Id
-  | InvalidPrecedence Int Int Id
-  | RepeatedFixity Id
-  | SameInfixPrecedence (Id, Fixity) (Id, Fixity)
 
 instance Show Error where
   show :: Error -> String
@@ -42,12 +39,6 @@ instance Show Error where
     [i|Variable #{hl repeated} is already defined.|]
   show (UsageBeforeInit var) =
     [i|Variable #{hl var} cannot be read during its own initialization.|]
-  show (InvalidPrecedence lb ub var) =
-    [i|Precedence of operator #{hl var} must be greater or equal than #{lb} and lesser than #{ub}.|]
-  show (RepeatedFixity var) =
-    [i|Fixity definition for #{hl var} is repeated.|]
-  show (SameInfixPrecedence _ _) =
-    errorTODO
 
 errorPrefix :: String
 errorPrefix = red "Error: "
@@ -57,15 +48,12 @@ wrapError err = [i|#{errorPrefix}#{err}|]
 
 data Warning
   = UnusedVar Id
-  | MissingFixity Id Fixity
   | DebugKeywordUsage Range
 
 instance Show Warning where
   show :: Warning -> String
   show (UnusedVar var) =
     [i|Variable #{hl var} is not used.|]
-  show (MissingFixity var fix) =
-    [i|Missing fixity definition for #{hl var}. Defaulting to #{hl fix}.|]
   show (DebugKeywordUsage _) =
     [i|Consider removing the debug keyword because it produces an IO action.|]
 

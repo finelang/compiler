@@ -5,16 +5,11 @@ import Control.Monad.Trans.SEC (SEC, fail', gets, modify, runSEC, warn)
 import Data.Either (partitionEithers)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Fine.Error (
-  Error (
-    InvalidPrecedence,
-    RepeatedFixity,
-    UsageBeforeInit
-  ),
+  Error (UsageBeforeInit),
   Warning (UnusedVar),
  )
 import Fine.Syntax (
@@ -22,7 +17,6 @@ import Fine.Syntax (
   BindType (..),
   Defn (..),
   Expr (..),
-  Fixity (Fixity),
   Id,
   Module (Module),
   ParsedModule (ParsedModule),
@@ -31,7 +25,6 @@ import Fine.Syntax (
   binder,
  )
 import Fine.Syntax.Utils (isFunction)
-import Fine.Transform.Common (Fixities)
 import Fine.Transform.Expr (runExprTransformer)
 import Fine.Transform.Type (transformType)
 import Fine.Transform.Vars (alreadyDefined)
@@ -42,15 +35,13 @@ data Env = Env
     usedExprBinders :: Set Id,
     allTypeBinders :: Set Id, -- all binders to make available for type functions
     currentTypeBinders :: Set Id,
-    usedTypeBinders :: Set Id,
-    fixities :: Fixities
+    usedTypeBinders :: Set Id
   }
 
 initEnv :: [Defn] -> SEC Env Error Warning ()
 initEnv [] = return ()
 initEnv (defn : defns) = do
   case defn of
-    FixDefn _ _ -> return ()
     Defn _ -> return ()
     TypeDefn (TypeBind binder' _) ->
       modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
@@ -84,8 +75,7 @@ transformTypeBind (TypeBind binder' type') = do
 
 transformExpr :: Expr Parsed -> SEC Env Error Warning (Expr Transformed)
 transformExpr expr = do
-  fixs <- gets fixities
-  let (expr', errs, wrns) = runExprTransformer fixs expr
+  let (expr', errs, wrns) = runExprTransformer expr
   forM_ errs fail'
   forM_ wrns warn
   return expr'
@@ -146,13 +136,6 @@ checkRepeatedBinders defns = do
   typeDefnBinder _ = Nothing
 
 transformDefn :: Defn -> SEC Env Error Warning [Either (Bind OfExpr Transformed) (Bind OfType Transformed)]
-transformDefn (FixDefn fix@(Fixity _ prec) op) = do
-  unless (0 <= prec && prec < 10) (fail' $ InvalidPrecedence 0 10 op) -- TODO: read from some config
-  fixities' <- gets fixities
-  if Map.member op fixities'
-    then fail' (RepeatedFixity op)
-    else modify (\ctx -> ctx{fixities = Map.insert op fix fixities'})
-  return []
 transformDefn (Defn bind) = do
   bind' <- transformExprBind bind
   return [Left bind']
@@ -182,11 +165,10 @@ transformModule (ParsedModule defns entry) = do
   (exprBinds, typeBinds) <- partitionEithers . concat <$> mapM transformDefn defns
   entry' <- mapM transformEntryExpr entry
   warnUnusedBinders
-  fixities' <- gets fixities
-  return (Module exprBinds typeBinds fixities' entry')
+  return (Module exprBinds typeBinds entry')
 
 runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Transformed), [Warning])
 runTransformer mdule =
   let env =
-        Env Set.empty Set.empty Set.empty Set.empty Set.empty Map.empty
+        Env Set.empty Set.empty Set.empty Set.empty Set.empty
    in runSEC (transformModule mdule) env

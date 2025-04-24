@@ -16,6 +16,7 @@ import Fine.Syntax (
   Id (Id),
   Lit (..),
   Module (Module),
+  Op (..),
   Phase (Ready, Transformed),
   Range (NoRange),
   idText,
@@ -44,6 +45,22 @@ genLitCode (Bool True) = "true"
 genLitCode (Bool False) = "false"
 genLitCode (Str s) = [i|"#{s}"|]
 genLitCode (Unit) = "null"
+
+genOpCode :: Op -> Text
+genOpCode And = "&&"
+genOpCode Or = "||"
+genOpCode Le = "<="
+genOpCode Ge = ">="
+genOpCode Eq = "==="
+genOpCode Neq = "!=="
+genOpCode Lt = "<"
+genOpCode Gt = ">"
+genOpCode Add = "+"
+genOpCode Sub = "-"
+genOpCode Mult = "*"
+genOpCode Div = "/"
+genOpCode Rest = "%"
+genOpCode Concat = "+"
 
 genPropCode :: (Id, Expr') -> Reader Indentation Text
 genPropCode (prop, value) = do
@@ -131,6 +148,11 @@ genExprCode (Tuple _ exprs) = do
   exprs' <- genIndexedPropsCode (NonEmpty.toList exprs)
   return [i|({#{exprs'}})|]
 genExprCode (Var _ var) = return (idText var)
+genExprCode (Bin _ op left right) = do
+  let op' = genOpCode op
+  left' <- genExprCode left
+  right' <- genExprCode right
+  return [i|(#{left'} #{op'} #{right'})|]
 genExprCode (App _ f args) = do
   f' <- genExprCode f
   args' <- Text.intercalate ", " <$> mapM genExprCode (NonEmpty.toList args)
@@ -151,10 +173,6 @@ genExprCode (Block _ block) = do
   content <- genStmtsCode block
   indent <- ask
   return [i|(() => {\n#{content}#{indent}})()|]
-genExprCode (Conj _ conditions) =
-  let conditions' = NonEmpty.toList conditions
-   in Text.intercalate " && " <$> mapM genExprCode conditions'
-genExprCode (Equals _ left right) = Text.intercalate " === " <$> mapM genExprCode [left, right]
 
 genBindCode :: Bind OfExpr Ready -> Reader Indentation Text
 genBindCode (ExprBind binder' _ expr) = do
@@ -164,7 +182,7 @@ genBindCode (ForeignBind binder' _ code) =
   return [i|const #{binder'} = #{code};|]
 
 genModuleCode :: Module Ready -> Reader Indentation Text
-genModuleCode (Module values _ _ entry) = do
+genModuleCode (Module values _ entry) = do
   case (values, entry) of
     ([], Nothing) -> return ""
     ([], Just expr) -> (<> ";\n") <$> genExprCode expr

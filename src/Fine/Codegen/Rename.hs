@@ -1,10 +1,8 @@
 module Fine.Codegen.Rename (runRenamer) where
 
-import Control.Monad.Trans.Reader (Reader, asks, local, runReader)
-import Data.Char (ord)
+import Control.Monad.Trans.Reader (Reader, asks, runReader)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (mapMaybe)
 
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -13,12 +11,11 @@ import Fine.Syntax (
   BindType (OfExpr),
   Block (..),
   Expr (..),
-  Id (Id, Op),
+  Id (Id),
   Module (Module, moduleEntry, moduleExprs),
   Pattern (..),
   Phase (Transformed),
   Range (NoRange),
-  binder,
  )
 import Fine.Syntax.Utils (isCtor)
 
@@ -58,6 +55,7 @@ renameExpr (Data ext tag exprs) = Data ext tag <$> mapM renameExpr exprs
 renameExpr (Record ext props) = Record ext <$> (mapM . mapM) renameExpr props
 renameExpr (Tuple ext exprs) = Tuple ext <$> mapM renameExpr exprs
 renameExpr (Var ext name) = Var ext <$> substt name
+renameExpr (Bin ext op left right) = Bin ext op <$> renameExpr left <*> renameExpr right
 renameExpr (App ext f args) = App ext <$> renameExpr f <*> mapM renameExpr args
 renameExpr (GenApp ext f typeArgs) = GenApp ext <$> renameExpr f <*> return typeArgs
 renameExpr (Access ext expr prop) = Access ext <$> renameExpr expr <*> return prop
@@ -81,18 +79,10 @@ renameBind (ForeignBind binder' type' code) = do
   binder'' <- substt binder'
   return (ForeignBind binder'' type' code)
 
-opSubstt :: Id -> Maybe (Id, Id)
-opSubstt (Id _ _) = Nothing
-opSubstt op@(Op r name) =
-  let codes = map (Text.pack . show . ord) (Text.unpack name)
-   in Just (op, Id r $ Text.append "op$" $ Text.intercalate "_" codes)
-
 renameModule :: Module Transformed -> Reader Substts (Module Transformed)
-renameModule mdule@(Module exprs _ _ entry) = do
-  let opSubstts = Map.fromList $ mapMaybe (opSubstt . binder) exprs
-  let reader = Map.union opSubstts
-  exprs' <- local reader (mapM renameBind exprs)
-  entry' <- local reader (mapM renameExpr entry)
+renameModule mdule@(Module exprs _ entry) = do
+  exprs' <- mapM renameBind exprs
+  entry' <- mapM renameExpr entry
   return (mdule{moduleExprs = exprs', moduleEntry = entry'})
 
 runRenamer :: [Text] -> Module Transformed -> Module Transformed

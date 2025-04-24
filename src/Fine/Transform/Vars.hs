@@ -194,6 +194,7 @@ exprFreeVars (Data _ _ exprs) = unions' <$> mapM exprFreeVars exprs
 exprFreeVars (Record _ props) = unions' <$> mapM (exprFreeVars . snd) props
 exprFreeVars (Tuple _ exprs) = unions' <$> mapM exprFreeVars exprs
 exprFreeVars (Var _ var) = withReader vars (check var) >> return (singleVar var)
+exprFreeVars (Bin _ _ left right) = union' <$> exprFreeVars left <*> exprFreeVars right
 exprFreeVars (App _ f args) = do
   fVars <- exprFreeVars f
   argsVars <- unions' <$> mapM exprFreeVars args

@@ -48,9 +48,7 @@ library
     Fine.Syntax
     Fine.Syntax.Utils
     Fine.Transform
-    Fine.Transform.Common
     Fine.Transform.Expr
-    Fine.Transform.ShuntingYard
     Fine.Transform.Type
     Fine.Transform.Vars
   hs-source-dirs:

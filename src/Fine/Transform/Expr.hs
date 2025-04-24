@@ -1,8 +1,7 @@
 module Fine.Transform.Expr (runExprTransformer) where
 
-import Control.Monad (forM_)
-import Control.Monad.Trans.RW (RW, ask, runRW, tell)
-import Data.Errors (Errors (Errors), error', warning)
+import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
+import Data.Errors (Errors (Errors), warning)
 import Data.List.NonEmpty qualified as NonEmpty
 import Fine.Error (Error, Warning (DebugKeywordUsage))
 import Fine.Syntax (
@@ -11,13 +10,11 @@ import Fine.Syntax (
   Phase (Parsed, Transformed),
   range,
  )
-import Fine.Transform.Common (Fixities)
-import Fine.Transform.ShuntingYard (runShuntingYard)
 import Fine.Transform.Type (transformType)
 
 type Errors' = Errors Error Warning
 
-transformBlock :: Block Parsed -> RW Fixities Errors' (Block Transformed)
+transformBlock :: Block Parsed -> Writer Errors' (Block Transformed)
 transformBlock (Return expr) = Return <$> transformExpr expr
 transformBlock Void = return Void
 transformBlock (Do action block) =
@@ -34,12 +31,14 @@ transformBlock (Loop cond actions block) =
 transformBlock (LetPatt _ patt expr block) =
   LetPatt () patt <$> transformExpr expr <*> transformBlock block
 
-transformExpr :: Expr Parsed -> RW Fixities Errors' (Expr Transformed)
+transformExpr :: Expr Parsed -> Writer Errors' (Expr Transformed)
 transformExpr (Literal ext lit) = return (Literal ext lit)
 transformExpr (Data ext tag exprs) = Data ext tag <$> mapM transformExpr exprs
 transformExpr (Record ext props) = Record ext <$> (mapM . mapM) transformExpr props
 transformExpr (Tuple ext exprs) = Tuple ext <$> mapM transformExpr exprs
 transformExpr (Var ext var) = return (Var ext var)
+transformExpr (Bin ext op left right) =
+  Bin ext op <$> transformExpr left <*> transformExpr right
 transformExpr (App ext f args) = App ext <$> transformExpr f <*> mapM transformExpr args
 transformExpr (GenApp ext f typeArgs) = do
   f' <- transformExpr f
@@ -61,14 +60,8 @@ transformExpr (PatternMatching ext expr matches) = do
 transformExpr (Fun ext params body) = Fun ext params <$> transformExpr body
 transformExpr (GenFun ext typeParams body) = GenFun ext typeParams <$> transformExpr body
 transformExpr (Block ext block') = Block ext <$> transformBlock block'
-transformExpr (Chain _ chain) = do
-  ctx <- ask
-  let (expr, errs, wrns) = runShuntingYard ctx chain
-  forM_ errs (tell . error')
-  forM_ wrns (tell . warning)
-  transformExpr expr
 
-runExprTransformer :: Fixities -> Expr Parsed -> (Expr Transformed, [Error], [Warning])
-runExprTransformer fixs expr =
-  let (expr', Errors errs wrns) = runRW (transformExpr expr) fixs
+runExprTransformer :: Expr Parsed -> (Expr Transformed, [Error], [Warning])
+runExprTransformer expr =
+  let (expr', Errors errs wrns) = runWriter (transformExpr expr)
    in (expr', errs, wrns)

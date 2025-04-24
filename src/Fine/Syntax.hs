@@ -3,13 +3,14 @@
 module Fine.Syntax (
   Range (..),
   HasRange (..),
-  Id (Id, Op, idText),
+  Id (..),
+  idText,
   Phase (..),
   Kind (..),
   LitT (..),
   Type (..),
   typeExt,
-  Chain (..),
+  Op (..),
   Lit (..),
   Block (..),
   Expr (..),
@@ -17,8 +18,6 @@ module Fine.Syntax (
   BindType (..),
   Bind (..),
   binder,
-  Assoc (..),
-  Fixity (..),
   Defn (..),
   ParsedModule (..),
   Module (..),
@@ -29,7 +28,6 @@ import Data.Function (on)
 import Data.Kind qualified as HsKind
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Map.Strict (Map)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -63,13 +61,14 @@ class HasRange t where
 
 -- IDENTIFIER
 
-data Id
-  = Id {idRange :: Range, idText :: Text}
-  | Op {idRange :: Range, idText :: Text}
+data Id = Id Range Text
+
+idText :: Id -> Text
+idText (Id _ text) = text
 
 instance Eq Id where
   (==) :: Id -> Id -> Bool
-  (==) = (==) `on` idText
+  (Id _ text) == (Id _ text') = text == text'
 
 instance Ord Id where
   compare :: Id -> Id -> Ordering
@@ -77,11 +76,11 @@ instance Ord Id where
 
 instance HasRange Id where
   range :: Id -> Range
-  range = idRange
+  range (Id r _) = r
 
 instance Show Id where
   show :: Id -> String
-  show = Text.unpack . idText
+  show (Id _ text) = Text.unpack text
 
 -- PASS
 
@@ -157,16 +156,22 @@ instance HasRange (Type Typed) where
 
 -- EXPR
 
-data Chain
-  = Operand (Expr Parsed)
-  | Operation (Expr Parsed) Id Chain
-
-deriving instance (Show (Expr Parsed)) => Show Chain
-
-instance HasRange Chain where
-  range :: Chain -> Range
-  range (Operand expr) = range expr
-  range (Operation expr _ chain) = range expr <> range chain
+data Op
+  = Add
+  | Sub
+  | Mult
+  | Div
+  | Rest
+  | Eq
+  | Neq
+  | Lt
+  | Gt
+  | Le
+  | Ge
+  | And
+  | Or
+  | Concat
+  deriving (Show)
 
 data Lit
   = Int Int
@@ -218,6 +223,7 @@ data Expr (p :: Phase)
   | Record (ExprX p) (NonEmpty (Id, Expr p))
   | Tuple (ExprX p) (NonEmpty (Expr p))
   | Var (ExprX p) Id
+  | Bin (ExprX p) Op (Expr p) (Expr p)
   | App (ExprX p) (Expr p) (NonEmpty (Expr p))
   | GenApp (NonReadyExprX p) (Expr p) (NonEmpty (Type p))
   | Access (ExprX p) (Expr p) Id
@@ -227,9 +233,6 @@ data Expr (p :: Phase)
   | GenFun (NonReadyExprX p) (NonEmpty Id) (Expr p)
   | Block (ExprX p) (Block p)
   | PatternMatching (NonReadyExprX p) (Expr p) (NonEmpty (Pattern, Expr p))
-  | Chain (ParsedX p) Chain
-  | Conj (ReadyX p) (NonEmpty (Expr p))
-  | Equals (ReadyX p) (Expr p) (Expr p)
 
 deriving instance
   ( Show (ExprX p),
@@ -248,6 +251,7 @@ instance HasRange (Expr Parsed) where
   range (Record r _) = r
   range (Tuple r _) = r
   range (Var r _) = r
+  range (Bin r _ _ _) = r
   range (App r _ _) = r
   range (GenApp r _ _) = r
   range (Access r _ _) = r
@@ -257,7 +261,6 @@ instance HasRange (Expr Parsed) where
   range (GenFun r _ _) = r
   range (Block r _) = r
   range (PatternMatching r _ _) = r
-  range (Chain r _) = r
 
 -- PATTERN
 
@@ -301,26 +304,10 @@ binder (ExprBind idn _ _) = idn
 binder (TypeBind idn _) = idn
 binder (ForeignBind idn _ _) = idn
 
-data Assoc = LeftAssoc | RightAssoc | NonAssoc
-  deriving (Eq)
-
-instance Show Assoc where
-  show :: Assoc -> String
-  show LeftAssoc = "infixl"
-  show RightAssoc = "infixr"
-  show NonAssoc = "infix"
-
-data Fixity = Fixity Assoc Int
-
-instance Show Fixity where
-  show :: Fixity -> String
-  show (Fixity assoc prec) = [i|#{assoc} #{prec}|]
-
 data Defn
   = Defn (Bind OfExpr Parsed)
   | TypeDefn (Bind OfType Parsed)
   | DataDefn (Bind OfType Parsed) (NonEmpty (Bind OfExpr Parsed))
-  | FixDefn Fixity Id
 
 data ParsedModule
   = ParsedModule [Defn] (Maybe (Expr Parsed))
@@ -329,21 +316,15 @@ type family ModuleTypes (p :: Phase) where
   ModuleTypes Ready = ()
   ModuleTypes p = [Bind OfType p]
 
-type family ModuleFixities (p :: Phase) where
-  ModuleFixities Ready = ()
-  ModuleFixities _ = Map Id Fixity
-
 data Module (p :: Phase)
   = Module
   { moduleExprs :: [Bind OfExpr p],
     moduleTypes :: ModuleTypes p,
-    moduleFixities :: ModuleFixities p,
     moduleEntry :: Maybe (Expr p)
   }
 
 deriving instance
-  ( Show (ModuleFixities p),
-    Show (ModuleTypes p),
+  ( Show (ModuleTypes p),
     Show (BoundType p),
     Show (Expr p)
   ) =>
