@@ -10,7 +10,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
-import Fine.Syntax.Utils (mkDataDefn, mkExprDefn)
+import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun)
 }
 
 %name parseTokens
@@ -190,8 +190,16 @@ Bin : Bin '&&' Bin  { Bin (range $1 <> range $3) And $1 $3 }
     | Bin '@@' Bin  { Bin (range $1 <> range $3) Concat $1 (Bin NoRange Concat (Literal NoRange (Str " ")) $3) }
     | App           { $1 }
 
-App : App '(' Exprs ')' { App (range $1 <> range $4) $1 $3 }
-    | App '(' ')'       { App (range $1 <> range $3) $1 (Literal (range $2 <> range $3) Unit :| []) }
+Arg : Expr    { Right $1 }
+    | discard { Left (range $1) }
+
+Args_ : Args_ ',' Arg { $3 : $1 }
+      | Arg           { [$1] }
+
+Args : Args_  { toNonEmptyPARTIAL (reverse $1) }
+
+App : App '(' Args ')'  { mkAppOrFun (range $1 <> range $4) $1 $3 }
+    | App '(' ')'       { mkAppOrFun (range $1 <> range $3) $1 ((Right $ Literal (range $2 <> range $3) Unit) :| []) }
     | App '[' Types ']' { GenApp (range $1 <> range $4) $1 $3 }
     | App '.' Id        { Access (range $1 <> range $3) $1 $3 }
     | App '.' nat       { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }

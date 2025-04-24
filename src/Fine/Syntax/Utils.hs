@@ -1,21 +1,17 @@
-module Fine.Syntax.Utils (
-  isFunction,
-  isCtor,
-  mkDataDefn,
-  mkExprDefn,
-  patternBoundVars,
-) where
+module Fine.Syntax.Utils where
 
 import Data.Functor qualified as Functor
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.String.Interpolate (i)
 
+import Data.Either (isLeft, isRight)
+import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (
   Bind (ExprBind, TypeBind),
-  BindType (..),
   Defn (DataDefn, Defn),
-  Expr (Data, Fun, GenFun, Var),
-  Id,
+  Expr (App, Data, Fun, GenFun, Var),
+  Id (Id),
   Pattern (..),
   Phase (Parsed),
   Range (NoRange),
@@ -42,20 +38,6 @@ isCtor (Fun _ _ body) = isCtor body
 isCtor (GenFun _ _ body) = isCtor body
 isCtor _ = False
 
-mkCtor :: Maybe (NonEmpty Id) -> Type Parsed -> (Id, Maybe (NonEmpty (Id, Type Parsed))) -> Bind OfExpr Parsed
-mkCtor optTParams retType (tag, optTypedParams) =
-  let (type', expr) = case optTypedParams of
-        Just typedParams ->
-          let (params, types) = Functor.unzip typedParams
-           in (,)
-                (FunT NoRange types retType)
-                (Fun NoRange params $ Data NoRange tag $ map (Var NoRange) $ NonEmpty.toList params)
-        _ -> (retType, Data NoRange tag [])
-      (type'', expr') = case optTParams of
-        Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
-        _ -> (type', expr)
-   in ExprBind tag type'' expr'
-
 mkDataDefn ::
   Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, Maybe (NonEmpty (Id, Type Parsed))) -> Defn
 mkDataDefn ctTag optTParams ctors =
@@ -72,6 +54,19 @@ mkDataDefn ctTag optTParams ctors =
             (TData NoRange ctTag $ map (\param -> TVar (range param) param) $ NonEmpty.toList tparams)
         _ -> TData NoRange ctTag []
    in DataDefn tBind ctBinds
+ where
+  mkCtor optTParams' retType (tag, optTypedParams) =
+    let (type', expr) = case optTypedParams of
+          Just typedParams ->
+            let (params, types) = Functor.unzip typedParams
+             in (,)
+                  (FunT NoRange types retType)
+                  (Fun NoRange params $ Data NoRange tag $ map (Var NoRange) $ NonEmpty.toList params)
+          _ -> (retType, Data NoRange tag [])
+        (type'', expr') = case optTParams' of
+          Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
+          _ -> (type', expr)
+     in ExprBind tag type'' expr'
 
 mkExprDefn :: Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, Type Parsed) -> Type Parsed -> Expr Parsed -> Defn
 mkExprDefn binder optTParams typedParams retType body =
@@ -82,3 +77,24 @@ mkExprDefn binder optTParams typedParams retType body =
         Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
         _ -> (type', expr)
    in Defn (ExprBind binder type'' expr')
+
+mkAppOrFun :: Range -> Expr Parsed -> NonEmpty (Either Range (Expr Parsed)) -> Expr Parsed
+mkAppOrFun r f args =
+  if all isRight args
+    then App r f (NonEmpty.map fromRight args)
+    else
+      if all isLeft args
+        then f
+        else
+          let (params'', args'') = go (NonEmpty.toList args) 0 [] []
+           in Fun r params'' (App r f args'')
+ where
+  go :: [Either Range (Expr Parsed)] -> Int -> [Id] -> [Expr Parsed] -> (NonEmpty Id, NonEmpty (Expr Parsed))
+  go [] _ params' args' = (NonEmpty.fromList $ reverse params', NonEmpty.fromList $ reverse args')
+  go (Left r' : rest) count params' args' =
+    let param = Id r' [i|x#{count}|]
+     in go rest (count + 1) (param : params') (Var r' param : args')
+  go (Right arg : rest) count params' args' = go rest count params' (arg : args')
+
+  fromRight (Right x) = x
+  fromRight _ = errorUNREACHABLE

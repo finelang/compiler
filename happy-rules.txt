@@ -82,70 +82,75 @@ Grammar
 	Bin -> Bin '@' Bin                                 (73)
 	Bin -> Bin '@@' Bin                                (74)
 	Bin -> App                                         (75)
-	App -> App '(' Exprs ')'                           (76)
-	App -> App '(' ')'                                 (77)
-	App -> App '[' Types ']'                           (78)
-	App -> App '.' Id                                  (79)
-	App -> App '.' nat                                 (80)
-	App -> Atom                                        (81)
-	Atom -> '(' Exprs ')'                              (82)
-	Atom -> '(' ')'                                    (83)
-	Atom -> '{' Props '}'                              (84)
-	Atom -> '{' Block '}'                              (85)
-	Atom -> '{' Expr '}'                               (86)
-	Atom -> Int                                        (87)
-	Atom -> floatlit                                   (88)
-	Atom -> true                                       (89)
-	Atom -> false                                      (90)
-	Atom -> strlit                                     (91)
-	Atom -> Id                                         (92)
-	Atom -> Ct                                         (93)
-	Atom -> match Expr '{' Matches '}'                 (94)
-	PropTypes -> PropTypes ',' PropType                (95)
-	PropTypes -> PropType                              (96)
-	PropType -> Id ':' Type                            (97)
-	Types_ -> Types_ ',' Type                          (98)
-	Types_ -> Type                                     (99)
-	Types -> Types_                                    (100)
-	Type -> fn '(' Types ')' '->' Type                 (101)
-	Type -> fn '(' ')' '->' Type                       (102)
-	Type -> fn '[' Params ']' '->' Type                (103)
-	Type -> TApp                                       (104)
-	TApp -> TApp '[' Types ']'                         (105)
-	TApp -> TAtom                                      (106)
-	TAtom -> '(' Types ')'                             (107)
-	TAtom -> '{' PropTypes '}'                         (108)
-	TAtom -> '(' ')'                                   (109)
-	TAtom -> bool                                      (110)
-	TAtom -> int                                       (111)
-	TAtom -> str                                       (112)
-	TAtom -> float                                     (113)
-	TAtom -> void                                      (114)
-	TAtom -> Id                                        (115)
-	TAtom -> Ct                                        (116)
-	Entry -> run Expr                                  (117)
-	Entry ->                                           (118)
-	Defns -> Defns Defn OptSemi                        (119)
-	Defns ->                                           (120)
-	Defn -> type Id '[' Params ']' '=' Type            (121)
-	Defn -> type Id '=' Type                           (122)
-	Defn -> type Ct '[' Params ']' '{' Ctors '}'       (123)
-	Defn -> type Ct '{' Ctors '}'                      (124)
-	Defn -> let Id ':' Type '=' Expr                   (125)
-	Defn -> let foreign Id ':' Type '=' strlit         (126)
-	Defn -> let Id '[' Params ']' ':' Type '=' Expr    (127)
-	Defn -> let Id '(' TypedParams ')' ':' Type '=' Expr   (128)
-	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr   (129)
-	TypedParams_ -> TypedParams_ ',' TypedParam        (130)
-	TypedParams_ -> TypedParam                         (131)
-	TypedParam -> Id ':' Type                          (132)
-	TypedParams -> TypedParams_                        (133)
-	TypedParams ->                                     (134)
-	Ctors_ -> Ctors_ Ctor OptSemi                      (135)
-	Ctors_ -> Ctor OptSemi                             (136)
-	Ctors -> Ctors_                                    (137)
-	Ctor -> Ct                                         (138)
-	Ctor -> Ct '(' TypedParams ')'                     (139)
+	Arg -> Expr                                        (76)
+	Arg -> discard                                     (77)
+	Args_ -> Args_ ',' Arg                             (78)
+	Args_ -> Arg                                       (79)
+	Args -> Args_                                      (80)
+	App -> App '(' Args ')'                            (81)
+	App -> App '(' ')'                                 (82)
+	App -> App '[' Types ']'                           (83)
+	App -> App '.' Id                                  (84)
+	App -> App '.' nat                                 (85)
+	App -> Atom                                        (86)
+	Atom -> '(' Exprs ')'                              (87)
+	Atom -> '(' ')'                                    (88)
+	Atom -> '{' Props '}'                              (89)
+	Atom -> '{' Block '}'                              (90)
+	Atom -> '{' Expr '}'                               (91)
+	Atom -> Int                                        (92)
+	Atom -> floatlit                                   (93)
+	Atom -> true                                       (94)
+	Atom -> false                                      (95)
+	Atom -> strlit                                     (96)
+	Atom -> Id                                         (97)
+	Atom -> Ct                                         (98)
+	Atom -> match Expr '{' Matches '}'                 (99)
+	PropTypes -> PropTypes ',' PropType                (100)
+	PropTypes -> PropType                              (101)
+	PropType -> Id ':' Type                            (102)
+	Types_ -> Types_ ',' Type                          (103)
+	Types_ -> Type                                     (104)
+	Types -> Types_                                    (105)
+	Type -> fn '(' Types ')' '->' Type                 (106)
+	Type -> fn '(' ')' '->' Type                       (107)
+	Type -> fn '[' Params ']' '->' Type                (108)
+	Type -> TApp                                       (109)
+	TApp -> TApp '[' Types ']'                         (110)
+	TApp -> TAtom                                      (111)
+	TAtom -> '(' Types ')'                             (112)
+	TAtom -> '{' PropTypes '}'                         (113)
+	TAtom -> '(' ')'                                   (114)
+	TAtom -> bool                                      (115)
+	TAtom -> int                                       (116)
+	TAtom -> str                                       (117)
+	TAtom -> float                                     (118)
+	TAtom -> void                                      (119)
+	TAtom -> Id                                        (120)
+	TAtom -> Ct                                        (121)
+	Entry -> run Expr                                  (122)
+	Entry ->                                           (123)
+	Defns -> Defns Defn OptSemi                        (124)
+	Defns ->                                           (125)
+	Defn -> type Id '[' Params ']' '=' Type            (126)
+	Defn -> type Id '=' Type                           (127)
+	Defn -> type Ct '[' Params ']' '{' Ctors '}'       (128)
+	Defn -> type Ct '{' Ctors '}'                      (129)
+	Defn -> let Id ':' Type '=' Expr                   (130)
+	Defn -> let foreign Id ':' Type '=' strlit         (131)
+	Defn -> let Id '[' Params ']' ':' Type '=' Expr    (132)
+	Defn -> let Id '(' TypedParams ')' ':' Type '=' Expr   (133)
+	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr   (134)
+	TypedParams_ -> TypedParams_ ',' TypedParam        (135)
+	TypedParams_ -> TypedParam                         (136)
+	TypedParam -> Id ':' Type                          (137)
+	TypedParams -> TypedParams_                        (138)
+	TypedParams ->                                     (139)
+	Ctors_ -> Ctors_ Ctor OptSemi                      (140)
+	Ctors_ -> Ctor OptSemi                             (141)
+	Ctors -> Ctors_                                    (142)
+	Ctor -> Ct                                         (143)
+	Ctor -> Ct '(' TypedParams ')'                     (144)
 
 -----------------------------------------------------------------------------
 Terminals
@@ -235,24 +240,27 @@ Non-terminals
 	Match           rule  55
 	Expr            rules 56, 57, 58, 59
 	Bin             rules 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75
-	App             rules 76, 77, 78, 79, 80, 81
-	Atom            rules 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94
-	PropTypes       rules 95, 96
-	PropType        rule  97
-	Types_          rules 98, 99
-	Types           rule  100
-	Type            rules 101, 102, 103, 104
-	TApp            rules 105, 106
-	TAtom           rules 107, 108, 109, 110, 111, 112, 113, 114, 115, 116
-	Entry           rules 117, 118
-	Defns           rules 119, 120
-	Defn            rules 121, 122, 123, 124, 125, 126, 127, 128, 129
-	TypedParams_    rules 130, 131
-	TypedParam      rule  132
-	TypedParams     rules 133, 134
-	Ctors_          rules 135, 136
-	Ctors           rule  137
-	Ctor            rules 138, 139
+	Arg             rules 76, 77
+	Args_           rules 78, 79
+	Args            rule  80
+	App             rules 81, 82, 83, 84, 85, 86
+	Atom            rules 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99
+	PropTypes       rules 100, 101
+	PropType        rule  102
+	Types_          rules 103, 104
+	Types           rule  105
+	Type            rules 106, 107, 108, 109
+	TApp            rules 110, 111
+	TAtom           rules 112, 113, 114, 115, 116, 117, 118, 119, 120, 121
+	Entry           rules 122, 123
+	Defns           rules 124, 125
+	Defn            rules 126, 127, 128, 129, 130, 131, 132, 133, 134
+	TypedParams_    rules 135, 136
+	TypedParam      rule  137
+	TypedParams     rules 138, 139
+	Ctors_          rules 140, 141
+	Ctors           rule  142
+	Ctor            rules 143, 144
 
 -----------------------------------------------------------------------------
 States
@@ -261,10 +269,10 @@ State 0
 
 	%start_parseTokens -> . Module                      (rule 0)
 
-	let            reduce using rule 120
-	run            reduce using rule 120
-	type           reduce using rule 120
-	%eof           reduce using rule 120
+	let            reduce using rule 125
+	run            reduce using rule 125
+	type           reduce using rule 125
+	%eof           reduce using rule 125
 
 	Module         goto state 3
 	Defns          goto state 2
@@ -279,12 +287,12 @@ State 1
 State 2
 
 	Module -> Defns . Entry                             (rule 1)
-	Defns -> Defns . Defn OptSemi                       (rule 119)
+	Defns -> Defns . Defn OptSemi                       (rule 124)
 
 	let            shift, and enter state 6
 	run            shift, and enter state 7
 	type           shift, and enter state 8
-	%eof           reduce using rule 118
+	%eof           reduce using rule 123
 
 	Entry          goto state 4
 	Defn           goto state 5
@@ -305,7 +313,7 @@ State 4
 
 State 5
 
-	Defns -> Defns Defn . OptSemi                       (rule 119)
+	Defns -> Defns Defn . OptSemi                       (rule 124)
 
 	let            reduce using rule 10
 	run            reduce using rule 10
@@ -317,11 +325,11 @@ State 5
 
 State 6
 
-	Defn -> let . Id ':' Type '=' Expr                  (rule 125)
-	Defn -> let . foreign Id ':' Type '=' strlit        (rule 126)
-	Defn -> let . Id '[' Params ']' ':' Type '=' Expr    (rule 127)
-	Defn -> let . Id '(' TypedParams ')' ':' Type '=' Expr    (rule 128)
-	Defn -> let . Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr    (rule 129)
+	Defn -> let . Id ':' Type '=' Expr                  (rule 130)
+	Defn -> let . foreign Id ':' Type '=' strlit        (rule 131)
+	Defn -> let . Id '[' Params ']' ':' Type '=' Expr    (rule 132)
+	Defn -> let . Id '(' TypedParams ')' ':' Type '=' Expr    (rule 133)
+	Defn -> let . Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr    (rule 134)
 
 	foreign        shift, and enter state 32
 	id             shift, and enter state 11
@@ -330,7 +338,7 @@ State 6
 
 State 7
 
-	Entry -> run . Expr                                 (rule 117)
+	Entry -> run . Expr                                 (rule 122)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
@@ -356,10 +364,10 @@ State 7
 
 State 8
 
-	Defn -> type . Id '[' Params ']' '=' Type           (rule 121)
-	Defn -> type . Id '=' Type                          (rule 122)
-	Defn -> type . Ct '[' Params ']' '{' Ctors '}'      (rule 123)
-	Defn -> type . Ct '{' Ctors '}'                     (rule 124)
+	Defn -> type . Id '[' Params ']' '=' Type           (rule 126)
+	Defn -> type . Id '=' Type                          (rule 127)
+	Defn -> type . Ct '[' Params ']' '{' Ctors '}'      (rule 128)
+	Defn -> type . Ct '{' Ctors '}'                     (rule 129)
 
 	id             shift, and enter state 11
 	capid          shift, and enter state 12
@@ -369,8 +377,8 @@ State 8
 
 State 9
 
-	Defn -> type Id . '[' Params ']' '=' Type           (rule 121)
-	Defn -> type Id . '=' Type                          (rule 122)
+	Defn -> type Id . '[' Params ']' '=' Type           (rule 126)
+	Defn -> type Id . '=' Type                          (rule 127)
 
 	'='            shift, and enter state 78
 	'['            shift, and enter state 79
@@ -378,8 +386,8 @@ State 9
 
 State 10
 
-	Defn -> type Ct . '[' Params ']' '{' Ctors '}'      (rule 123)
-	Defn -> type Ct . '{' Ctors '}'                     (rule 124)
+	Defn -> type Ct . '[' Params ']' '{' Ctors '}'      (rule 128)
+	Defn -> type Ct . '{' Ctors '}'                     (rule 129)
 
 	'{'            shift, and enter state 76
 	'['            shift, and enter state 77
@@ -465,7 +473,77 @@ State 12
 
 State 13
 
-	Atom -> Id .                                        (rule 92)
+	Atom -> Id .                                        (rule 97)
+
+	else           reduce using rule 97
+	let            reduce using rule 97
+	run            reduce using rule 97
+	then           reduce using rule 97
+	type           reduce using rule 97
+	'.'            reduce using rule 97
+	'&&'           reduce using rule 97
+	'||'           reduce using rule 97
+	'<='           reduce using rule 97
+	'>='           reduce using rule 97
+	'@'            reduce using rule 97
+	'@@'           reduce using rule 97
+	'=='           reduce using rule 97
+	'!='           reduce using rule 97
+	'>'            reduce using rule 97
+	'<'            reduce using rule 97
+	'+'            reduce using rule 97
+	'-'            reduce using rule 97
+	'*'            reduce using rule 97
+	'/'            reduce using rule 97
+	'%'            reduce using rule 97
+	'('            reduce using rule 97
+	')'            reduce using rule 97
+	'{'            reduce using rule 97
+	'}'            reduce using rule 97
+	'['            reduce using rule 97
+	','            reduce using rule 97
+	';'            reduce using rule 97
+	%eof           reduce using rule 97
+
+
+State 14
+
+	Atom -> Ct .                                        (rule 98)
+
+	else           reduce using rule 98
+	let            reduce using rule 98
+	run            reduce using rule 98
+	then           reduce using rule 98
+	type           reduce using rule 98
+	'.'            reduce using rule 98
+	'&&'           reduce using rule 98
+	'||'           reduce using rule 98
+	'<='           reduce using rule 98
+	'>='           reduce using rule 98
+	'@'            reduce using rule 98
+	'@@'           reduce using rule 98
+	'=='           reduce using rule 98
+	'!='           reduce using rule 98
+	'>'            reduce using rule 98
+	'<'            reduce using rule 98
+	'+'            reduce using rule 98
+	'-'            reduce using rule 98
+	'*'            reduce using rule 98
+	'/'            reduce using rule 98
+	'%'            reduce using rule 98
+	'('            reduce using rule 98
+	')'            reduce using rule 98
+	'{'            reduce using rule 98
+	'}'            reduce using rule 98
+	'['            reduce using rule 98
+	','            reduce using rule 98
+	';'            reduce using rule 98
+	%eof           reduce using rule 98
+
+
+State 15
+
+	Atom -> Int .                                       (rule 92)
 
 	else           reduce using rule 92
 	let            reduce using rule 92
@@ -498,81 +576,11 @@ State 13
 	%eof           reduce using rule 92
 
 
-State 14
-
-	Atom -> Ct .                                        (rule 93)
-
-	else           reduce using rule 93
-	let            reduce using rule 93
-	run            reduce using rule 93
-	then           reduce using rule 93
-	type           reduce using rule 93
-	'.'            reduce using rule 93
-	'&&'           reduce using rule 93
-	'||'           reduce using rule 93
-	'<='           reduce using rule 93
-	'>='           reduce using rule 93
-	'@'            reduce using rule 93
-	'@@'           reduce using rule 93
-	'=='           reduce using rule 93
-	'!='           reduce using rule 93
-	'>'            reduce using rule 93
-	'<'            reduce using rule 93
-	'+'            reduce using rule 93
-	'-'            reduce using rule 93
-	'*'            reduce using rule 93
-	'/'            reduce using rule 93
-	'%'            reduce using rule 93
-	'('            reduce using rule 93
-	')'            reduce using rule 93
-	'{'            reduce using rule 93
-	'}'            reduce using rule 93
-	'['            reduce using rule 93
-	','            reduce using rule 93
-	';'            reduce using rule 93
-	%eof           reduce using rule 93
-
-
-State 15
-
-	Atom -> Int .                                       (rule 87)
-
-	else           reduce using rule 87
-	let            reduce using rule 87
-	run            reduce using rule 87
-	then           reduce using rule 87
-	type           reduce using rule 87
-	'.'            reduce using rule 87
-	'&&'           reduce using rule 87
-	'||'           reduce using rule 87
-	'<='           reduce using rule 87
-	'>='           reduce using rule 87
-	'@'            reduce using rule 87
-	'@@'           reduce using rule 87
-	'=='           reduce using rule 87
-	'!='           reduce using rule 87
-	'>'            reduce using rule 87
-	'<'            reduce using rule 87
-	'+'            reduce using rule 87
-	'-'            reduce using rule 87
-	'*'            reduce using rule 87
-	'/'            reduce using rule 87
-	'%'            reduce using rule 87
-	'('            reduce using rule 87
-	')'            reduce using rule 87
-	'{'            reduce using rule 87
-	'}'            reduce using rule 87
-	'['            reduce using rule 87
-	','            reduce using rule 87
-	';'            reduce using rule 87
-	%eof           reduce using rule 87
-
-
 State 16
 
-	Entry -> run Expr .                                 (rule 117)
+	Entry -> run Expr .                                 (rule 122)
 
-	%eof           reduce using rule 117
+	%eof           reduce using rule 122
 
 
 State 17
@@ -625,11 +633,11 @@ State 17
 State 18
 
 	Bin -> App .                                        (rule 75)
-	App -> App . '(' Exprs ')'                          (rule 76)
-	App -> App . '(' ')'                                (rule 77)
-	App -> App . '[' Types ']'                          (rule 78)
-	App -> App . '.' Id                                 (rule 79)
-	App -> App . '.' nat                                (rule 80)
+	App -> App . '(' Args ')'                           (rule 81)
+	App -> App . '(' ')'                                (rule 82)
+	App -> App . '[' Types ']'                          (rule 83)
+	App -> App . '.' Id                                 (rule 84)
+	App -> App . '.' nat                                (rule 85)
 
 	else           reduce using rule 75
 	let            reduce using rule 75
@@ -664,37 +672,37 @@ State 18
 
 State 19
 
-	App -> Atom .                                       (rule 81)
+	App -> Atom .                                       (rule 86)
 
-	else           reduce using rule 81
-	let            reduce using rule 81
-	run            reduce using rule 81
-	then           reduce using rule 81
-	type           reduce using rule 81
-	'.'            reduce using rule 81
-	'&&'           reduce using rule 81
-	'||'           reduce using rule 81
-	'<='           reduce using rule 81
-	'>='           reduce using rule 81
-	'@'            reduce using rule 81
-	'@@'           reduce using rule 81
-	'=='           reduce using rule 81
-	'!='           reduce using rule 81
-	'>'            reduce using rule 81
-	'<'            reduce using rule 81
-	'+'            reduce using rule 81
-	'-'            reduce using rule 81
-	'*'            reduce using rule 81
-	'/'            reduce using rule 81
-	'%'            reduce using rule 81
-	'('            reduce using rule 81
-	')'            reduce using rule 81
-	'{'            reduce using rule 81
-	'}'            reduce using rule 81
-	'['            reduce using rule 81
-	','            reduce using rule 81
-	';'            reduce using rule 81
-	%eof           reduce using rule 81
+	else           reduce using rule 86
+	let            reduce using rule 86
+	run            reduce using rule 86
+	then           reduce using rule 86
+	type           reduce using rule 86
+	'.'            reduce using rule 86
+	'&&'           reduce using rule 86
+	'||'           reduce using rule 86
+	'<='           reduce using rule 86
+	'>='           reduce using rule 86
+	'@'            reduce using rule 86
+	'@@'           reduce using rule 86
+	'=='           reduce using rule 86
+	'!='           reduce using rule 86
+	'>'            reduce using rule 86
+	'<'            reduce using rule 86
+	'+'            reduce using rule 86
+	'-'            reduce using rule 86
+	'*'            reduce using rule 86
+	'/'            reduce using rule 86
+	'%'            reduce using rule 86
+	'('            reduce using rule 86
+	')'            reduce using rule 86
+	'{'            reduce using rule 86
+	'}'            reduce using rule 86
+	'['            reduce using rule 86
+	','            reduce using rule 86
+	';'            reduce using rule 86
+	%eof           reduce using rule 86
 
 
 State 20
@@ -734,7 +742,7 @@ State 21
 
 State 22
 
-	Atom -> match . Expr '{' Matches '}'                (rule 94)
+	Atom -> match . Expr '{' Matches '}'                (rule 99)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
@@ -760,107 +768,107 @@ State 22
 
 State 23
 
-	Atom -> false .                                     (rule 90)
+	Atom -> false .                                     (rule 95)
 
-	else           reduce using rule 90
-	let            reduce using rule 90
-	run            reduce using rule 90
-	then           reduce using rule 90
-	type           reduce using rule 90
-	'.'            reduce using rule 90
-	'&&'           reduce using rule 90
-	'||'           reduce using rule 90
-	'<='           reduce using rule 90
-	'>='           reduce using rule 90
-	'@'            reduce using rule 90
-	'@@'           reduce using rule 90
-	'=='           reduce using rule 90
-	'!='           reduce using rule 90
-	'>'            reduce using rule 90
-	'<'            reduce using rule 90
-	'+'            reduce using rule 90
-	'-'            reduce using rule 90
-	'*'            reduce using rule 90
-	'/'            reduce using rule 90
-	'%'            reduce using rule 90
-	'('            reduce using rule 90
-	')'            reduce using rule 90
-	'{'            reduce using rule 90
-	'}'            reduce using rule 90
-	'['            reduce using rule 90
-	','            reduce using rule 90
-	';'            reduce using rule 90
-	%eof           reduce using rule 90
+	else           reduce using rule 95
+	let            reduce using rule 95
+	run            reduce using rule 95
+	then           reduce using rule 95
+	type           reduce using rule 95
+	'.'            reduce using rule 95
+	'&&'           reduce using rule 95
+	'||'           reduce using rule 95
+	'<='           reduce using rule 95
+	'>='           reduce using rule 95
+	'@'            reduce using rule 95
+	'@@'           reduce using rule 95
+	'=='           reduce using rule 95
+	'!='           reduce using rule 95
+	'>'            reduce using rule 95
+	'<'            reduce using rule 95
+	'+'            reduce using rule 95
+	'-'            reduce using rule 95
+	'*'            reduce using rule 95
+	'/'            reduce using rule 95
+	'%'            reduce using rule 95
+	'('            reduce using rule 95
+	')'            reduce using rule 95
+	'{'            reduce using rule 95
+	'}'            reduce using rule 95
+	'['            reduce using rule 95
+	','            reduce using rule 95
+	';'            reduce using rule 95
+	%eof           reduce using rule 95
 
 
 State 24
 
-	Atom -> true .                                      (rule 89)
+	Atom -> true .                                      (rule 94)
 
-	else           reduce using rule 89
-	let            reduce using rule 89
-	run            reduce using rule 89
-	then           reduce using rule 89
-	type           reduce using rule 89
-	'.'            reduce using rule 89
-	'&&'           reduce using rule 89
-	'||'           reduce using rule 89
-	'<='           reduce using rule 89
-	'>='           reduce using rule 89
-	'@'            reduce using rule 89
-	'@@'           reduce using rule 89
-	'=='           reduce using rule 89
-	'!='           reduce using rule 89
-	'>'            reduce using rule 89
-	'<'            reduce using rule 89
-	'+'            reduce using rule 89
-	'-'            reduce using rule 89
-	'*'            reduce using rule 89
-	'/'            reduce using rule 89
-	'%'            reduce using rule 89
-	'('            reduce using rule 89
-	')'            reduce using rule 89
-	'{'            reduce using rule 89
-	'}'            reduce using rule 89
-	'['            reduce using rule 89
-	','            reduce using rule 89
-	';'            reduce using rule 89
-	%eof           reduce using rule 89
+	else           reduce using rule 94
+	let            reduce using rule 94
+	run            reduce using rule 94
+	then           reduce using rule 94
+	type           reduce using rule 94
+	'.'            reduce using rule 94
+	'&&'           reduce using rule 94
+	'||'           reduce using rule 94
+	'<='           reduce using rule 94
+	'>='           reduce using rule 94
+	'@'            reduce using rule 94
+	'@@'           reduce using rule 94
+	'=='           reduce using rule 94
+	'!='           reduce using rule 94
+	'>'            reduce using rule 94
+	'<'            reduce using rule 94
+	'+'            reduce using rule 94
+	'-'            reduce using rule 94
+	'*'            reduce using rule 94
+	'/'            reduce using rule 94
+	'%'            reduce using rule 94
+	'('            reduce using rule 94
+	')'            reduce using rule 94
+	'{'            reduce using rule 94
+	'}'            reduce using rule 94
+	'['            reduce using rule 94
+	','            reduce using rule 94
+	';'            reduce using rule 94
+	%eof           reduce using rule 94
 
 
 State 25
 
-	Atom -> strlit .                                    (rule 91)
+	Atom -> strlit .                                    (rule 96)
 
-	else           reduce using rule 91
-	let            reduce using rule 91
-	run            reduce using rule 91
-	then           reduce using rule 91
-	type           reduce using rule 91
-	'.'            reduce using rule 91
-	'&&'           reduce using rule 91
-	'||'           reduce using rule 91
-	'<='           reduce using rule 91
-	'>='           reduce using rule 91
-	'@'            reduce using rule 91
-	'@@'           reduce using rule 91
-	'=='           reduce using rule 91
-	'!='           reduce using rule 91
-	'>'            reduce using rule 91
-	'<'            reduce using rule 91
-	'+'            reduce using rule 91
-	'-'            reduce using rule 91
-	'*'            reduce using rule 91
-	'/'            reduce using rule 91
-	'%'            reduce using rule 91
-	'('            reduce using rule 91
-	')'            reduce using rule 91
-	'{'            reduce using rule 91
-	'}'            reduce using rule 91
-	'['            reduce using rule 91
-	','            reduce using rule 91
-	';'            reduce using rule 91
-	%eof           reduce using rule 91
+	else           reduce using rule 96
+	let            reduce using rule 96
+	run            reduce using rule 96
+	then           reduce using rule 96
+	type           reduce using rule 96
+	'.'            reduce using rule 96
+	'&&'           reduce using rule 96
+	'||'           reduce using rule 96
+	'<='           reduce using rule 96
+	'>='           reduce using rule 96
+	'@'            reduce using rule 96
+	'@@'           reduce using rule 96
+	'=='           reduce using rule 96
+	'!='           reduce using rule 96
+	'>'            reduce using rule 96
+	'<'            reduce using rule 96
+	'+'            reduce using rule 96
+	'-'            reduce using rule 96
+	'*'            reduce using rule 96
+	'/'            reduce using rule 96
+	'%'            reduce using rule 96
+	'('            reduce using rule 96
+	')'            reduce using rule 96
+	'{'            reduce using rule 96
+	'}'            reduce using rule 96
+	'['            reduce using rule 96
+	','            reduce using rule 96
+	';'            reduce using rule 96
+	%eof           reduce using rule 96
 
 
 State 26
@@ -935,43 +943,43 @@ State 27
 
 State 28
 
-	Atom -> floatlit .                                  (rule 88)
+	Atom -> floatlit .                                  (rule 93)
 
-	else           reduce using rule 88
-	let            reduce using rule 88
-	run            reduce using rule 88
-	then           reduce using rule 88
-	type           reduce using rule 88
-	'.'            reduce using rule 88
-	'&&'           reduce using rule 88
-	'||'           reduce using rule 88
-	'<='           reduce using rule 88
-	'>='           reduce using rule 88
-	'@'            reduce using rule 88
-	'@@'           reduce using rule 88
-	'=='           reduce using rule 88
-	'!='           reduce using rule 88
-	'>'            reduce using rule 88
-	'<'            reduce using rule 88
-	'+'            reduce using rule 88
-	'-'            reduce using rule 88
-	'*'            reduce using rule 88
-	'/'            reduce using rule 88
-	'%'            reduce using rule 88
-	'('            reduce using rule 88
-	')'            reduce using rule 88
-	'{'            reduce using rule 88
-	'}'            reduce using rule 88
-	'['            reduce using rule 88
-	','            reduce using rule 88
-	';'            reduce using rule 88
-	%eof           reduce using rule 88
+	else           reduce using rule 93
+	let            reduce using rule 93
+	run            reduce using rule 93
+	then           reduce using rule 93
+	type           reduce using rule 93
+	'.'            reduce using rule 93
+	'&&'           reduce using rule 93
+	'||'           reduce using rule 93
+	'<='           reduce using rule 93
+	'>='           reduce using rule 93
+	'@'            reduce using rule 93
+	'@@'           reduce using rule 93
+	'=='           reduce using rule 93
+	'!='           reduce using rule 93
+	'>'            reduce using rule 93
+	'<'            reduce using rule 93
+	'+'            reduce using rule 93
+	'-'            reduce using rule 93
+	'*'            reduce using rule 93
+	'/'            reduce using rule 93
+	'%'            reduce using rule 93
+	'('            reduce using rule 93
+	')'            reduce using rule 93
+	'{'            reduce using rule 93
+	'}'            reduce using rule 93
+	'['            reduce using rule 93
+	','            reduce using rule 93
+	';'            reduce using rule 93
+	%eof           reduce using rule 93
 
 
 State 29
 
-	Atom -> '(' . Exprs ')'                             (rule 82)
-	Atom -> '(' . ')'                                   (rule 83)
+	Atom -> '(' . Exprs ')'                             (rule 87)
+	Atom -> '(' . ')'                                   (rule 88)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
@@ -1000,9 +1008,9 @@ State 29
 
 State 30
 
-	Atom -> '{' . Props '}'                             (rule 84)
-	Atom -> '{' . Block '}'                             (rule 85)
-	Atom -> '{' . Expr '}'                              (rule 86)
+	Atom -> '{' . Props '}'                             (rule 89)
+	Atom -> '{' . Block '}'                             (rule 90)
+	Atom -> '{' . Expr '}'                              (rule 91)
 
 	debug          shift, and enter state 46
 	fn             shift, and enter state 20
@@ -1037,10 +1045,10 @@ State 30
 
 State 31
 
-	Defn -> let Id . ':' Type '=' Expr                  (rule 125)
-	Defn -> let Id . '[' Params ']' ':' Type '=' Expr    (rule 127)
-	Defn -> let Id . '(' TypedParams ')' ':' Type '=' Expr    (rule 128)
-	Defn -> let Id . '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr    (rule 129)
+	Defn -> let Id . ':' Type '=' Expr                  (rule 130)
+	Defn -> let Id . '[' Params ']' ':' Type '=' Expr    (rule 132)
+	Defn -> let Id . '(' TypedParams ')' ':' Type '=' Expr    (rule 133)
+	Defn -> let Id . '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr    (rule 134)
 
 	':'            shift, and enter state 36
 	'('            shift, and enter state 37
@@ -1049,7 +1057,7 @@ State 31
 
 State 32
 
-	Defn -> let foreign . Id ':' Type '=' strlit        (rule 126)
+	Defn -> let foreign . Id ':' Type '=' strlit        (rule 131)
 
 	id             shift, and enter state 11
 
@@ -1057,12 +1065,12 @@ State 32
 
 State 33
 
-	Defns -> Defns Defn OptSemi .                       (rule 119)
+	Defns -> Defns Defn OptSemi .                       (rule 124)
 
-	let            reduce using rule 119
-	run            reduce using rule 119
-	type           reduce using rule 119
-	%eof           reduce using rule 119
+	let            reduce using rule 124
+	run            reduce using rule 124
+	type           reduce using rule 124
+	%eof           reduce using rule 124
 
 
 State 34
@@ -1093,14 +1101,14 @@ State 34
 
 State 35
 
-	Defn -> let foreign Id . ':' Type '=' strlit        (rule 126)
+	Defn -> let foreign Id . ':' Type '=' strlit        (rule 131)
 
-	':'            shift, and enter state 154
+	':'            shift, and enter state 158
 
 
 State 36
 
-	Defn -> let Id ':' . Type '=' Expr                  (rule 125)
+	Defn -> let Id ':' . Type '=' Expr                  (rule 130)
 
 	fn             shift, and enter state 88
 	float          shift, and enter state 89
@@ -1115,60 +1123,60 @@ State 36
 
 	Id             goto state 83
 	Ct             goto state 84
-	Type           goto state 153
+	Type           goto state 157
 	TApp           goto state 86
 	TAtom          goto state 87
 
 State 37
 
-	Defn -> let Id '(' . TypedParams ')' ':' Type '=' Expr    (rule 128)
+	Defn -> let Id '(' . TypedParams ')' ':' Type '=' Expr    (rule 133)
 
 	id             shift, and enter state 11
-	')'            reduce using rule 134
+	')'            reduce using rule 139
 
-	Id             goto state 149
-	TypedParams_   goto state 150
-	TypedParam     goto state 151
-	TypedParams    goto state 152
+	Id             goto state 153
+	TypedParams_   goto state 154
+	TypedParam     goto state 155
+	TypedParams    goto state 156
 
 State 38
 
-	Defn -> let Id '[' . Params ']' ':' Type '=' Expr    (rule 127)
-	Defn -> let Id '[' . Params ']' '(' TypedParams ')' ':' Type '=' Expr    (rule 129)
+	Defn -> let Id '[' . Params ']' ':' Type '=' Expr    (rule 132)
+	Defn -> let Id '[' . Params ']' '(' TypedParams ')' ':' Type '=' Expr    (rule 134)
 
 	id             shift, and enter state 11
 
 	Id             goto state 80
 	Params_        goto state 81
-	Params         goto state 148
+	Params         goto state 152
 
 State 39
 
 	Stmt -> Id . '=' Expr ';'                           (rule 39)
 	Prop -> Id . '=' Expr                               (rule 48)
-	Atom -> Id .                                        (rule 92)
+	Atom -> Id .                                        (rule 97)
 
-	'='            shift, and enter state 147
-	'.'            reduce using rule 92
-	'&&'           reduce using rule 92
-	'||'           reduce using rule 92
-	'<='           reduce using rule 92
-	'>='           reduce using rule 92
-	'@'            reduce using rule 92
-	'@@'           reduce using rule 92
-	'=='           reduce using rule 92
-	'!='           reduce using rule 92
-	'>'            reduce using rule 92
-	'<'            reduce using rule 92
-	'+'            reduce using rule 92
-	'-'            reduce using rule 92
-	'*'            reduce using rule 92
-	'/'            reduce using rule 92
-	'%'            reduce using rule 92
-	'('            reduce using rule 92
-	'}'            reduce using rule 92
-	'['            reduce using rule 92
-	';'            reduce using rule 92
+	'='            shift, and enter state 151
+	'.'            reduce using rule 97
+	'&&'           reduce using rule 97
+	'||'           reduce using rule 97
+	'<='           reduce using rule 97
+	'>='           reduce using rule 97
+	'@'            reduce using rule 97
+	'@@'           reduce using rule 97
+	'=='           reduce using rule 97
+	'!='           reduce using rule 97
+	'>'            reduce using rule 97
+	'<'            reduce using rule 97
+	'+'            reduce using rule 97
+	'-'            reduce using rule 97
+	'*'            reduce using rule 97
+	'/'            reduce using rule 97
+	'%'            reduce using rule 97
+	'('            reduce using rule 97
+	'}'            reduce using rule 97
+	'['            reduce using rule 97
+	';'            reduce using rule 97
 
 
 State 40
@@ -1193,11 +1201,11 @@ State 40
 	'('            shift, and enter state 29
 	'{'            shift, and enter state 30
 
-	Id             goto state 144
+	Id             goto state 148
 	Ct             goto state 14
-	Stmt           goto state 145
+	Stmt           goto state 149
 	Int            goto state 15
-	Expr           goto state 146
+	Expr           goto state 150
 	Bin            goto state 17
 	App            goto state 18
 	Atom           goto state 19
@@ -1227,18 +1235,18 @@ State 41
 
 State 42
 
-	Atom -> '{' Block . '}'                             (rule 85)
+	Atom -> '{' Block . '}'                             (rule 90)
 
-	'}'            shift, and enter state 143
+	'}'            shift, and enter state 147
 
 
 State 43
 
 	Props -> Props . ',' Prop                           (rule 46)
-	Atom -> '{' Props . '}'                             (rule 84)
+	Atom -> '{' Props . '}'                             (rule 89)
 
-	'}'            shift, and enter state 141
-	','            shift, and enter state 142
+	'}'            shift, and enter state 145
+	','            shift, and enter state 146
 
 
 State 44
@@ -1252,10 +1260,10 @@ State 44
 State 45
 
 	Stmt -> Expr . ';'                                  (rule 38)
-	Atom -> '{' Expr . '}'                              (rule 86)
+	Atom -> '{' Expr . '}'                              (rule 91)
 
-	'}'            shift, and enter state 139
-	';'            shift, and enter state 140
+	'}'            shift, and enter state 143
+	';'            shift, and enter state 144
 
 
 State 46
@@ -1279,7 +1287,7 @@ State 46
 	Id             goto state 13
 	Ct             goto state 14
 	Int            goto state 15
-	Expr           goto state 138
+	Expr           goto state 142
 	Bin            goto state 17
 	App            goto state 18
 	Atom           goto state 19
@@ -1290,15 +1298,15 @@ State 47
 	Stmt -> let . mut Id '=' Expr ';'                   (rule 36)
 	Stmt -> let . DeepPattern '=' Expr ';'              (rule 37)
 
-	mut            shift, and enter state 135
+	mut            shift, and enter state 139
 	id             shift, and enter state 11
 	capid          shift, and enter state 12
-	'('            shift, and enter state 136
-	'{'            shift, and enter state 137
+	'('            shift, and enter state 140
+	'{'            shift, and enter state 141
 
-	Id             goto state 132
-	Ct             goto state 133
-	DeepPattern    goto state 134
+	Id             goto state 136
+	Ct             goto state 137
+	DeepPattern    goto state 138
 
 State 48
 
@@ -1321,7 +1329,7 @@ State 48
 	Id             goto state 13
 	Ct             goto state 14
 	Int            goto state 15
-	Expr           goto state 131
+	Expr           goto state 135
 	Bin            goto state 17
 	App            goto state 18
 	Atom           goto state 19
@@ -1332,7 +1340,7 @@ State 49
 
 	id             shift, and enter state 11
 
-	Id             goto state 130
+	Id             goto state 134
 
 State 50
 
@@ -1340,14 +1348,14 @@ State 50
 	Exprs -> Exprs_ .                                   (rule 52)
 
 	')'            reduce using rule 52
-	','            shift, and enter state 129
+	','            shift, and enter state 133
 
 
 State 51
 
-	Atom -> '(' Exprs . ')'                             (rule 82)
+	Atom -> '(' Exprs . ')'                             (rule 87)
 
-	')'            shift, and enter state 128
+	')'            shift, and enter state 132
 
 
 State 52
@@ -1360,51 +1368,51 @@ State 52
 
 State 53
 
-	Atom -> '(' ')' .                                   (rule 83)
+	Atom -> '(' ')' .                                   (rule 88)
 
-	else           reduce using rule 83
-	let            reduce using rule 83
-	run            reduce using rule 83
-	then           reduce using rule 83
-	type           reduce using rule 83
-	'.'            reduce using rule 83
-	'&&'           reduce using rule 83
-	'||'           reduce using rule 83
-	'<='           reduce using rule 83
-	'>='           reduce using rule 83
-	'@'            reduce using rule 83
-	'@@'           reduce using rule 83
-	'=='           reduce using rule 83
-	'!='           reduce using rule 83
-	'>'            reduce using rule 83
-	'<'            reduce using rule 83
-	'+'            reduce using rule 83
-	'-'            reduce using rule 83
-	'*'            reduce using rule 83
-	'/'            reduce using rule 83
-	'%'            reduce using rule 83
-	'('            reduce using rule 83
-	')'            reduce using rule 83
-	'{'            reduce using rule 83
-	'}'            reduce using rule 83
-	'['            reduce using rule 83
-	','            reduce using rule 83
-	';'            reduce using rule 83
-	%eof           reduce using rule 83
+	else           reduce using rule 88
+	let            reduce using rule 88
+	run            reduce using rule 88
+	then           reduce using rule 88
+	type           reduce using rule 88
+	'.'            reduce using rule 88
+	'&&'           reduce using rule 88
+	'||'           reduce using rule 88
+	'<='           reduce using rule 88
+	'>='           reduce using rule 88
+	'@'            reduce using rule 88
+	'@@'           reduce using rule 88
+	'=='           reduce using rule 88
+	'!='           reduce using rule 88
+	'>'            reduce using rule 88
+	'<'            reduce using rule 88
+	'+'            reduce using rule 88
+	'-'            reduce using rule 88
+	'*'            reduce using rule 88
+	'/'            reduce using rule 88
+	'%'            reduce using rule 88
+	'('            reduce using rule 88
+	')'            reduce using rule 88
+	'{'            reduce using rule 88
+	'}'            reduce using rule 88
+	'['            reduce using rule 88
+	','            reduce using rule 88
+	';'            reduce using rule 88
+	%eof           reduce using rule 88
 
 
 State 54
 
-	Atom -> match Expr . '{' Matches '}'                (rule 94)
+	Atom -> match Expr . '{' Matches '}'                (rule 99)
 
-	'{'            shift, and enter state 127
+	'{'            shift, and enter state 131
 
 
 State 55
 
 	Expr -> if Expr . then Expr else Expr               (rule 57)
 
-	then           shift, and enter state 126
+	then           shift, and enter state 130
 
 
 State 56
@@ -1416,8 +1424,8 @@ State 56
 
 	Id             goto state 80
 	Params_        goto state 81
-	Params         goto state 124
-	OptParams      goto state 125
+	Params         goto state 128
+	OptParams      goto state 129
 
 State 57
 
@@ -1427,28 +1435,29 @@ State 57
 
 	Id             goto state 80
 	Params_        goto state 81
-	Params         goto state 123
+	Params         goto state 127
 
 State 58
 
-	App -> App '.' . Id                                 (rule 79)
-	App -> App '.' . nat                                (rule 80)
+	App -> App '.' . Id                                 (rule 84)
+	App -> App '.' . nat                                (rule 85)
 
 	id             shift, and enter state 11
-	nat            shift, and enter state 122
+	nat            shift, and enter state 126
 
-	Id             goto state 121
+	Id             goto state 125
 
 State 59
 
-	App -> App '(' . Exprs ')'                          (rule 76)
-	App -> App '(' . ')'                                (rule 77)
+	App -> App '(' . Args ')'                           (rule 81)
+	App -> App '(' . ')'                                (rule 82)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
 	match          shift, and enter state 22
 	false          shift, and enter state 23
 	true           shift, and enter state 24
+	discard        shift, and enter state 123
 	id             shift, and enter state 11
 	capid          shift, and enter state 12
 	strlit         shift, and enter state 25
@@ -1456,22 +1465,23 @@ State 59
 	nonnat         shift, and enter state 27
 	floatlit       shift, and enter state 28
 	'('            shift, and enter state 29
-	')'            shift, and enter state 120
+	')'            shift, and enter state 124
 	'{'            shift, and enter state 30
 
 	Id             goto state 13
 	Ct             goto state 14
 	Int            goto state 15
-	Exprs_         goto state 50
-	Exprs          goto state 119
-	Expr           goto state 52
+	Expr           goto state 119
 	Bin            goto state 17
+	Arg            goto state 120
+	Args_          goto state 121
+	Args           goto state 122
 	App            goto state 18
 	Atom           goto state 19
 
 State 60
 
-	App -> App '[' . Types ']'                          (rule 78)
+	App -> App '[' . Types ']'                          (rule 83)
 
 	fn             shift, and enter state 88
 	float          shift, and enter state 89
@@ -1839,7 +1849,7 @@ State 75
 
 State 76
 
-	Defn -> type Ct '{' . Ctors '}'                     (rule 124)
+	Defn -> type Ct '{' . Ctors '}'                     (rule 129)
 
 	capid          shift, and enter state 12
 
@@ -1850,7 +1860,7 @@ State 76
 
 State 77
 
-	Defn -> type Ct '[' . Params ']' '{' Ctors '}'      (rule 123)
+	Defn -> type Ct '[' . Params ']' '{' Ctors '}'      (rule 128)
 
 	id             shift, and enter state 11
 
@@ -1860,7 +1870,7 @@ State 77
 
 State 78
 
-	Defn -> type Id '=' . Type                          (rule 122)
+	Defn -> type Id '=' . Type                          (rule 127)
 
 	fn             shift, and enter state 88
 	float          shift, and enter state 89
@@ -1881,7 +1891,7 @@ State 78
 
 State 79
 
-	Defn -> type Id '[' . Params ']' '=' Type           (rule 121)
+	Defn -> type Id '[' . Params ']' '=' Type           (rule 126)
 
 	id             shift, and enter state 11
 
@@ -1905,126 +1915,82 @@ State 81
 
 	')'            reduce using rule 6
 	']'            reduce using rule 6
-	','            shift, and enter state 214
+	','            shift, and enter state 219
 
 
 State 82
 
-	Defn -> type Id '[' Params . ']' '=' Type           (rule 121)
+	Defn -> type Id '[' Params . ']' '=' Type           (rule 126)
 
-	']'            shift, and enter state 213
+	']'            shift, and enter state 218
 
 
 State 83
 
-	TAtom -> Id .                                       (rule 115)
+	TAtom -> Id .                                       (rule 120)
 
-	let            reduce using rule 115
-	run            reduce using rule 115
-	type           reduce using rule 115
-	'='            reduce using rule 115
-	')'            reduce using rule 115
-	'}'            reduce using rule 115
-	'['            reduce using rule 115
-	']'            reduce using rule 115
-	','            reduce using rule 115
-	';'            reduce using rule 115
-	%eof           reduce using rule 115
+	let            reduce using rule 120
+	run            reduce using rule 120
+	type           reduce using rule 120
+	'='            reduce using rule 120
+	')'            reduce using rule 120
+	'}'            reduce using rule 120
+	'['            reduce using rule 120
+	']'            reduce using rule 120
+	','            reduce using rule 120
+	';'            reduce using rule 120
+	%eof           reduce using rule 120
 
 
 State 84
 
-	TAtom -> Ct .                                       (rule 116)
+	TAtom -> Ct .                                       (rule 121)
 
-	let            reduce using rule 116
-	run            reduce using rule 116
-	type           reduce using rule 116
-	'='            reduce using rule 116
-	')'            reduce using rule 116
-	'}'            reduce using rule 116
-	'['            reduce using rule 116
-	']'            reduce using rule 116
-	','            reduce using rule 116
-	';'            reduce using rule 116
-	%eof           reduce using rule 116
+	let            reduce using rule 121
+	run            reduce using rule 121
+	type           reduce using rule 121
+	'='            reduce using rule 121
+	')'            reduce using rule 121
+	'}'            reduce using rule 121
+	'['            reduce using rule 121
+	']'            reduce using rule 121
+	','            reduce using rule 121
+	';'            reduce using rule 121
+	%eof           reduce using rule 121
 
 
 State 85
 
-	Defn -> type Id '=' Type .                          (rule 122)
+	Defn -> type Id '=' Type .                          (rule 127)
 
-	let            reduce using rule 122
-	run            reduce using rule 122
-	type           reduce using rule 122
-	';'            reduce using rule 122
-	%eof           reduce using rule 122
+	let            reduce using rule 127
+	run            reduce using rule 127
+	type           reduce using rule 127
+	';'            reduce using rule 127
+	%eof           reduce using rule 127
 
 
 State 86
 
-	Type -> TApp .                                      (rule 104)
-	TApp -> TApp . '[' Types ']'                        (rule 105)
+	Type -> TApp .                                      (rule 109)
+	TApp -> TApp . '[' Types ']'                        (rule 110)
 
-	let            reduce using rule 104
-	run            reduce using rule 104
-	type           reduce using rule 104
-	'='            reduce using rule 104
-	')'            reduce using rule 104
-	'}'            reduce using rule 104
-	'['            shift, and enter state 212
-	']'            reduce using rule 104
-	','            reduce using rule 104
-	';'            reduce using rule 104
-	%eof           reduce using rule 104
+	let            reduce using rule 109
+	run            reduce using rule 109
+	type           reduce using rule 109
+	'='            reduce using rule 109
+	')'            reduce using rule 109
+	'}'            reduce using rule 109
+	'['            shift, and enter state 217
+	']'            reduce using rule 109
+	','            reduce using rule 109
+	';'            reduce using rule 109
+	%eof           reduce using rule 109
 
 
 State 87
 
-	TApp -> TAtom .                                     (rule 106)
-
-	let            reduce using rule 106
-	run            reduce using rule 106
-	type           reduce using rule 106
-	'='            reduce using rule 106
-	')'            reduce using rule 106
-	'}'            reduce using rule 106
-	'['            reduce using rule 106
-	']'            reduce using rule 106
-	','            reduce using rule 106
-	';'            reduce using rule 106
-	%eof           reduce using rule 106
-
-
-State 88
-
-	Type -> fn . '(' Types ')' '->' Type                (rule 101)
-	Type -> fn . '(' ')' '->' Type                      (rule 102)
-	Type -> fn . '[' Params ']' '->' Type               (rule 103)
-
-	'('            shift, and enter state 210
-	'['            shift, and enter state 211
-
-
-State 89
-
-	TAtom -> float .                                    (rule 113)
-
-	let            reduce using rule 113
-	run            reduce using rule 113
-	type           reduce using rule 113
-	'='            reduce using rule 113
-	')'            reduce using rule 113
-	'}'            reduce using rule 113
-	'['            reduce using rule 113
-	']'            reduce using rule 113
-	','            reduce using rule 113
-	';'            reduce using rule 113
-	%eof           reduce using rule 113
-
-
-State 90
-
-	TAtom -> int .                                      (rule 111)
+	TApp -> TAtom .                                     (rule 111)
 
 	let            reduce using rule 111
 	run            reduce using rule 111
@@ -2039,61 +2005,105 @@ State 90
 	%eof           reduce using rule 111
 
 
+State 88
+
+	Type -> fn . '(' Types ')' '->' Type                (rule 106)
+	Type -> fn . '(' ')' '->' Type                      (rule 107)
+	Type -> fn . '[' Params ']' '->' Type               (rule 108)
+
+	'('            shift, and enter state 215
+	'['            shift, and enter state 216
+
+
+State 89
+
+	TAtom -> float .                                    (rule 118)
+
+	let            reduce using rule 118
+	run            reduce using rule 118
+	type           reduce using rule 118
+	'='            reduce using rule 118
+	')'            reduce using rule 118
+	'}'            reduce using rule 118
+	'['            reduce using rule 118
+	']'            reduce using rule 118
+	','            reduce using rule 118
+	';'            reduce using rule 118
+	%eof           reduce using rule 118
+
+
+State 90
+
+	TAtom -> int .                                      (rule 116)
+
+	let            reduce using rule 116
+	run            reduce using rule 116
+	type           reduce using rule 116
+	'='            reduce using rule 116
+	')'            reduce using rule 116
+	'}'            reduce using rule 116
+	'['            reduce using rule 116
+	']'            reduce using rule 116
+	','            reduce using rule 116
+	';'            reduce using rule 116
+	%eof           reduce using rule 116
+
+
 State 91
 
-	TAtom -> str .                                      (rule 112)
+	TAtom -> str .                                      (rule 117)
 
-	let            reduce using rule 112
-	run            reduce using rule 112
-	type           reduce using rule 112
-	'='            reduce using rule 112
-	')'            reduce using rule 112
-	'}'            reduce using rule 112
-	'['            reduce using rule 112
-	']'            reduce using rule 112
-	','            reduce using rule 112
-	';'            reduce using rule 112
-	%eof           reduce using rule 112
+	let            reduce using rule 117
+	run            reduce using rule 117
+	type           reduce using rule 117
+	'='            reduce using rule 117
+	')'            reduce using rule 117
+	'}'            reduce using rule 117
+	'['            reduce using rule 117
+	']'            reduce using rule 117
+	','            reduce using rule 117
+	';'            reduce using rule 117
+	%eof           reduce using rule 117
 
 
 State 92
 
-	TAtom -> bool .                                     (rule 110)
+	TAtom -> bool .                                     (rule 115)
 
-	let            reduce using rule 110
-	run            reduce using rule 110
-	type           reduce using rule 110
-	'='            reduce using rule 110
-	')'            reduce using rule 110
-	'}'            reduce using rule 110
-	'['            reduce using rule 110
-	']'            reduce using rule 110
-	','            reduce using rule 110
-	';'            reduce using rule 110
-	%eof           reduce using rule 110
+	let            reduce using rule 115
+	run            reduce using rule 115
+	type           reduce using rule 115
+	'='            reduce using rule 115
+	')'            reduce using rule 115
+	'}'            reduce using rule 115
+	'['            reduce using rule 115
+	']'            reduce using rule 115
+	','            reduce using rule 115
+	';'            reduce using rule 115
+	%eof           reduce using rule 115
 
 
 State 93
 
-	TAtom -> void .                                     (rule 114)
+	TAtom -> void .                                     (rule 119)
 
-	let            reduce using rule 114
-	run            reduce using rule 114
-	type           reduce using rule 114
-	'='            reduce using rule 114
-	')'            reduce using rule 114
-	'}'            reduce using rule 114
-	'['            reduce using rule 114
-	']'            reduce using rule 114
-	','            reduce using rule 114
-	';'            reduce using rule 114
-	%eof           reduce using rule 114
+	let            reduce using rule 119
+	run            reduce using rule 119
+	type           reduce using rule 119
+	'='            reduce using rule 119
+	')'            reduce using rule 119
+	'}'            reduce using rule 119
+	'['            reduce using rule 119
+	']'            reduce using rule 119
+	','            reduce using rule 119
+	';'            reduce using rule 119
+	%eof           reduce using rule 119
 
 
 State 94
 
-	TAtom -> '(' . Types ')'                            (rule 107)
-	TAtom -> '(' . ')'                                  (rule 109)
+	TAtom -> '(' . Types ')'                            (rule 112)
+	TAtom -> '(' . ')'                                  (rule 114)
 
 	fn             shift, and enter state 88
 	float          shift, and enter state 89
@@ -2104,72 +2114,72 @@ State 94
 	id             shift, and enter state 11
 	capid          shift, and enter state 12
 	'('            shift, and enter state 94
-	')'            shift, and enter state 209
+	')'            shift, and enter state 214
 	'{'            shift, and enter state 95
 
 	Id             goto state 83
 	Ct             goto state 84
 	Types_         goto state 116
-	Types          goto state 208
+	Types          goto state 213
 	Type           goto state 118
 	TApp           goto state 86
 	TAtom          goto state 87
 
 State 95
 
-	TAtom -> '{' . PropTypes '}'                        (rule 108)
+	TAtom -> '{' . PropTypes '}'                        (rule 113)
 
 	id             shift, and enter state 11
 
-	Id             goto state 205
-	PropTypes      goto state 206
-	PropType       goto state 207
+	Id             goto state 210
+	PropTypes      goto state 211
+	PropType       goto state 212
 
 State 96
 
-	Defn -> type Ct '[' Params . ']' '{' Ctors '}'      (rule 123)
+	Defn -> type Ct '[' Params . ']' '{' Ctors '}'      (rule 128)
 
-	']'            shift, and enter state 204
+	']'            shift, and enter state 209
 
 
 State 97
 
-	Ctor -> Ct .                                        (rule 138)
-	Ctor -> Ct . '(' TypedParams ')'                    (rule 139)
+	Ctor -> Ct .                                        (rule 143)
+	Ctor -> Ct . '(' TypedParams ')'                    (rule 144)
 
-	capid          reduce using rule 138
-	'('            shift, and enter state 203
-	'}'            reduce using rule 138
-	';'            reduce using rule 138
+	capid          reduce using rule 143
+	'('            shift, and enter state 208
+	'}'            reduce using rule 143
+	';'            reduce using rule 143
 
 
 State 98
 
-	Ctors_ -> Ctors_ . Ctor OptSemi                     (rule 135)
-	Ctors -> Ctors_ .                                   (rule 137)
+	Ctors_ -> Ctors_ . Ctor OptSemi                     (rule 140)
+	Ctors -> Ctors_ .                                   (rule 142)
 
 	capid          shift, and enter state 12
-	'}'            reduce using rule 137
+	'}'            reduce using rule 142
 
 	Ct             goto state 97
-	Ctor           goto state 202
+	Ctor           goto state 207
 
 State 99
 
-	Defn -> type Ct '{' Ctors . '}'                     (rule 124)
+	Defn -> type Ct '{' Ctors . '}'                     (rule 129)
 
-	'}'            shift, and enter state 201
+	'}'            shift, and enter state 206
 
 
 State 100
 
-	Ctors_ -> Ctor . OptSemi                            (rule 136)
+	Ctors_ -> Ctor . OptSemi                            (rule 141)
 
 	capid          reduce using rule 10
 	'}'            reduce using rule 10
 	';'            shift, and enter state 34
 
-	OptSemi        goto state 200
+	OptSemi        goto state 205
 
 State 101
 
@@ -2878,216 +2888,73 @@ State 115
 
 State 116
 
-	Types_ -> Types_ . ',' Type                         (rule 98)
-	Types -> Types_ .                                   (rule 100)
+	Types_ -> Types_ . ',' Type                         (rule 103)
+	Types -> Types_ .                                   (rule 105)
 
-	')'            reduce using rule 100
-	']'            reduce using rule 100
-	','            shift, and enter state 199
+	')'            reduce using rule 105
+	']'            reduce using rule 105
+	','            shift, and enter state 204
 
 
 State 117
 
-	App -> App '[' Types . ']'                          (rule 78)
+	App -> App '[' Types . ']'                          (rule 83)
 
-	']'            shift, and enter state 198
+	']'            shift, and enter state 203
 
 
 State 118
 
-	Types_ -> Type .                                    (rule 99)
+	Types_ -> Type .                                    (rule 104)
 
-	')'            reduce using rule 99
-	']'            reduce using rule 99
-	','            reduce using rule 99
+	')'            reduce using rule 104
+	']'            reduce using rule 104
+	','            reduce using rule 104
 
 
 State 119
 
-	App -> App '(' Exprs . ')'                          (rule 76)
+	Arg -> Expr .                                       (rule 76)
 
-	')'            shift, and enter state 197
+	')'            reduce using rule 76
+	','            reduce using rule 76
 
 
 State 120
 
-	App -> App '(' ')' .                                (rule 77)
+	Args_ -> Arg .                                      (rule 79)
 
-	else           reduce using rule 77
-	let            reduce using rule 77
-	run            reduce using rule 77
-	then           reduce using rule 77
-	type           reduce using rule 77
-	'.'            reduce using rule 77
-	'&&'           reduce using rule 77
-	'||'           reduce using rule 77
-	'<='           reduce using rule 77
-	'>='           reduce using rule 77
-	'@'            reduce using rule 77
-	'@@'           reduce using rule 77
-	'=='           reduce using rule 77
-	'!='           reduce using rule 77
-	'>'            reduce using rule 77
-	'<'            reduce using rule 77
-	'+'            reduce using rule 77
-	'-'            reduce using rule 77
-	'*'            reduce using rule 77
-	'/'            reduce using rule 77
-	'%'            reduce using rule 77
-	'('            reduce using rule 77
-	')'            reduce using rule 77
-	'{'            reduce using rule 77
-	'}'            reduce using rule 77
-	'['            reduce using rule 77
-	','            reduce using rule 77
-	';'            reduce using rule 77
-	%eof           reduce using rule 77
+	')'            reduce using rule 79
+	','            reduce using rule 79
 
 
 State 121
 
-	App -> App '.' Id .                                 (rule 79)
+	Args_ -> Args_ . ',' Arg                            (rule 78)
+	Args -> Args_ .                                     (rule 80)
 
-	else           reduce using rule 79
-	let            reduce using rule 79
-	run            reduce using rule 79
-	then           reduce using rule 79
-	type           reduce using rule 79
-	'.'            reduce using rule 79
-	'&&'           reduce using rule 79
-	'||'           reduce using rule 79
-	'<='           reduce using rule 79
-	'>='           reduce using rule 79
-	'@'            reduce using rule 79
-	'@@'           reduce using rule 79
-	'=='           reduce using rule 79
-	'!='           reduce using rule 79
-	'>'            reduce using rule 79
-	'<'            reduce using rule 79
-	'+'            reduce using rule 79
-	'-'            reduce using rule 79
-	'*'            reduce using rule 79
-	'/'            reduce using rule 79
-	'%'            reduce using rule 79
-	'('            reduce using rule 79
-	')'            reduce using rule 79
-	'{'            reduce using rule 79
-	'}'            reduce using rule 79
-	'['            reduce using rule 79
-	','            reduce using rule 79
-	';'            reduce using rule 79
-	%eof           reduce using rule 79
+	')'            reduce using rule 80
+	','            shift, and enter state 202
 
 
 State 122
 
-	App -> App '.' nat .                                (rule 80)
+	App -> App '(' Args . ')'                           (rule 81)
 
-	else           reduce using rule 80
-	let            reduce using rule 80
-	run            reduce using rule 80
-	then           reduce using rule 80
-	type           reduce using rule 80
-	'.'            reduce using rule 80
-	'&&'           reduce using rule 80
-	'||'           reduce using rule 80
-	'<='           reduce using rule 80
-	'>='           reduce using rule 80
-	'@'            reduce using rule 80
-	'@@'           reduce using rule 80
-	'=='           reduce using rule 80
-	'!='           reduce using rule 80
-	'>'            reduce using rule 80
-	'<'            reduce using rule 80
-	'+'            reduce using rule 80
-	'-'            reduce using rule 80
-	'*'            reduce using rule 80
-	'/'            reduce using rule 80
-	'%'            reduce using rule 80
-	'('            reduce using rule 80
-	')'            reduce using rule 80
-	'{'            reduce using rule 80
-	'}'            reduce using rule 80
-	'['            reduce using rule 80
-	','            reduce using rule 80
-	';'            reduce using rule 80
-	%eof           reduce using rule 80
+	')'            shift, and enter state 201
 
 
 State 123
 
-	Expr -> fn '[' Params . ']' '->' Expr               (rule 59)
+	Arg -> discard .                                    (rule 77)
 
-	']'            shift, and enter state 196
+	')'            reduce using rule 77
+	','            reduce using rule 77
 
 
 State 124
 
-	OptParams -> Params .                               (rule 7)
-
-	')'            reduce using rule 7
-
-
-State 125
-
-	Expr -> fn '(' OptParams . ')' '->' Expr            (rule 58)
-
-	')'            shift, and enter state 195
-
-
-State 126
-
-	Expr -> if Expr then . Expr else Expr               (rule 57)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 194
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 127
-
-	Atom -> match Expr '{' . Matches '}'                (rule 94)
-
-	false          shift, and enter state 177
-	true           shift, and enter state 178
-	discard        shift, and enter state 179
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 180
-	nat            shift, and enter state 181
-	nonnat         shift, and enter state 182
-	floatlit       shift, and enter state 183
-	'('            shift, and enter state 184
-	'{'            shift, and enter state 137
-
-	Id             goto state 170
-	Ct             goto state 171
-	IntPatt        goto state 174
-	Pattern        goto state 191
-	DeepPattern    goto state 176
-	Matches        goto state 192
-	Match          goto state 193
-
-State 128
-
-	Atom -> '(' Exprs ')' .                             (rule 82)
+	App -> App '(' ')' .                                (rule 82)
 
 	else           reduce using rule 82
 	let            reduce using rule 82
@@ -3120,179 +2987,9 @@ State 128
 	%eof           reduce using rule 82
 
 
-State 129
+State 125
 
-	Exprs_ -> Exprs_ ',' . Expr                         (rule 50)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 190
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 130
-
-	Prop -> '=' Id .                                    (rule 49)
-
-	'}'            reduce using rule 49
-	','            reduce using rule 49
-
-
-State 131
-
-	Stmt -> while Expr . '{' VoidBlock '}' OptSemi      (rule 41)
-
-	'{'            shift, and enter state 189
-
-
-State 132
-
-	Stmt -> let Id . '=' Expr ';'                       (rule 35)
-
-	'='            shift, and enter state 188
-
-
-State 133
-
-	DeepPattern -> Ct . '(' Patterns ')'                (rule 30)
-
-	'('            shift, and enter state 187
-
-
-State 134
-
-	Stmt -> let DeepPattern . '=' Expr ';'              (rule 37)
-
-	'='            shift, and enter state 186
-
-
-State 135
-
-	Stmt -> let mut . Id '=' Expr ';'                   (rule 36)
-
-	id             shift, and enter state 11
-
-	Id             goto state 185
-
-State 136
-
-	DeepPattern -> '(' . Patterns ')'                   (rule 31)
-
-	false          shift, and enter state 177
-	true           shift, and enter state 178
-	discard        shift, and enter state 179
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 180
-	nat            shift, and enter state 181
-	nonnat         shift, and enter state 182
-	floatlit       shift, and enter state 183
-	'('            shift, and enter state 184
-	'{'            shift, and enter state 137
-
-	Id             goto state 170
-	Ct             goto state 171
-	Patterns_      goto state 172
-	Patterns       goto state 173
-	IntPatt        goto state 174
-	Pattern        goto state 175
-	DeepPattern    goto state 176
-
-State 137
-
-	DeepPattern -> '{' . PropPatterns '}'               (rule 32)
-
-	id             shift, and enter state 11
-	'='            shift, and enter state 169
-
-	Id             goto state 166
-	PropPatterns   goto state 167
-	PropPattern    goto state 168
-
-State 138
-
-	Stmt -> debug Expr . ';'                            (rule 40)
-
-	';'            shift, and enter state 165
-
-
-State 139
-
-	Atom -> '{' Expr '}' .                              (rule 86)
-
-	else           reduce using rule 86
-	let            reduce using rule 86
-	run            reduce using rule 86
-	then           reduce using rule 86
-	type           reduce using rule 86
-	'.'            reduce using rule 86
-	'&&'           reduce using rule 86
-	'||'           reduce using rule 86
-	'<='           reduce using rule 86
-	'>='           reduce using rule 86
-	'@'            reduce using rule 86
-	'@@'           reduce using rule 86
-	'=='           reduce using rule 86
-	'!='           reduce using rule 86
-	'>'            reduce using rule 86
-	'<'            reduce using rule 86
-	'+'            reduce using rule 86
-	'-'            reduce using rule 86
-	'*'            reduce using rule 86
-	'/'            reduce using rule 86
-	'%'            reduce using rule 86
-	'('            reduce using rule 86
-	')'            reduce using rule 86
-	'{'            reduce using rule 86
-	'}'            reduce using rule 86
-	'['            reduce using rule 86
-	','            reduce using rule 86
-	';'            reduce using rule 86
-	%eof           reduce using rule 86
-
-
-State 140
-
-	Stmt -> Expr ';' .                                  (rule 38)
-
-	debug          reduce using rule 38
-	fn             reduce using rule 38
-	if             reduce using rule 38
-	let            reduce using rule 38
-	match          reduce using rule 38
-	while          reduce using rule 38
-	false          reduce using rule 38
-	true           reduce using rule 38
-	id             reduce using rule 38
-	capid          reduce using rule 38
-	strlit         reduce using rule 38
-	nat            reduce using rule 38
-	nonnat         reduce using rule 38
-	floatlit       reduce using rule 38
-	'('            reduce using rule 38
-	'{'            reduce using rule 38
-	'}'            reduce using rule 38
-
-
-State 141
-
-	Atom -> '{' Props '}' .                             (rule 84)
+	App -> App '.' Id .                                 (rule 84)
 
 	else           reduce using rule 84
 	let            reduce using rule 84
@@ -3325,19 +3022,9 @@ State 141
 	%eof           reduce using rule 84
 
 
-State 142
+State 126
 
-	Props -> Props ',' . Prop                           (rule 46)
-
-	id             shift, and enter state 11
-	'='            shift, and enter state 49
-
-	Id             goto state 163
-	Prop           goto state 164
-
-State 143
-
-	Atom -> '{' Block '}' .                             (rule 85)
+	App -> App '.' nat .                                (rule 85)
 
 	else           reduce using rule 85
 	let            reduce using rule 85
@@ -3370,35 +3057,391 @@ State 143
 	%eof           reduce using rule 85
 
 
+State 127
+
+	Expr -> fn '[' Params . ']' '->' Expr               (rule 59)
+
+	']'            shift, and enter state 200
+
+
+State 128
+
+	OptParams -> Params .                               (rule 7)
+
+	')'            reduce using rule 7
+
+
+State 129
+
+	Expr -> fn '(' OptParams . ')' '->' Expr            (rule 58)
+
+	')'            shift, and enter state 199
+
+
+State 130
+
+	Expr -> if Expr then . Expr else Expr               (rule 57)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 198
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 131
+
+	Atom -> match Expr '{' . Matches '}'                (rule 99)
+
+	false          shift, and enter state 181
+	true           shift, and enter state 182
+	discard        shift, and enter state 183
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 184
+	nat            shift, and enter state 185
+	nonnat         shift, and enter state 186
+	floatlit       shift, and enter state 187
+	'('            shift, and enter state 188
+	'{'            shift, and enter state 141
+
+	Id             goto state 174
+	Ct             goto state 175
+	IntPatt        goto state 178
+	Pattern        goto state 195
+	DeepPattern    goto state 180
+	Matches        goto state 196
+	Match          goto state 197
+
+State 132
+
+	Atom -> '(' Exprs ')' .                             (rule 87)
+
+	else           reduce using rule 87
+	let            reduce using rule 87
+	run            reduce using rule 87
+	then           reduce using rule 87
+	type           reduce using rule 87
+	'.'            reduce using rule 87
+	'&&'           reduce using rule 87
+	'||'           reduce using rule 87
+	'<='           reduce using rule 87
+	'>='           reduce using rule 87
+	'@'            reduce using rule 87
+	'@@'           reduce using rule 87
+	'=='           reduce using rule 87
+	'!='           reduce using rule 87
+	'>'            reduce using rule 87
+	'<'            reduce using rule 87
+	'+'            reduce using rule 87
+	'-'            reduce using rule 87
+	'*'            reduce using rule 87
+	'/'            reduce using rule 87
+	'%'            reduce using rule 87
+	'('            reduce using rule 87
+	')'            reduce using rule 87
+	'{'            reduce using rule 87
+	'}'            reduce using rule 87
+	'['            reduce using rule 87
+	','            reduce using rule 87
+	';'            reduce using rule 87
+	%eof           reduce using rule 87
+
+
+State 133
+
+	Exprs_ -> Exprs_ ',' . Expr                         (rule 50)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 194
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 134
+
+	Prop -> '=' Id .                                    (rule 49)
+
+	'}'            reduce using rule 49
+	','            reduce using rule 49
+
+
+State 135
+
+	Stmt -> while Expr . '{' VoidBlock '}' OptSemi      (rule 41)
+
+	'{'            shift, and enter state 193
+
+
+State 136
+
+	Stmt -> let Id . '=' Expr ';'                       (rule 35)
+
+	'='            shift, and enter state 192
+
+
+State 137
+
+	DeepPattern -> Ct . '(' Patterns ')'                (rule 30)
+
+	'('            shift, and enter state 191
+
+
+State 138
+
+	Stmt -> let DeepPattern . '=' Expr ';'              (rule 37)
+
+	'='            shift, and enter state 190
+
+
+State 139
+
+	Stmt -> let mut . Id '=' Expr ';'                   (rule 36)
+
+	id             shift, and enter state 11
+
+	Id             goto state 189
+
+State 140
+
+	DeepPattern -> '(' . Patterns ')'                   (rule 31)
+
+	false          shift, and enter state 181
+	true           shift, and enter state 182
+	discard        shift, and enter state 183
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 184
+	nat            shift, and enter state 185
+	nonnat         shift, and enter state 186
+	floatlit       shift, and enter state 187
+	'('            shift, and enter state 188
+	'{'            shift, and enter state 141
+
+	Id             goto state 174
+	Ct             goto state 175
+	Patterns_      goto state 176
+	Patterns       goto state 177
+	IntPatt        goto state 178
+	Pattern        goto state 179
+	DeepPattern    goto state 180
+
+State 141
+
+	DeepPattern -> '{' . PropPatterns '}'               (rule 32)
+
+	id             shift, and enter state 11
+	'='            shift, and enter state 173
+
+	Id             goto state 170
+	PropPatterns   goto state 171
+	PropPattern    goto state 172
+
+State 142
+
+	Stmt -> debug Expr . ';'                            (rule 40)
+
+	';'            shift, and enter state 169
+
+
+State 143
+
+	Atom -> '{' Expr '}' .                              (rule 91)
+
+	else           reduce using rule 91
+	let            reduce using rule 91
+	run            reduce using rule 91
+	then           reduce using rule 91
+	type           reduce using rule 91
+	'.'            reduce using rule 91
+	'&&'           reduce using rule 91
+	'||'           reduce using rule 91
+	'<='           reduce using rule 91
+	'>='           reduce using rule 91
+	'@'            reduce using rule 91
+	'@@'           reduce using rule 91
+	'=='           reduce using rule 91
+	'!='           reduce using rule 91
+	'>'            reduce using rule 91
+	'<'            reduce using rule 91
+	'+'            reduce using rule 91
+	'-'            reduce using rule 91
+	'*'            reduce using rule 91
+	'/'            reduce using rule 91
+	'%'            reduce using rule 91
+	'('            reduce using rule 91
+	')'            reduce using rule 91
+	'{'            reduce using rule 91
+	'}'            reduce using rule 91
+	'['            reduce using rule 91
+	','            reduce using rule 91
+	';'            reduce using rule 91
+	%eof           reduce using rule 91
+
+
 State 144
 
-	Stmt -> Id . '=' Expr ';'                           (rule 39)
-	Atom -> Id .                                        (rule 92)
+	Stmt -> Expr ';' .                                  (rule 38)
 
-	'='            shift, and enter state 162
-	'.'            reduce using rule 92
-	'&&'           reduce using rule 92
-	'||'           reduce using rule 92
-	'<='           reduce using rule 92
-	'>='           reduce using rule 92
-	'@'            reduce using rule 92
-	'@@'           reduce using rule 92
-	'=='           reduce using rule 92
-	'!='           reduce using rule 92
-	'>'            reduce using rule 92
-	'<'            reduce using rule 92
-	'+'            reduce using rule 92
-	'-'            reduce using rule 92
-	'*'            reduce using rule 92
-	'/'            reduce using rule 92
-	'%'            reduce using rule 92
-	'('            reduce using rule 92
-	'}'            reduce using rule 92
-	'['            reduce using rule 92
-	';'            reduce using rule 92
+	debug          reduce using rule 38
+	fn             reduce using rule 38
+	if             reduce using rule 38
+	let            reduce using rule 38
+	match          reduce using rule 38
+	while          reduce using rule 38
+	false          reduce using rule 38
+	true           reduce using rule 38
+	id             reduce using rule 38
+	capid          reduce using rule 38
+	strlit         reduce using rule 38
+	nat            reduce using rule 38
+	nonnat         reduce using rule 38
+	floatlit       reduce using rule 38
+	'('            reduce using rule 38
+	'{'            reduce using rule 38
+	'}'            reduce using rule 38
 
 
 State 145
+
+	Atom -> '{' Props '}' .                             (rule 89)
+
+	else           reduce using rule 89
+	let            reduce using rule 89
+	run            reduce using rule 89
+	then           reduce using rule 89
+	type           reduce using rule 89
+	'.'            reduce using rule 89
+	'&&'           reduce using rule 89
+	'||'           reduce using rule 89
+	'<='           reduce using rule 89
+	'>='           reduce using rule 89
+	'@'            reduce using rule 89
+	'@@'           reduce using rule 89
+	'=='           reduce using rule 89
+	'!='           reduce using rule 89
+	'>'            reduce using rule 89
+	'<'            reduce using rule 89
+	'+'            reduce using rule 89
+	'-'            reduce using rule 89
+	'*'            reduce using rule 89
+	'/'            reduce using rule 89
+	'%'            reduce using rule 89
+	'('            reduce using rule 89
+	')'            reduce using rule 89
+	'{'            reduce using rule 89
+	'}'            reduce using rule 89
+	'['            reduce using rule 89
+	','            reduce using rule 89
+	';'            reduce using rule 89
+	%eof           reduce using rule 89
+
+
+State 146
+
+	Props -> Props ',' . Prop                           (rule 46)
+
+	id             shift, and enter state 11
+	'='            shift, and enter state 49
+
+	Id             goto state 167
+	Prop           goto state 168
+
+State 147
+
+	Atom -> '{' Block '}' .                             (rule 90)
+
+	else           reduce using rule 90
+	let            reduce using rule 90
+	run            reduce using rule 90
+	then           reduce using rule 90
+	type           reduce using rule 90
+	'.'            reduce using rule 90
+	'&&'           reduce using rule 90
+	'||'           reduce using rule 90
+	'<='           reduce using rule 90
+	'>='           reduce using rule 90
+	'@'            reduce using rule 90
+	'@@'           reduce using rule 90
+	'=='           reduce using rule 90
+	'!='           reduce using rule 90
+	'>'            reduce using rule 90
+	'<'            reduce using rule 90
+	'+'            reduce using rule 90
+	'-'            reduce using rule 90
+	'*'            reduce using rule 90
+	'/'            reduce using rule 90
+	'%'            reduce using rule 90
+	'('            reduce using rule 90
+	')'            reduce using rule 90
+	'{'            reduce using rule 90
+	'}'            reduce using rule 90
+	'['            reduce using rule 90
+	','            reduce using rule 90
+	';'            reduce using rule 90
+	%eof           reduce using rule 90
+
+
+State 148
+
+	Stmt -> Id . '=' Expr ';'                           (rule 39)
+	Atom -> Id .                                        (rule 97)
+
+	'='            shift, and enter state 166
+	'.'            reduce using rule 97
+	'&&'           reduce using rule 97
+	'||'           reduce using rule 97
+	'<='           reduce using rule 97
+	'>='           reduce using rule 97
+	'@'            reduce using rule 97
+	'@@'           reduce using rule 97
+	'=='           reduce using rule 97
+	'!='           reduce using rule 97
+	'>'            reduce using rule 97
+	'<'            reduce using rule 97
+	'+'            reduce using rule 97
+	'-'            reduce using rule 97
+	'*'            reduce using rule 97
+	'/'            reduce using rule 97
+	'%'            reduce using rule 97
+	'('            reduce using rule 97
+	'}'            reduce using rule 97
+	'['            reduce using rule 97
+	';'            reduce using rule 97
+
+
+State 149
 
 	Stmts -> Stmts Stmt .                               (rule 33)
 
@@ -3421,1410 +3464,119 @@ State 145
 	'}'            reduce using rule 33
 
 
-State 146
+State 150
 
 	Stmt -> Expr . ';'                                  (rule 38)
 	Block -> Stmts Expr .                               (rule 42)
 
 	'}'            reduce using rule 42
-	';'            shift, and enter state 140
-
-
-State 147
-
-	Stmt -> Id '=' . Expr ';'                           (rule 39)
-	Prop -> Id '=' . Expr                               (rule 48)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 161
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 148
-
-	Defn -> let Id '[' Params . ']' ':' Type '=' Expr    (rule 127)
-	Defn -> let Id '[' Params . ']' '(' TypedParams ')' ':' Type '=' Expr    (rule 129)
-
-	']'            shift, and enter state 160
-
-
-State 149
-
-	TypedParam -> Id . ':' Type                         (rule 132)
-
-	':'            shift, and enter state 159
-
-
-State 150
-
-	TypedParams_ -> TypedParams_ . ',' TypedParam       (rule 130)
-	TypedParams -> TypedParams_ .                       (rule 133)
-
-	')'            reduce using rule 133
-	','            shift, and enter state 158
+	';'            shift, and enter state 144
 
 
 State 151
 
-	TypedParams_ -> TypedParam .                        (rule 131)
+	Stmt -> Id '=' . Expr ';'                           (rule 39)
+	Prop -> Id '=' . Expr                               (rule 48)
 
-	')'            reduce using rule 131
-	','            reduce using rule 131
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
 
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 165
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
 
 State 152
 
-	Defn -> let Id '(' TypedParams . ')' ':' Type '=' Expr    (rule 128)
+	Defn -> let Id '[' Params . ']' ':' Type '=' Expr    (rule 132)
+	Defn -> let Id '[' Params . ']' '(' TypedParams ')' ':' Type '=' Expr    (rule 134)
 
-	')'            shift, and enter state 157
+	']'            shift, and enter state 164
 
 
 State 153
 
-	Defn -> let Id ':' Type . '=' Expr                  (rule 125)
+	TypedParam -> Id . ':' Type                         (rule 137)
 
-	'='            shift, and enter state 156
+	':'            shift, and enter state 163
 
 
 State 154
 
-	Defn -> let foreign Id ':' . Type '=' strlit        (rule 126)
+	TypedParams_ -> TypedParams_ . ',' TypedParam       (rule 135)
+	TypedParams -> TypedParams_ .                       (rule 138)
 
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
+	')'            reduce using rule 138
+	','            shift, and enter state 162
 
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 155
-	TApp           goto state 86
-	TAtom          goto state 87
 
 State 155
 
-	Defn -> let foreign Id ':' Type . '=' strlit        (rule 126)
+	TypedParams_ -> TypedParam .                        (rule 136)
 
-	'='            shift, and enter state 259
+	')'            reduce using rule 136
+	','            reduce using rule 136
 
 
 State 156
 
-	Defn -> let Id ':' Type '=' . Expr                  (rule 125)
+	Defn -> let Id '(' TypedParams . ')' ':' Type '=' Expr    (rule 133)
 
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
+	')'            shift, and enter state 161
 
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 258
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
 
 State 157
 
-	Defn -> let Id '(' TypedParams ')' . ':' Type '=' Expr    (rule 128)
+	Defn -> let Id ':' Type . '=' Expr                  (rule 130)
 
-	':'            shift, and enter state 257
+	'='            shift, and enter state 160
 
 
 State 158
 
-	TypedParams_ -> TypedParams_ ',' . TypedParam       (rule 130)
+	Defn -> let foreign Id ':' . Type '=' strlit        (rule 131)
 
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
 	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
 
-	Id             goto state 149
-	TypedParam     goto state 256
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 159
+	TApp           goto state 86
+	TAtom          goto state 87
 
 State 159
 
-	TypedParam -> Id ':' . Type                         (rule 132)
+	Defn -> let foreign Id ':' Type . '=' strlit        (rule 131)
 
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
+	'='            shift, and enter state 265
 
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 255
-	TApp           goto state 86
-	TAtom          goto state 87
 
 State 160
 
-	Defn -> let Id '[' Params ']' . ':' Type '=' Expr    (rule 127)
-	Defn -> let Id '[' Params ']' . '(' TypedParams ')' ':' Type '=' Expr    (rule 129)
-
-	':'            shift, and enter state 253
-	'('            shift, and enter state 254
-
-
-State 161
-
-	Stmt -> Id '=' Expr . ';'                           (rule 39)
-	Prop -> Id '=' Expr .                               (rule 48)
-
-	'}'            reduce using rule 48
-	','            reduce using rule 48
-	';'            shift, and enter state 252
-
-
-State 162
-
-	Stmt -> Id '=' . Expr ';'                           (rule 39)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 251
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 163
-
-	Prop -> Id . '=' Expr                               (rule 48)
-
-	'='            shift, and enter state 250
-
-
-State 164
-
-	Props -> Props ',' Prop .                           (rule 46)
-
-	'}'            reduce using rule 46
-	','            reduce using rule 46
-
-
-State 165
-
-	Stmt -> debug Expr ';' .                            (rule 40)
-
-	debug          reduce using rule 40
-	fn             reduce using rule 40
-	if             reduce using rule 40
-	let            reduce using rule 40
-	match          reduce using rule 40
-	while          reduce using rule 40
-	false          reduce using rule 40
-	true           reduce using rule 40
-	id             reduce using rule 40
-	capid          reduce using rule 40
-	strlit         reduce using rule 40
-	nat            reduce using rule 40
-	nonnat         reduce using rule 40
-	floatlit       reduce using rule 40
-	'('            reduce using rule 40
-	'{'            reduce using rule 40
-	'}'            reduce using rule 40
-
-
-State 166
-
-	PropPattern -> Id . '=' Pattern                     (rule 18)
-
-	'='            shift, and enter state 249
-
-
-State 167
-
-	PropPatterns -> PropPatterns . ',' PropPattern      (rule 16)
-	DeepPattern -> '{' PropPatterns . '}'               (rule 32)
-
-	'}'            shift, and enter state 247
-	','            shift, and enter state 248
-
-
-State 168
-
-	PropPatterns -> PropPattern .                       (rule 17)
-
-	'}'            reduce using rule 17
-	','            reduce using rule 17
-
-
-State 169
-
-	PropPattern -> '=' . Id                             (rule 19)
-
-	id             shift, and enter state 11
-
-	Id             goto state 246
-
-State 170
-
-	Pattern -> Id .                                     (rule 27)
-
-	'->'           reduce using rule 27
-	')'            reduce using rule 27
-	'}'            reduce using rule 27
-	','            reduce using rule 27
-
-
-State 171
-
-	Pattern -> Ct .                                     (rule 20)
-	DeepPattern -> Ct . '(' Patterns ')'                (rule 30)
-
-	'->'           reduce using rule 20
-	'('            shift, and enter state 187
-	')'            reduce using rule 20
-	'}'            reduce using rule 20
-	','            reduce using rule 20
-
-
-State 172
-
-	Patterns_ -> Patterns_ . ',' Pattern                (rule 11)
-	Patterns -> Patterns_ .                             (rule 13)
-
-	')'            reduce using rule 13
-	','            shift, and enter state 245
-
-
-State 173
-
-	DeepPattern -> '(' Patterns . ')'                   (rule 31)
-
-	')'            shift, and enter state 244
-
-
-State 174
-
-	Pattern -> IntPatt .                                (rule 22)
-
-	'->'           reduce using rule 22
-	')'            reduce using rule 22
-	'}'            reduce using rule 22
-	','            reduce using rule 22
-
-
-State 175
-
-	Patterns_ -> Pattern .                              (rule 12)
-
-	')'            reduce using rule 12
-	','            reduce using rule 12
-
-
-State 176
-
-	Pattern -> DeepPattern .                            (rule 29)
-
-	'->'           reduce using rule 29
-	')'            reduce using rule 29
-	'}'            reduce using rule 29
-	','            reduce using rule 29
-
-
-State 177
-
-	Pattern -> false .                                  (rule 25)
-
-	'->'           reduce using rule 25
-	')'            reduce using rule 25
-	'}'            reduce using rule 25
-	','            reduce using rule 25
-
-
-State 178
-
-	Pattern -> true .                                   (rule 24)
-
-	'->'           reduce using rule 24
-	')'            reduce using rule 24
-	'}'            reduce using rule 24
-	','            reduce using rule 24
-
-
-State 179
-
-	Pattern -> discard .                                (rule 28)
-
-	'->'           reduce using rule 28
-	')'            reduce using rule 28
-	'}'            reduce using rule 28
-	','            reduce using rule 28
-
-
-State 180
-
-	Pattern -> strlit .                                 (rule 26)
-
-	'->'           reduce using rule 26
-	')'            reduce using rule 26
-	'}'            reduce using rule 26
-	','            reduce using rule 26
-
-
-State 181
-
-	IntPatt -> nat .                                    (rule 14)
-
-	'->'           reduce using rule 14
-	')'            reduce using rule 14
-	'}'            reduce using rule 14
-	','            reduce using rule 14
-
-
-State 182
-
-	IntPatt -> nonnat .                                 (rule 15)
-
-	'->'           reduce using rule 15
-	')'            reduce using rule 15
-	'}'            reduce using rule 15
-	','            reduce using rule 15
-
-
-State 183
-
-	Pattern -> floatlit .                               (rule 23)
-
-	'->'           reduce using rule 23
-	')'            reduce using rule 23
-	'}'            reduce using rule 23
-	','            reduce using rule 23
-
-
-State 184
-
-	Pattern -> '(' . ')'                                (rule 21)
-	DeepPattern -> '(' . Patterns ')'                   (rule 31)
-
-	false          shift, and enter state 177
-	true           shift, and enter state 178
-	discard        shift, and enter state 179
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 180
-	nat            shift, and enter state 181
-	nonnat         shift, and enter state 182
-	floatlit       shift, and enter state 183
-	'('            shift, and enter state 184
-	')'            shift, and enter state 243
-	'{'            shift, and enter state 137
-
-	Id             goto state 170
-	Ct             goto state 171
-	Patterns_      goto state 172
-	Patterns       goto state 173
-	IntPatt        goto state 174
-	Pattern        goto state 175
-	DeepPattern    goto state 176
-
-State 185
-
-	Stmt -> let mut Id . '=' Expr ';'                   (rule 36)
-
-	'='            shift, and enter state 242
-
-
-State 186
-
-	Stmt -> let DeepPattern '=' . Expr ';'              (rule 37)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 241
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 187
-
-	DeepPattern -> Ct '(' . Patterns ')'                (rule 30)
-
-	false          shift, and enter state 177
-	true           shift, and enter state 178
-	discard        shift, and enter state 179
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 180
-	nat            shift, and enter state 181
-	nonnat         shift, and enter state 182
-	floatlit       shift, and enter state 183
-	'('            shift, and enter state 184
-	'{'            shift, and enter state 137
-
-	Id             goto state 170
-	Ct             goto state 171
-	Patterns_      goto state 172
-	Patterns       goto state 240
-	IntPatt        goto state 174
-	Pattern        goto state 175
-	DeepPattern    goto state 176
-
-State 188
-
-	Stmt -> let Id '=' . Expr ';'                       (rule 35)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 239
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 189
-
-	Stmt -> while Expr '{' . VoidBlock '}' OptSemi      (rule 41)
-
-	debug          shift, and enter state 46
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	let            shift, and enter state 47
-	match          shift, and enter state 22
-	while          shift, and enter state 48
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 144
-	Ct             goto state 14
-	Stmts          goto state 236
-	Stmt           goto state 41
-	VoidBlock      goto state 237
-	Int            goto state 15
-	Expr           goto state 238
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 190
-
-	Exprs_ -> Exprs_ ',' Expr .                         (rule 50)
-
-	')'            reduce using rule 50
-	','            reduce using rule 50
-
-
-State 191
-
-	Match -> Pattern . '->' Expr                        (rule 55)
-
-	'->'           shift, and enter state 235
-
-
-State 192
-
-	Matches -> Matches . Match ';'                      (rule 53)
-	Atom -> match Expr '{' Matches . '}'                (rule 94)
-
-	false          shift, and enter state 177
-	true           shift, and enter state 178
-	discard        shift, and enter state 179
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 180
-	nat            shift, and enter state 181
-	nonnat         shift, and enter state 182
-	floatlit       shift, and enter state 183
-	'('            shift, and enter state 184
-	'{'            shift, and enter state 137
-	'}'            shift, and enter state 234
-
-	Id             goto state 170
-	Ct             goto state 171
-	IntPatt        goto state 174
-	Pattern        goto state 191
-	DeepPattern    goto state 176
-	Match          goto state 233
-
-State 193
-
-	Matches -> Match . ';'                              (rule 54)
-
-	';'            shift, and enter state 232
-
-
-State 194
-
-	Expr -> if Expr then Expr . else Expr               (rule 57)
-
-	else           shift, and enter state 231
-
-
-State 195
-
-	Expr -> fn '(' OptParams ')' . '->' Expr            (rule 58)
-
-	'->'           shift, and enter state 230
-
-
-State 196
-
-	Expr -> fn '[' Params ']' . '->' Expr               (rule 59)
-
-	'->'           shift, and enter state 229
-
-
-State 197
-
-	App -> App '(' Exprs ')' .                          (rule 76)
-
-	else           reduce using rule 76
-	let            reduce using rule 76
-	run            reduce using rule 76
-	then           reduce using rule 76
-	type           reduce using rule 76
-	'.'            reduce using rule 76
-	'&&'           reduce using rule 76
-	'||'           reduce using rule 76
-	'<='           reduce using rule 76
-	'>='           reduce using rule 76
-	'@'            reduce using rule 76
-	'@@'           reduce using rule 76
-	'=='           reduce using rule 76
-	'!='           reduce using rule 76
-	'>'            reduce using rule 76
-	'<'            reduce using rule 76
-	'+'            reduce using rule 76
-	'-'            reduce using rule 76
-	'*'            reduce using rule 76
-	'/'            reduce using rule 76
-	'%'            reduce using rule 76
-	'('            reduce using rule 76
-	')'            reduce using rule 76
-	'{'            reduce using rule 76
-	'}'            reduce using rule 76
-	'['            reduce using rule 76
-	','            reduce using rule 76
-	';'            reduce using rule 76
-	%eof           reduce using rule 76
-
-
-State 198
-
-	App -> App '[' Types ']' .                          (rule 78)
-
-	else           reduce using rule 78
-	let            reduce using rule 78
-	run            reduce using rule 78
-	then           reduce using rule 78
-	type           reduce using rule 78
-	'.'            reduce using rule 78
-	'&&'           reduce using rule 78
-	'||'           reduce using rule 78
-	'<='           reduce using rule 78
-	'>='           reduce using rule 78
-	'@'            reduce using rule 78
-	'@@'           reduce using rule 78
-	'=='           reduce using rule 78
-	'!='           reduce using rule 78
-	'>'            reduce using rule 78
-	'<'            reduce using rule 78
-	'+'            reduce using rule 78
-	'-'            reduce using rule 78
-	'*'            reduce using rule 78
-	'/'            reduce using rule 78
-	'%'            reduce using rule 78
-	'('            reduce using rule 78
-	')'            reduce using rule 78
-	'{'            reduce using rule 78
-	'}'            reduce using rule 78
-	'['            reduce using rule 78
-	','            reduce using rule 78
-	';'            reduce using rule 78
-	%eof           reduce using rule 78
-
-
-State 199
-
-	Types_ -> Types_ ',' . Type                         (rule 98)
-
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
-
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 228
-	TApp           goto state 86
-	TAtom          goto state 87
-
-State 200
-
-	Ctors_ -> Ctor OptSemi .                            (rule 136)
-
-	capid          reduce using rule 136
-	'}'            reduce using rule 136
-
-
-State 201
-
-	Defn -> type Ct '{' Ctors '}' .                     (rule 124)
-
-	let            reduce using rule 124
-	run            reduce using rule 124
-	type           reduce using rule 124
-	';'            reduce using rule 124
-	%eof           reduce using rule 124
-
-
-State 202
-
-	Ctors_ -> Ctors_ Ctor . OptSemi                     (rule 135)
-
-	capid          reduce using rule 10
-	'}'            reduce using rule 10
-	';'            shift, and enter state 34
-
-	OptSemi        goto state 227
-
-State 203
-
-	Ctor -> Ct '(' . TypedParams ')'                    (rule 139)
-
-	id             shift, and enter state 11
-	')'            reduce using rule 134
-
-	Id             goto state 149
-	TypedParams_   goto state 150
-	TypedParam     goto state 151
-	TypedParams    goto state 226
-
-State 204
-
-	Defn -> type Ct '[' Params ']' . '{' Ctors '}'      (rule 123)
-
-	'{'            shift, and enter state 225
-
-
-State 205
-
-	PropType -> Id . ':' Type                           (rule 97)
-
-	':'            shift, and enter state 224
-
-
-State 206
-
-	PropTypes -> PropTypes . ',' PropType               (rule 95)
-	TAtom -> '{' PropTypes . '}'                        (rule 108)
-
-	'}'            shift, and enter state 222
-	','            shift, and enter state 223
-
-
-State 207
-
-	PropTypes -> PropType .                             (rule 96)
-
-	'}'            reduce using rule 96
-	','            reduce using rule 96
-
-
-State 208
-
-	TAtom -> '(' Types . ')'                            (rule 107)
-
-	')'            shift, and enter state 221
-
-
-State 209
-
-	TAtom -> '(' ')' .                                  (rule 109)
-
-	let            reduce using rule 109
-	run            reduce using rule 109
-	type           reduce using rule 109
-	'='            reduce using rule 109
-	')'            reduce using rule 109
-	'}'            reduce using rule 109
-	'['            reduce using rule 109
-	']'            reduce using rule 109
-	','            reduce using rule 109
-	';'            reduce using rule 109
-	%eof           reduce using rule 109
-
-
-State 210
-
-	Type -> fn '(' . Types ')' '->' Type                (rule 101)
-	Type -> fn '(' . ')' '->' Type                      (rule 102)
-
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	')'            shift, and enter state 220
-	'{'            shift, and enter state 95
-
-	Id             goto state 83
-	Ct             goto state 84
-	Types_         goto state 116
-	Types          goto state 219
-	Type           goto state 118
-	TApp           goto state 86
-	TAtom          goto state 87
-
-State 211
-
-	Type -> fn '[' . Params ']' '->' Type               (rule 103)
-
-	id             shift, and enter state 11
-
-	Id             goto state 80
-	Params_        goto state 81
-	Params         goto state 218
-
-State 212
-
-	TApp -> TApp '[' . Types ']'                        (rule 105)
-
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
-
-	Id             goto state 83
-	Ct             goto state 84
-	Types_         goto state 116
-	Types          goto state 217
-	Type           goto state 118
-	TApp           goto state 86
-	TAtom          goto state 87
-
-State 213
-
-	Defn -> type Id '[' Params ']' . '=' Type           (rule 121)
-
-	'='            shift, and enter state 216
-
-
-State 214
-
-	Params_ -> Params_ ',' . Id                         (rule 4)
-
-	id             shift, and enter state 11
-
-	Id             goto state 215
-
-State 215
-
-	Params_ -> Params_ ',' Id .                         (rule 4)
-
-	')'            reduce using rule 4
-	']'            reduce using rule 4
-	','            reduce using rule 4
-
-
-State 216
-
-	Defn -> type Id '[' Params ']' '=' . Type           (rule 121)
-
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
-
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 286
-	TApp           goto state 86
-	TAtom          goto state 87
-
-State 217
-
-	TApp -> TApp '[' Types . ']'                        (rule 105)
-
-	']'            shift, and enter state 285
-
-
-State 218
-
-	Type -> fn '[' Params . ']' '->' Type               (rule 103)
-
-	']'            shift, and enter state 284
-
-
-State 219
-
-	Type -> fn '(' Types . ')' '->' Type                (rule 101)
-
-	')'            shift, and enter state 283
-
-
-State 220
-
-	Type -> fn '(' ')' . '->' Type                      (rule 102)
-
-	'->'           shift, and enter state 282
-
-
-State 221
-
-	TAtom -> '(' Types ')' .                            (rule 107)
-
-	let            reduce using rule 107
-	run            reduce using rule 107
-	type           reduce using rule 107
-	'='            reduce using rule 107
-	')'            reduce using rule 107
-	'}'            reduce using rule 107
-	'['            reduce using rule 107
-	']'            reduce using rule 107
-	','            reduce using rule 107
-	';'            reduce using rule 107
-	%eof           reduce using rule 107
-
-
-State 222
-
-	TAtom -> '{' PropTypes '}' .                        (rule 108)
-
-	let            reduce using rule 108
-	run            reduce using rule 108
-	type           reduce using rule 108
-	'='            reduce using rule 108
-	')'            reduce using rule 108
-	'}'            reduce using rule 108
-	'['            reduce using rule 108
-	']'            reduce using rule 108
-	','            reduce using rule 108
-	';'            reduce using rule 108
-	%eof           reduce using rule 108
-
-
-State 223
-
-	PropTypes -> PropTypes ',' . PropType               (rule 95)
-
-	id             shift, and enter state 11
-
-	Id             goto state 205
-	PropType       goto state 281
-
-State 224
-
-	PropType -> Id ':' . Type                           (rule 97)
-
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
-
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 280
-	TApp           goto state 86
-	TAtom          goto state 87
-
-State 225
-
-	Defn -> type Ct '[' Params ']' '{' . Ctors '}'      (rule 123)
-
-	capid          shift, and enter state 12
-
-	Ct             goto state 97
-	Ctors_         goto state 98
-	Ctors          goto state 279
-	Ctor           goto state 100
-
-State 226
-
-	Ctor -> Ct '(' TypedParams . ')'                    (rule 139)
-
-	')'            shift, and enter state 278
-
-
-State 227
-
-	Ctors_ -> Ctors_ Ctor OptSemi .                     (rule 135)
-
-	capid          reduce using rule 135
-	'}'            reduce using rule 135
-
-
-State 228
-
-	Types_ -> Types_ ',' Type .                         (rule 98)
-
-	')'            reduce using rule 98
-	']'            reduce using rule 98
-	','            reduce using rule 98
-
-
-State 229
-
-	Expr -> fn '[' Params ']' '->' . Expr               (rule 59)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 277
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 230
-
-	Expr -> fn '(' OptParams ')' '->' . Expr            (rule 58)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 276
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 231
-
-	Expr -> if Expr then Expr else . Expr               (rule 57)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 275
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 232
-
-	Matches -> Match ';' .                              (rule 54)
-
-	false          reduce using rule 54
-	true           reduce using rule 54
-	discard        reduce using rule 54
-	id             reduce using rule 54
-	capid          reduce using rule 54
-	strlit         reduce using rule 54
-	nat            reduce using rule 54
-	nonnat         reduce using rule 54
-	floatlit       reduce using rule 54
-	'('            reduce using rule 54
-	'{'            reduce using rule 54
-	'}'            reduce using rule 54
-
-
-State 233
-
-	Matches -> Matches Match . ';'                      (rule 53)
-
-	';'            shift, and enter state 274
-
-
-State 234
-
-	Atom -> match Expr '{' Matches '}' .                (rule 94)
-
-	else           reduce using rule 94
-	let            reduce using rule 94
-	run            reduce using rule 94
-	then           reduce using rule 94
-	type           reduce using rule 94
-	'.'            reduce using rule 94
-	'&&'           reduce using rule 94
-	'||'           reduce using rule 94
-	'<='           reduce using rule 94
-	'>='           reduce using rule 94
-	'@'            reduce using rule 94
-	'@@'           reduce using rule 94
-	'=='           reduce using rule 94
-	'!='           reduce using rule 94
-	'>'            reduce using rule 94
-	'<'            reduce using rule 94
-	'+'            reduce using rule 94
-	'-'            reduce using rule 94
-	'*'            reduce using rule 94
-	'/'            reduce using rule 94
-	'%'            reduce using rule 94
-	'('            reduce using rule 94
-	')'            reduce using rule 94
-	'{'            reduce using rule 94
-	'}'            reduce using rule 94
-	'['            reduce using rule 94
-	','            reduce using rule 94
-	';'            reduce using rule 94
-	%eof           reduce using rule 94
-
-
-State 235
-
-	Match -> Pattern '->' . Expr                        (rule 55)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 273
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 236
-
-	Stmts -> Stmts . Stmt                               (rule 33)
-	VoidBlock -> Stmts .                                (rule 43)
-
-	debug          shift, and enter state 46
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	let            shift, and enter state 47
-	match          shift, and enter state 22
-	while          shift, and enter state 48
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-	'}'            reduce using rule 43
-
-	Id             goto state 144
-	Ct             goto state 14
-	Stmt           goto state 145
-	Int            goto state 15
-	Expr           goto state 238
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 237
-
-	Stmt -> while Expr '{' VoidBlock . '}' OptSemi      (rule 41)
-
-	'}'            shift, and enter state 272
-
-
-State 238
-
-	Stmt -> Expr . ';'                                  (rule 38)
-
-	';'            shift, and enter state 140
-
-
-State 239
-
-	Stmt -> let Id '=' Expr . ';'                       (rule 35)
-
-	';'            shift, and enter state 271
-
-
-State 240
-
-	DeepPattern -> Ct '(' Patterns . ')'                (rule 30)
-
-	')'            shift, and enter state 270
-
-
-State 241
-
-	Stmt -> let DeepPattern '=' Expr . ';'              (rule 37)
-
-	';'            shift, and enter state 269
-
-
-State 242
-
-	Stmt -> let mut Id '=' . Expr ';'                   (rule 36)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 268
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 243
-
-	Pattern -> '(' ')' .                                (rule 21)
-
-	'->'           reduce using rule 21
-	')'            reduce using rule 21
-	'}'            reduce using rule 21
-	','            reduce using rule 21
-
-
-State 244
-
-	DeepPattern -> '(' Patterns ')' .                   (rule 31)
-
-	'->'           reduce using rule 31
-	'='            reduce using rule 31
-	')'            reduce using rule 31
-	'}'            reduce using rule 31
-	','            reduce using rule 31
-
-
-State 245
-
-	Patterns_ -> Patterns_ ',' . Pattern                (rule 11)
-
-	false          shift, and enter state 177
-	true           shift, and enter state 178
-	discard        shift, and enter state 179
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 180
-	nat            shift, and enter state 181
-	nonnat         shift, and enter state 182
-	floatlit       shift, and enter state 183
-	'('            shift, and enter state 184
-	'{'            shift, and enter state 137
-
-	Id             goto state 170
-	Ct             goto state 171
-	IntPatt        goto state 174
-	Pattern        goto state 267
-	DeepPattern    goto state 176
-
-State 246
-
-	PropPattern -> '=' Id .                             (rule 19)
-
-	'}'            reduce using rule 19
-	','            reduce using rule 19
-
-
-State 247
-
-	DeepPattern -> '{' PropPatterns '}' .               (rule 32)
-
-	'->'           reduce using rule 32
-	'='            reduce using rule 32
-	')'            reduce using rule 32
-	'}'            reduce using rule 32
-	','            reduce using rule 32
-
-
-State 248
-
-	PropPatterns -> PropPatterns ',' . PropPattern      (rule 16)
-
-	id             shift, and enter state 11
-	'='            shift, and enter state 169
-
-	Id             goto state 166
-	PropPattern    goto state 266
-
-State 249
-
-	PropPattern -> Id '=' . Pattern                     (rule 18)
-
-	false          shift, and enter state 177
-	true           shift, and enter state 178
-	discard        shift, and enter state 179
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 180
-	nat            shift, and enter state 181
-	nonnat         shift, and enter state 182
-	floatlit       shift, and enter state 183
-	'('            shift, and enter state 184
-	'{'            shift, and enter state 137
-
-	Id             goto state 170
-	Ct             goto state 171
-	IntPatt        goto state 174
-	Pattern        goto state 265
-	DeepPattern    goto state 176
-
-State 250
-
-	Prop -> Id '=' . Expr                               (rule 48)
+	Defn -> let Id ':' Type '=' . Expr                  (rule 130)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
@@ -4848,14 +3600,1341 @@ State 250
 	App            goto state 18
 	Atom           goto state 19
 
+State 161
+
+	Defn -> let Id '(' TypedParams ')' . ':' Type '=' Expr    (rule 133)
+
+	':'            shift, and enter state 263
+
+
+State 162
+
+	TypedParams_ -> TypedParams_ ',' . TypedParam       (rule 135)
+
+	id             shift, and enter state 11
+
+	Id             goto state 153
+	TypedParam     goto state 262
+
+State 163
+
+	TypedParam -> Id ':' . Type                         (rule 137)
+
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
+
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 261
+	TApp           goto state 86
+	TAtom          goto state 87
+
+State 164
+
+	Defn -> let Id '[' Params ']' . ':' Type '=' Expr    (rule 132)
+	Defn -> let Id '[' Params ']' . '(' TypedParams ')' ':' Type '=' Expr    (rule 134)
+
+	':'            shift, and enter state 259
+	'('            shift, and enter state 260
+
+
+State 165
+
+	Stmt -> Id '=' Expr . ';'                           (rule 39)
+	Prop -> Id '=' Expr .                               (rule 48)
+
+	'}'            reduce using rule 48
+	','            reduce using rule 48
+	';'            shift, and enter state 258
+
+
+State 166
+
+	Stmt -> Id '=' . Expr ';'                           (rule 39)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 257
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 167
+
+	Prop -> Id . '=' Expr                               (rule 48)
+
+	'='            shift, and enter state 256
+
+
+State 168
+
+	Props -> Props ',' Prop .                           (rule 46)
+
+	'}'            reduce using rule 46
+	','            reduce using rule 46
+
+
+State 169
+
+	Stmt -> debug Expr ';' .                            (rule 40)
+
+	debug          reduce using rule 40
+	fn             reduce using rule 40
+	if             reduce using rule 40
+	let            reduce using rule 40
+	match          reduce using rule 40
+	while          reduce using rule 40
+	false          reduce using rule 40
+	true           reduce using rule 40
+	id             reduce using rule 40
+	capid          reduce using rule 40
+	strlit         reduce using rule 40
+	nat            reduce using rule 40
+	nonnat         reduce using rule 40
+	floatlit       reduce using rule 40
+	'('            reduce using rule 40
+	'{'            reduce using rule 40
+	'}'            reduce using rule 40
+
+
+State 170
+
+	PropPattern -> Id . '=' Pattern                     (rule 18)
+
+	'='            shift, and enter state 255
+
+
+State 171
+
+	PropPatterns -> PropPatterns . ',' PropPattern      (rule 16)
+	DeepPattern -> '{' PropPatterns . '}'               (rule 32)
+
+	'}'            shift, and enter state 253
+	','            shift, and enter state 254
+
+
+State 172
+
+	PropPatterns -> PropPattern .                       (rule 17)
+
+	'}'            reduce using rule 17
+	','            reduce using rule 17
+
+
+State 173
+
+	PropPattern -> '=' . Id                             (rule 19)
+
+	id             shift, and enter state 11
+
+	Id             goto state 252
+
+State 174
+
+	Pattern -> Id .                                     (rule 27)
+
+	'->'           reduce using rule 27
+	')'            reduce using rule 27
+	'}'            reduce using rule 27
+	','            reduce using rule 27
+
+
+State 175
+
+	Pattern -> Ct .                                     (rule 20)
+	DeepPattern -> Ct . '(' Patterns ')'                (rule 30)
+
+	'->'           reduce using rule 20
+	'('            shift, and enter state 191
+	')'            reduce using rule 20
+	'}'            reduce using rule 20
+	','            reduce using rule 20
+
+
+State 176
+
+	Patterns_ -> Patterns_ . ',' Pattern                (rule 11)
+	Patterns -> Patterns_ .                             (rule 13)
+
+	')'            reduce using rule 13
+	','            shift, and enter state 251
+
+
+State 177
+
+	DeepPattern -> '(' Patterns . ')'                   (rule 31)
+
+	')'            shift, and enter state 250
+
+
+State 178
+
+	Pattern -> IntPatt .                                (rule 22)
+
+	'->'           reduce using rule 22
+	')'            reduce using rule 22
+	'}'            reduce using rule 22
+	','            reduce using rule 22
+
+
+State 179
+
+	Patterns_ -> Pattern .                              (rule 12)
+
+	')'            reduce using rule 12
+	','            reduce using rule 12
+
+
+State 180
+
+	Pattern -> DeepPattern .                            (rule 29)
+
+	'->'           reduce using rule 29
+	')'            reduce using rule 29
+	'}'            reduce using rule 29
+	','            reduce using rule 29
+
+
+State 181
+
+	Pattern -> false .                                  (rule 25)
+
+	'->'           reduce using rule 25
+	')'            reduce using rule 25
+	'}'            reduce using rule 25
+	','            reduce using rule 25
+
+
+State 182
+
+	Pattern -> true .                                   (rule 24)
+
+	'->'           reduce using rule 24
+	')'            reduce using rule 24
+	'}'            reduce using rule 24
+	','            reduce using rule 24
+
+
+State 183
+
+	Pattern -> discard .                                (rule 28)
+
+	'->'           reduce using rule 28
+	')'            reduce using rule 28
+	'}'            reduce using rule 28
+	','            reduce using rule 28
+
+
+State 184
+
+	Pattern -> strlit .                                 (rule 26)
+
+	'->'           reduce using rule 26
+	')'            reduce using rule 26
+	'}'            reduce using rule 26
+	','            reduce using rule 26
+
+
+State 185
+
+	IntPatt -> nat .                                    (rule 14)
+
+	'->'           reduce using rule 14
+	')'            reduce using rule 14
+	'}'            reduce using rule 14
+	','            reduce using rule 14
+
+
+State 186
+
+	IntPatt -> nonnat .                                 (rule 15)
+
+	'->'           reduce using rule 15
+	')'            reduce using rule 15
+	'}'            reduce using rule 15
+	','            reduce using rule 15
+
+
+State 187
+
+	Pattern -> floatlit .                               (rule 23)
+
+	'->'           reduce using rule 23
+	')'            reduce using rule 23
+	'}'            reduce using rule 23
+	','            reduce using rule 23
+
+
+State 188
+
+	Pattern -> '(' . ')'                                (rule 21)
+	DeepPattern -> '(' . Patterns ')'                   (rule 31)
+
+	false          shift, and enter state 181
+	true           shift, and enter state 182
+	discard        shift, and enter state 183
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 184
+	nat            shift, and enter state 185
+	nonnat         shift, and enter state 186
+	floatlit       shift, and enter state 187
+	'('            shift, and enter state 188
+	')'            shift, and enter state 249
+	'{'            shift, and enter state 141
+
+	Id             goto state 174
+	Ct             goto state 175
+	Patterns_      goto state 176
+	Patterns       goto state 177
+	IntPatt        goto state 178
+	Pattern        goto state 179
+	DeepPattern    goto state 180
+
+State 189
+
+	Stmt -> let mut Id . '=' Expr ';'                   (rule 36)
+
+	'='            shift, and enter state 248
+
+
+State 190
+
+	Stmt -> let DeepPattern '=' . Expr ';'              (rule 37)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 247
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 191
+
+	DeepPattern -> Ct '(' . Patterns ')'                (rule 30)
+
+	false          shift, and enter state 181
+	true           shift, and enter state 182
+	discard        shift, and enter state 183
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 184
+	nat            shift, and enter state 185
+	nonnat         shift, and enter state 186
+	floatlit       shift, and enter state 187
+	'('            shift, and enter state 188
+	'{'            shift, and enter state 141
+
+	Id             goto state 174
+	Ct             goto state 175
+	Patterns_      goto state 176
+	Patterns       goto state 246
+	IntPatt        goto state 178
+	Pattern        goto state 179
+	DeepPattern    goto state 180
+
+State 192
+
+	Stmt -> let Id '=' . Expr ';'                       (rule 35)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 245
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 193
+
+	Stmt -> while Expr '{' . VoidBlock '}' OptSemi      (rule 41)
+
+	debug          shift, and enter state 46
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	let            shift, and enter state 47
+	match          shift, and enter state 22
+	while          shift, and enter state 48
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 148
+	Ct             goto state 14
+	Stmts          goto state 242
+	Stmt           goto state 41
+	VoidBlock      goto state 243
+	Int            goto state 15
+	Expr           goto state 244
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 194
+
+	Exprs_ -> Exprs_ ',' Expr .                         (rule 50)
+
+	')'            reduce using rule 50
+	','            reduce using rule 50
+
+
+State 195
+
+	Match -> Pattern . '->' Expr                        (rule 55)
+
+	'->'           shift, and enter state 241
+
+
+State 196
+
+	Matches -> Matches . Match ';'                      (rule 53)
+	Atom -> match Expr '{' Matches . '}'                (rule 99)
+
+	false          shift, and enter state 181
+	true           shift, and enter state 182
+	discard        shift, and enter state 183
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 184
+	nat            shift, and enter state 185
+	nonnat         shift, and enter state 186
+	floatlit       shift, and enter state 187
+	'('            shift, and enter state 188
+	'{'            shift, and enter state 141
+	'}'            shift, and enter state 240
+
+	Id             goto state 174
+	Ct             goto state 175
+	IntPatt        goto state 178
+	Pattern        goto state 195
+	DeepPattern    goto state 180
+	Match          goto state 239
+
+State 197
+
+	Matches -> Match . ';'                              (rule 54)
+
+	';'            shift, and enter state 238
+
+
+State 198
+
+	Expr -> if Expr then Expr . else Expr               (rule 57)
+
+	else           shift, and enter state 237
+
+
+State 199
+
+	Expr -> fn '(' OptParams ')' . '->' Expr            (rule 58)
+
+	'->'           shift, and enter state 236
+
+
+State 200
+
+	Expr -> fn '[' Params ']' . '->' Expr               (rule 59)
+
+	'->'           shift, and enter state 235
+
+
+State 201
+
+	App -> App '(' Args ')' .                           (rule 81)
+
+	else           reduce using rule 81
+	let            reduce using rule 81
+	run            reduce using rule 81
+	then           reduce using rule 81
+	type           reduce using rule 81
+	'.'            reduce using rule 81
+	'&&'           reduce using rule 81
+	'||'           reduce using rule 81
+	'<='           reduce using rule 81
+	'>='           reduce using rule 81
+	'@'            reduce using rule 81
+	'@@'           reduce using rule 81
+	'=='           reduce using rule 81
+	'!='           reduce using rule 81
+	'>'            reduce using rule 81
+	'<'            reduce using rule 81
+	'+'            reduce using rule 81
+	'-'            reduce using rule 81
+	'*'            reduce using rule 81
+	'/'            reduce using rule 81
+	'%'            reduce using rule 81
+	'('            reduce using rule 81
+	')'            reduce using rule 81
+	'{'            reduce using rule 81
+	'}'            reduce using rule 81
+	'['            reduce using rule 81
+	','            reduce using rule 81
+	';'            reduce using rule 81
+	%eof           reduce using rule 81
+
+
+State 202
+
+	Args_ -> Args_ ',' . Arg                            (rule 78)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	discard        shift, and enter state 123
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 119
+	Bin            goto state 17
+	Arg            goto state 234
+	App            goto state 18
+	Atom           goto state 19
+
+State 203
+
+	App -> App '[' Types ']' .                          (rule 83)
+
+	else           reduce using rule 83
+	let            reduce using rule 83
+	run            reduce using rule 83
+	then           reduce using rule 83
+	type           reduce using rule 83
+	'.'            reduce using rule 83
+	'&&'           reduce using rule 83
+	'||'           reduce using rule 83
+	'<='           reduce using rule 83
+	'>='           reduce using rule 83
+	'@'            reduce using rule 83
+	'@@'           reduce using rule 83
+	'=='           reduce using rule 83
+	'!='           reduce using rule 83
+	'>'            reduce using rule 83
+	'<'            reduce using rule 83
+	'+'            reduce using rule 83
+	'-'            reduce using rule 83
+	'*'            reduce using rule 83
+	'/'            reduce using rule 83
+	'%'            reduce using rule 83
+	'('            reduce using rule 83
+	')'            reduce using rule 83
+	'{'            reduce using rule 83
+	'}'            reduce using rule 83
+	'['            reduce using rule 83
+	','            reduce using rule 83
+	';'            reduce using rule 83
+	%eof           reduce using rule 83
+
+
+State 204
+
+	Types_ -> Types_ ',' . Type                         (rule 103)
+
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
+
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 233
+	TApp           goto state 86
+	TAtom          goto state 87
+
+State 205
+
+	Ctors_ -> Ctor OptSemi .                            (rule 141)
+
+	capid          reduce using rule 141
+	'}'            reduce using rule 141
+
+
+State 206
+
+	Defn -> type Ct '{' Ctors '}' .                     (rule 129)
+
+	let            reduce using rule 129
+	run            reduce using rule 129
+	type           reduce using rule 129
+	';'            reduce using rule 129
+	%eof           reduce using rule 129
+
+
+State 207
+
+	Ctors_ -> Ctors_ Ctor . OptSemi                     (rule 140)
+
+	capid          reduce using rule 10
+	'}'            reduce using rule 10
+	';'            shift, and enter state 34
+
+	OptSemi        goto state 232
+
+State 208
+
+	Ctor -> Ct '(' . TypedParams ')'                    (rule 144)
+
+	id             shift, and enter state 11
+	')'            reduce using rule 139
+
+	Id             goto state 153
+	TypedParams_   goto state 154
+	TypedParam     goto state 155
+	TypedParams    goto state 231
+
+State 209
+
+	Defn -> type Ct '[' Params ']' . '{' Ctors '}'      (rule 128)
+
+	'{'            shift, and enter state 230
+
+
+State 210
+
+	PropType -> Id . ':' Type                           (rule 102)
+
+	':'            shift, and enter state 229
+
+
+State 211
+
+	PropTypes -> PropTypes . ',' PropType               (rule 100)
+	TAtom -> '{' PropTypes . '}'                        (rule 113)
+
+	'}'            shift, and enter state 227
+	','            shift, and enter state 228
+
+
+State 212
+
+	PropTypes -> PropType .                             (rule 101)
+
+	'}'            reduce using rule 101
+	','            reduce using rule 101
+
+
+State 213
+
+	TAtom -> '(' Types . ')'                            (rule 112)
+
+	')'            shift, and enter state 226
+
+
+State 214
+
+	TAtom -> '(' ')' .                                  (rule 114)
+
+	let            reduce using rule 114
+	run            reduce using rule 114
+	type           reduce using rule 114
+	'='            reduce using rule 114
+	')'            reduce using rule 114
+	'}'            reduce using rule 114
+	'['            reduce using rule 114
+	']'            reduce using rule 114
+	','            reduce using rule 114
+	';'            reduce using rule 114
+	%eof           reduce using rule 114
+
+
+State 215
+
+	Type -> fn '(' . Types ')' '->' Type                (rule 106)
+	Type -> fn '(' . ')' '->' Type                      (rule 107)
+
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	')'            shift, and enter state 225
+	'{'            shift, and enter state 95
+
+	Id             goto state 83
+	Ct             goto state 84
+	Types_         goto state 116
+	Types          goto state 224
+	Type           goto state 118
+	TApp           goto state 86
+	TAtom          goto state 87
+
+State 216
+
+	Type -> fn '[' . Params ']' '->' Type               (rule 108)
+
+	id             shift, and enter state 11
+
+	Id             goto state 80
+	Params_        goto state 81
+	Params         goto state 223
+
+State 217
+
+	TApp -> TApp '[' . Types ']'                        (rule 110)
+
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
+
+	Id             goto state 83
+	Ct             goto state 84
+	Types_         goto state 116
+	Types          goto state 222
+	Type           goto state 118
+	TApp           goto state 86
+	TAtom          goto state 87
+
+State 218
+
+	Defn -> type Id '[' Params ']' . '=' Type           (rule 126)
+
+	'='            shift, and enter state 221
+
+
+State 219
+
+	Params_ -> Params_ ',' . Id                         (rule 4)
+
+	id             shift, and enter state 11
+
+	Id             goto state 220
+
+State 220
+
+	Params_ -> Params_ ',' Id .                         (rule 4)
+
+	')'            reduce using rule 4
+	']'            reduce using rule 4
+	','            reduce using rule 4
+
+
+State 221
+
+	Defn -> type Id '[' Params ']' '=' . Type           (rule 126)
+
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
+
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 292
+	TApp           goto state 86
+	TAtom          goto state 87
+
+State 222
+
+	TApp -> TApp '[' Types . ']'                        (rule 110)
+
+	']'            shift, and enter state 291
+
+
+State 223
+
+	Type -> fn '[' Params . ']' '->' Type               (rule 108)
+
+	']'            shift, and enter state 290
+
+
+State 224
+
+	Type -> fn '(' Types . ')' '->' Type                (rule 106)
+
+	')'            shift, and enter state 289
+
+
+State 225
+
+	Type -> fn '(' ')' . '->' Type                      (rule 107)
+
+	'->'           shift, and enter state 288
+
+
+State 226
+
+	TAtom -> '(' Types ')' .                            (rule 112)
+
+	let            reduce using rule 112
+	run            reduce using rule 112
+	type           reduce using rule 112
+	'='            reduce using rule 112
+	')'            reduce using rule 112
+	'}'            reduce using rule 112
+	'['            reduce using rule 112
+	']'            reduce using rule 112
+	','            reduce using rule 112
+	';'            reduce using rule 112
+	%eof           reduce using rule 112
+
+
+State 227
+
+	TAtom -> '{' PropTypes '}' .                        (rule 113)
+
+	let            reduce using rule 113
+	run            reduce using rule 113
+	type           reduce using rule 113
+	'='            reduce using rule 113
+	')'            reduce using rule 113
+	'}'            reduce using rule 113
+	'['            reduce using rule 113
+	']'            reduce using rule 113
+	','            reduce using rule 113
+	';'            reduce using rule 113
+	%eof           reduce using rule 113
+
+
+State 228
+
+	PropTypes -> PropTypes ',' . PropType               (rule 100)
+
+	id             shift, and enter state 11
+
+	Id             goto state 210
+	PropType       goto state 287
+
+State 229
+
+	PropType -> Id ':' . Type                           (rule 102)
+
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
+
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 286
+	TApp           goto state 86
+	TAtom          goto state 87
+
+State 230
+
+	Defn -> type Ct '[' Params ']' '{' . Ctors '}'      (rule 128)
+
+	capid          shift, and enter state 12
+
+	Ct             goto state 97
+	Ctors_         goto state 98
+	Ctors          goto state 285
+	Ctor           goto state 100
+
+State 231
+
+	Ctor -> Ct '(' TypedParams . ')'                    (rule 144)
+
+	')'            shift, and enter state 284
+
+
+State 232
+
+	Ctors_ -> Ctors_ Ctor OptSemi .                     (rule 140)
+
+	capid          reduce using rule 140
+	'}'            reduce using rule 140
+
+
+State 233
+
+	Types_ -> Types_ ',' Type .                         (rule 103)
+
+	')'            reduce using rule 103
+	']'            reduce using rule 103
+	','            reduce using rule 103
+
+
+State 234
+
+	Args_ -> Args_ ',' Arg .                            (rule 78)
+
+	')'            reduce using rule 78
+	','            reduce using rule 78
+
+
+State 235
+
+	Expr -> fn '[' Params ']' '->' . Expr               (rule 59)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 283
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 236
+
+	Expr -> fn '(' OptParams ')' '->' . Expr            (rule 58)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 282
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 237
+
+	Expr -> if Expr then Expr else . Expr               (rule 57)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 281
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 238
+
+	Matches -> Match ';' .                              (rule 54)
+
+	false          reduce using rule 54
+	true           reduce using rule 54
+	discard        reduce using rule 54
+	id             reduce using rule 54
+	capid          reduce using rule 54
+	strlit         reduce using rule 54
+	nat            reduce using rule 54
+	nonnat         reduce using rule 54
+	floatlit       reduce using rule 54
+	'('            reduce using rule 54
+	'{'            reduce using rule 54
+	'}'            reduce using rule 54
+
+
+State 239
+
+	Matches -> Matches Match . ';'                      (rule 53)
+
+	';'            shift, and enter state 280
+
+
+State 240
+
+	Atom -> match Expr '{' Matches '}' .                (rule 99)
+
+	else           reduce using rule 99
+	let            reduce using rule 99
+	run            reduce using rule 99
+	then           reduce using rule 99
+	type           reduce using rule 99
+	'.'            reduce using rule 99
+	'&&'           reduce using rule 99
+	'||'           reduce using rule 99
+	'<='           reduce using rule 99
+	'>='           reduce using rule 99
+	'@'            reduce using rule 99
+	'@@'           reduce using rule 99
+	'=='           reduce using rule 99
+	'!='           reduce using rule 99
+	'>'            reduce using rule 99
+	'<'            reduce using rule 99
+	'+'            reduce using rule 99
+	'-'            reduce using rule 99
+	'*'            reduce using rule 99
+	'/'            reduce using rule 99
+	'%'            reduce using rule 99
+	'('            reduce using rule 99
+	')'            reduce using rule 99
+	'{'            reduce using rule 99
+	'}'            reduce using rule 99
+	'['            reduce using rule 99
+	','            reduce using rule 99
+	';'            reduce using rule 99
+	%eof           reduce using rule 99
+
+
+State 241
+
+	Match -> Pattern '->' . Expr                        (rule 55)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 279
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 242
+
+	Stmts -> Stmts . Stmt                               (rule 33)
+	VoidBlock -> Stmts .                                (rule 43)
+
+	debug          shift, and enter state 46
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	let            shift, and enter state 47
+	match          shift, and enter state 22
+	while          shift, and enter state 48
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+	'}'            reduce using rule 43
+
+	Id             goto state 148
+	Ct             goto state 14
+	Stmt           goto state 149
+	Int            goto state 15
+	Expr           goto state 244
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 243
+
+	Stmt -> while Expr '{' VoidBlock . '}' OptSemi      (rule 41)
+
+	'}'            shift, and enter state 278
+
+
+State 244
+
+	Stmt -> Expr . ';'                                  (rule 38)
+
+	';'            shift, and enter state 144
+
+
+State 245
+
+	Stmt -> let Id '=' Expr . ';'                       (rule 35)
+
+	';'            shift, and enter state 277
+
+
+State 246
+
+	DeepPattern -> Ct '(' Patterns . ')'                (rule 30)
+
+	')'            shift, and enter state 276
+
+
+State 247
+
+	Stmt -> let DeepPattern '=' Expr . ';'              (rule 37)
+
+	';'            shift, and enter state 275
+
+
+State 248
+
+	Stmt -> let mut Id '=' . Expr ';'                   (rule 36)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 274
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 249
+
+	Pattern -> '(' ')' .                                (rule 21)
+
+	'->'           reduce using rule 21
+	')'            reduce using rule 21
+	'}'            reduce using rule 21
+	','            reduce using rule 21
+
+
+State 250
+
+	DeepPattern -> '(' Patterns ')' .                   (rule 31)
+
+	'->'           reduce using rule 31
+	'='            reduce using rule 31
+	')'            reduce using rule 31
+	'}'            reduce using rule 31
+	','            reduce using rule 31
+
+
 State 251
+
+	Patterns_ -> Patterns_ ',' . Pattern                (rule 11)
+
+	false          shift, and enter state 181
+	true           shift, and enter state 182
+	discard        shift, and enter state 183
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 184
+	nat            shift, and enter state 185
+	nonnat         shift, and enter state 186
+	floatlit       shift, and enter state 187
+	'('            shift, and enter state 188
+	'{'            shift, and enter state 141
+
+	Id             goto state 174
+	Ct             goto state 175
+	IntPatt        goto state 178
+	Pattern        goto state 273
+	DeepPattern    goto state 180
+
+State 252
+
+	PropPattern -> '=' Id .                             (rule 19)
+
+	'}'            reduce using rule 19
+	','            reduce using rule 19
+
+
+State 253
+
+	DeepPattern -> '{' PropPatterns '}' .               (rule 32)
+
+	'->'           reduce using rule 32
+	'='            reduce using rule 32
+	')'            reduce using rule 32
+	'}'            reduce using rule 32
+	','            reduce using rule 32
+
+
+State 254
+
+	PropPatterns -> PropPatterns ',' . PropPattern      (rule 16)
+
+	id             shift, and enter state 11
+	'='            shift, and enter state 173
+
+	Id             goto state 170
+	PropPattern    goto state 272
+
+State 255
+
+	PropPattern -> Id '=' . Pattern                     (rule 18)
+
+	false          shift, and enter state 181
+	true           shift, and enter state 182
+	discard        shift, and enter state 183
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 184
+	nat            shift, and enter state 185
+	nonnat         shift, and enter state 186
+	floatlit       shift, and enter state 187
+	'('            shift, and enter state 188
+	'{'            shift, and enter state 141
+
+	Id             goto state 174
+	Ct             goto state 175
+	IntPatt        goto state 178
+	Pattern        goto state 271
+	DeepPattern    goto state 180
+
+State 256
+
+	Prop -> Id '=' . Expr                               (rule 48)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 270
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 257
 
 	Stmt -> Id '=' Expr . ';'                           (rule 39)
 
-	';'            shift, and enter state 252
+	';'            shift, and enter state 258
 
 
-State 252
+State 258
 
 	Stmt -> Id '=' Expr ';' .                           (rule 39)
 
@@ -4878,127 +4957,127 @@ State 252
 	'}'            reduce using rule 39
 
 
-State 253
-
-	Defn -> let Id '[' Params ']' ':' . Type '=' Expr    (rule 127)
-
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
-
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 263
-	TApp           goto state 86
-	TAtom          goto state 87
-
-State 254
-
-	Defn -> let Id '[' Params ']' '(' . TypedParams ')' ':' Type '=' Expr    (rule 129)
-
-	id             shift, and enter state 11
-	')'            reduce using rule 134
-
-	Id             goto state 149
-	TypedParams_   goto state 150
-	TypedParam     goto state 151
-	TypedParams    goto state 262
-
-State 255
-
-	TypedParam -> Id ':' Type .                         (rule 132)
-
-	')'            reduce using rule 132
-	','            reduce using rule 132
-
-
-State 256
-
-	TypedParams_ -> TypedParams_ ',' TypedParam .       (rule 130)
-
-	')'            reduce using rule 130
-	','            reduce using rule 130
-
-
-State 257
-
-	Defn -> let Id '(' TypedParams ')' ':' . Type '=' Expr    (rule 128)
-
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
-
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 261
-	TApp           goto state 86
-	TAtom          goto state 87
-
-State 258
-
-	Defn -> let Id ':' Type '=' Expr .                  (rule 125)
-
-	let            reduce using rule 125
-	run            reduce using rule 125
-	type           reduce using rule 125
-	';'            reduce using rule 125
-	%eof           reduce using rule 125
-
-
 State 259
 
-	Defn -> let foreign Id ':' Type '=' . strlit        (rule 126)
+	Defn -> let Id '[' Params ']' ':' . Type '=' Expr    (rule 132)
 
-	strlit         shift, and enter state 260
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
 
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 269
+	TApp           goto state 86
+	TAtom          goto state 87
 
 State 260
 
-	Defn -> let foreign Id ':' Type '=' strlit .        (rule 126)
+	Defn -> let Id '[' Params ']' '(' . TypedParams ')' ':' Type '=' Expr    (rule 134)
 
-	let            reduce using rule 126
-	run            reduce using rule 126
-	type           reduce using rule 126
-	';'            reduce using rule 126
-	%eof           reduce using rule 126
+	id             shift, and enter state 11
+	')'            reduce using rule 139
 
+	Id             goto state 153
+	TypedParams_   goto state 154
+	TypedParam     goto state 155
+	TypedParams    goto state 268
 
 State 261
 
-	Defn -> let Id '(' TypedParams ')' ':' Type . '=' Expr    (rule 128)
+	TypedParam -> Id ':' Type .                         (rule 137)
 
-	'='            shift, and enter state 295
+	')'            reduce using rule 137
+	','            reduce using rule 137
 
 
 State 262
 
-	Defn -> let Id '[' Params ']' '(' TypedParams . ')' ':' Type '=' Expr    (rule 129)
+	TypedParams_ -> TypedParams_ ',' TypedParam .       (rule 135)
 
-	')'            shift, and enter state 294
+	')'            reduce using rule 135
+	','            reduce using rule 135
 
 
 State 263
 
-	Defn -> let Id '[' Params ']' ':' Type . '=' Expr    (rule 127)
+	Defn -> let Id '(' TypedParams ')' ':' . Type '=' Expr    (rule 133)
 
-	'='            shift, and enter state 293
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
 
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 267
+	TApp           goto state 86
+	TAtom          goto state 87
 
 State 264
+
+	Defn -> let Id ':' Type '=' Expr .                  (rule 130)
+
+	let            reduce using rule 130
+	run            reduce using rule 130
+	type           reduce using rule 130
+	';'            reduce using rule 130
+	%eof           reduce using rule 130
+
+
+State 265
+
+	Defn -> let foreign Id ':' Type '=' . strlit        (rule 131)
+
+	strlit         shift, and enter state 266
+
+
+State 266
+
+	Defn -> let foreign Id ':' Type '=' strlit .        (rule 131)
+
+	let            reduce using rule 131
+	run            reduce using rule 131
+	type           reduce using rule 131
+	';'            reduce using rule 131
+	%eof           reduce using rule 131
+
+
+State 267
+
+	Defn -> let Id '(' TypedParams ')' ':' Type . '=' Expr    (rule 133)
+
+	'='            shift, and enter state 301
+
+
+State 268
+
+	Defn -> let Id '[' Params ']' '(' TypedParams . ')' ':' Type '=' Expr    (rule 134)
+
+	')'            shift, and enter state 300
+
+
+State 269
+
+	Defn -> let Id '[' Params ']' ':' Type . '=' Expr    (rule 132)
+
+	'='            shift, and enter state 299
+
+
+State 270
 
 	Prop -> Id '=' Expr .                               (rule 48)
 
@@ -5006,7 +5085,7 @@ State 264
 	','            reduce using rule 48
 
 
-State 265
+State 271
 
 	PropPattern -> Id '=' Pattern .                     (rule 18)
 
@@ -5014,7 +5093,7 @@ State 265
 	','            reduce using rule 18
 
 
-State 266
+State 272
 
 	PropPatterns -> PropPatterns ',' PropPattern .      (rule 16)
 
@@ -5022,7 +5101,7 @@ State 266
 	','            reduce using rule 16
 
 
-State 267
+State 273
 
 	Patterns_ -> Patterns_ ',' Pattern .                (rule 11)
 
@@ -5030,14 +5109,14 @@ State 267
 	','            reduce using rule 11
 
 
-State 268
+State 274
 
 	Stmt -> let mut Id '=' Expr . ';'                   (rule 36)
 
-	';'            shift, and enter state 292
+	';'            shift, and enter state 298
 
 
-State 269
+State 275
 
 	Stmt -> let DeepPattern '=' Expr ';' .              (rule 37)
 
@@ -5060,7 +5139,7 @@ State 269
 	'}'            reduce using rule 37
 
 
-State 270
+State 276
 
 	DeepPattern -> Ct '(' Patterns ')' .                (rule 30)
 
@@ -5071,7 +5150,7 @@ State 270
 	','            reduce using rule 30
 
 
-State 271
+State 277
 
 	Stmt -> let Id '=' Expr ';' .                       (rule 35)
 
@@ -5094,7 +5173,7 @@ State 271
 	'}'            reduce using rule 35
 
 
-State 272
+State 278
 
 	Stmt -> while Expr '{' VoidBlock '}' . OptSemi      (rule 41)
 
@@ -5117,16 +5196,16 @@ State 272
 	'}'            reduce using rule 10
 	';'            shift, and enter state 34
 
-	OptSemi        goto state 291
+	OptSemi        goto state 297
 
-State 273
+State 279
 
 	Match -> Pattern '->' Expr .                        (rule 55)
 
 	';'            reduce using rule 55
 
 
-State 274
+State 280
 
 	Matches -> Matches Match ';' .                      (rule 53)
 
@@ -5144,7 +5223,7 @@ State 274
 	'}'            reduce using rule 53
 
 
-State 275
+State 281
 
 	Expr -> if Expr then Expr else Expr .               (rule 57)
 
@@ -5161,7 +5240,7 @@ State 275
 	%eof           reduce using rule 57
 
 
-State 276
+State 282
 
 	Expr -> fn '(' OptParams ')' '->' Expr .            (rule 58)
 
@@ -5178,7 +5257,7 @@ State 276
 	%eof           reduce using rule 58
 
 
-State 277
+State 283
 
 	Expr -> fn '[' Params ']' '->' Expr .               (rule 59)
 
@@ -5195,125 +5274,41 @@ State 277
 	%eof           reduce using rule 59
 
 
-State 278
-
-	Ctor -> Ct '(' TypedParams ')' .                    (rule 139)
-
-	capid          reduce using rule 139
-	'}'            reduce using rule 139
-	';'            reduce using rule 139
-
-
-State 279
-
-	Defn -> type Ct '[' Params ']' '{' Ctors . '}'      (rule 123)
-
-	'}'            shift, and enter state 290
-
-
-State 280
-
-	PropType -> Id ':' Type .                           (rule 97)
-
-	'}'            reduce using rule 97
-	','            reduce using rule 97
-
-
-State 281
-
-	PropTypes -> PropTypes ',' PropType .               (rule 95)
-
-	'}'            reduce using rule 95
-	','            reduce using rule 95
-
-
-State 282
-
-	Type -> fn '(' ')' '->' . Type                      (rule 102)
-
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
-
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 289
-	TApp           goto state 86
-	TAtom          goto state 87
-
-State 283
-
-	Type -> fn '(' Types ')' . '->' Type                (rule 101)
-
-	'->'           shift, and enter state 288
-
-
 State 284
 
-	Type -> fn '[' Params ']' . '->' Type               (rule 103)
+	Ctor -> Ct '(' TypedParams ')' .                    (rule 144)
 
-	'->'           shift, and enter state 287
+	capid          reduce using rule 144
+	'}'            reduce using rule 144
+	';'            reduce using rule 144
 
 
 State 285
 
-	TApp -> TApp '[' Types ']' .                        (rule 105)
+	Defn -> type Ct '[' Params ']' '{' Ctors . '}'      (rule 128)
 
-	let            reduce using rule 105
-	run            reduce using rule 105
-	type           reduce using rule 105
-	'='            reduce using rule 105
-	')'            reduce using rule 105
-	'}'            reduce using rule 105
-	'['            reduce using rule 105
-	']'            reduce using rule 105
-	','            reduce using rule 105
-	';'            reduce using rule 105
-	%eof           reduce using rule 105
+	'}'            shift, and enter state 296
 
 
 State 286
 
-	Defn -> type Id '[' Params ']' '=' Type .           (rule 121)
+	PropType -> Id ':' Type .                           (rule 102)
 
-	let            reduce using rule 121
-	run            reduce using rule 121
-	type           reduce using rule 121
-	';'            reduce using rule 121
-	%eof           reduce using rule 121
+	'}'            reduce using rule 102
+	','            reduce using rule 102
 
 
 State 287
 
-	Type -> fn '[' Params ']' '->' . Type               (rule 103)
+	PropTypes -> PropTypes ',' PropType .               (rule 100)
 
-	fn             shift, and enter state 88
-	float          shift, and enter state 89
-	int            shift, and enter state 90
-	str            shift, and enter state 91
-	bool           shift, and enter state 92
-	void           shift, and enter state 93
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	'('            shift, and enter state 94
-	'{'            shift, and enter state 95
+	'}'            reduce using rule 100
+	','            reduce using rule 100
 
-	Id             goto state 83
-	Ct             goto state 84
-	Type           goto state 300
-	TApp           goto state 86
-	TAtom          goto state 87
 
 State 288
 
-	Type -> fn '(' Types ')' '->' . Type                (rule 101)
+	Type -> fn '(' ')' '->' . Type                      (rule 107)
 
 	fn             shift, and enter state 88
 	float          shift, and enter state 89
@@ -5328,38 +5323,122 @@ State 288
 
 	Id             goto state 83
 	Ct             goto state 84
-	Type           goto state 299
+	Type           goto state 295
 	TApp           goto state 86
 	TAtom          goto state 87
 
 State 289
 
-	Type -> fn '(' ')' '->' Type .                      (rule 102)
+	Type -> fn '(' Types ')' . '->' Type                (rule 106)
 
-	let            reduce using rule 102
-	run            reduce using rule 102
-	type           reduce using rule 102
-	'='            reduce using rule 102
-	')'            reduce using rule 102
-	'}'            reduce using rule 102
-	']'            reduce using rule 102
-	','            reduce using rule 102
-	';'            reduce using rule 102
-	%eof           reduce using rule 102
+	'->'           shift, and enter state 294
 
 
 State 290
 
-	Defn -> type Ct '[' Params ']' '{' Ctors '}' .      (rule 123)
+	Type -> fn '[' Params ']' . '->' Type               (rule 108)
 
-	let            reduce using rule 123
-	run            reduce using rule 123
-	type           reduce using rule 123
-	';'            reduce using rule 123
-	%eof           reduce using rule 123
+	'->'           shift, and enter state 293
 
 
 State 291
+
+	TApp -> TApp '[' Types ']' .                        (rule 110)
+
+	let            reduce using rule 110
+	run            reduce using rule 110
+	type           reduce using rule 110
+	'='            reduce using rule 110
+	')'            reduce using rule 110
+	'}'            reduce using rule 110
+	'['            reduce using rule 110
+	']'            reduce using rule 110
+	','            reduce using rule 110
+	';'            reduce using rule 110
+	%eof           reduce using rule 110
+
+
+State 292
+
+	Defn -> type Id '[' Params ']' '=' Type .           (rule 126)
+
+	let            reduce using rule 126
+	run            reduce using rule 126
+	type           reduce using rule 126
+	';'            reduce using rule 126
+	%eof           reduce using rule 126
+
+
+State 293
+
+	Type -> fn '[' Params ']' '->' . Type               (rule 108)
+
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
+
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 306
+	TApp           goto state 86
+	TAtom          goto state 87
+
+State 294
+
+	Type -> fn '(' Types ')' '->' . Type                (rule 106)
+
+	fn             shift, and enter state 88
+	float          shift, and enter state 89
+	int            shift, and enter state 90
+	str            shift, and enter state 91
+	bool           shift, and enter state 92
+	void           shift, and enter state 93
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	'('            shift, and enter state 94
+	'{'            shift, and enter state 95
+
+	Id             goto state 83
+	Ct             goto state 84
+	Type           goto state 305
+	TApp           goto state 86
+	TAtom          goto state 87
+
+State 295
+
+	Type -> fn '(' ')' '->' Type .                      (rule 107)
+
+	let            reduce using rule 107
+	run            reduce using rule 107
+	type           reduce using rule 107
+	'='            reduce using rule 107
+	')'            reduce using rule 107
+	'}'            reduce using rule 107
+	']'            reduce using rule 107
+	','            reduce using rule 107
+	';'            reduce using rule 107
+	%eof           reduce using rule 107
+
+
+State 296
+
+	Defn -> type Ct '[' Params ']' '{' Ctors '}' .      (rule 128)
+
+	let            reduce using rule 128
+	run            reduce using rule 128
+	type           reduce using rule 128
+	';'            reduce using rule 128
+	%eof           reduce using rule 128
+
+
+State 297
 
 	Stmt -> while Expr '{' VoidBlock '}' OptSemi .      (rule 41)
 
@@ -5382,7 +5461,7 @@ State 291
 	'}'            reduce using rule 41
 
 
-State 292
+State 298
 
 	Stmt -> let mut Id '=' Expr ';' .                   (rule 36)
 
@@ -5405,42 +5484,9 @@ State 292
 	'}'            reduce using rule 36
 
 
-State 293
+State 299
 
-	Defn -> let Id '[' Params ']' ':' Type '=' . Expr    (rule 127)
-
-	fn             shift, and enter state 20
-	if             shift, and enter state 21
-	match          shift, and enter state 22
-	false          shift, and enter state 23
-	true           shift, and enter state 24
-	id             shift, and enter state 11
-	capid          shift, and enter state 12
-	strlit         shift, and enter state 25
-	nat            shift, and enter state 26
-	nonnat         shift, and enter state 27
-	floatlit       shift, and enter state 28
-	'('            shift, and enter state 29
-	'{'            shift, and enter state 30
-
-	Id             goto state 13
-	Ct             goto state 14
-	Int            goto state 15
-	Expr           goto state 298
-	Bin            goto state 17
-	App            goto state 18
-	Atom           goto state 19
-
-State 294
-
-	Defn -> let Id '[' Params ']' '(' TypedParams ')' . ':' Type '=' Expr    (rule 129)
-
-	':'            shift, and enter state 297
-
-
-State 295
-
-	Defn -> let Id '(' TypedParams ')' ':' Type '=' . Expr    (rule 128)
+	Defn -> let Id '[' Params ']' ':' Type '=' . Expr    (rule 132)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
@@ -5459,25 +5505,58 @@ State 295
 	Id             goto state 13
 	Ct             goto state 14
 	Int            goto state 15
-	Expr           goto state 296
+	Expr           goto state 304
 	Bin            goto state 17
 	App            goto state 18
 	Atom           goto state 19
 
-State 296
+State 300
 
-	Defn -> let Id '(' TypedParams ')' ':' Type '=' Expr .    (rule 128)
+	Defn -> let Id '[' Params ']' '(' TypedParams ')' . ':' Type '=' Expr    (rule 134)
 
-	let            reduce using rule 128
-	run            reduce using rule 128
-	type           reduce using rule 128
-	';'            reduce using rule 128
-	%eof           reduce using rule 128
+	':'            shift, and enter state 303
 
 
-State 297
+State 301
 
-	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' . Type '=' Expr    (rule 129)
+	Defn -> let Id '(' TypedParams ')' ':' Type '=' . Expr    (rule 133)
+
+	fn             shift, and enter state 20
+	if             shift, and enter state 21
+	match          shift, and enter state 22
+	false          shift, and enter state 23
+	true           shift, and enter state 24
+	id             shift, and enter state 11
+	capid          shift, and enter state 12
+	strlit         shift, and enter state 25
+	nat            shift, and enter state 26
+	nonnat         shift, and enter state 27
+	floatlit       shift, and enter state 28
+	'('            shift, and enter state 29
+	'{'            shift, and enter state 30
+
+	Id             goto state 13
+	Ct             goto state 14
+	Int            goto state 15
+	Expr           goto state 302
+	Bin            goto state 17
+	App            goto state 18
+	Atom           goto state 19
+
+State 302
+
+	Defn -> let Id '(' TypedParams ')' ':' Type '=' Expr .    (rule 133)
+
+	let            reduce using rule 133
+	run            reduce using rule 133
+	type           reduce using rule 133
+	';'            reduce using rule 133
+	%eof           reduce using rule 133
+
+
+State 303
+
+	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' . Type '=' Expr    (rule 134)
 
 	fn             shift, and enter state 88
 	float          shift, and enter state 89
@@ -5492,63 +5571,63 @@ State 297
 
 	Id             goto state 83
 	Ct             goto state 84
-	Type           goto state 301
+	Type           goto state 307
 	TApp           goto state 86
 	TAtom          goto state 87
 
-State 298
+State 304
 
-	Defn -> let Id '[' Params ']' ':' Type '=' Expr .    (rule 127)
+	Defn -> let Id '[' Params ']' ':' Type '=' Expr .    (rule 132)
 
-	let            reduce using rule 127
-	run            reduce using rule 127
-	type           reduce using rule 127
-	';'            reduce using rule 127
-	%eof           reduce using rule 127
-
-
-State 299
-
-	Type -> fn '(' Types ')' '->' Type .                (rule 101)
-
-	let            reduce using rule 101
-	run            reduce using rule 101
-	type           reduce using rule 101
-	'='            reduce using rule 101
-	')'            reduce using rule 101
-	'}'            reduce using rule 101
-	']'            reduce using rule 101
-	','            reduce using rule 101
-	';'            reduce using rule 101
-	%eof           reduce using rule 101
+	let            reduce using rule 132
+	run            reduce using rule 132
+	type           reduce using rule 132
+	';'            reduce using rule 132
+	%eof           reduce using rule 132
 
 
-State 300
+State 305
 
-	Type -> fn '[' Params ']' '->' Type .               (rule 103)
+	Type -> fn '(' Types ')' '->' Type .                (rule 106)
 
-	let            reduce using rule 103
-	run            reduce using rule 103
-	type           reduce using rule 103
-	'='            reduce using rule 103
-	')'            reduce using rule 103
-	'}'            reduce using rule 103
-	']'            reduce using rule 103
-	','            reduce using rule 103
-	';'            reduce using rule 103
-	%eof           reduce using rule 103
-
-
-State 301
-
-	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' Type . '=' Expr    (rule 129)
-
-	'='            shift, and enter state 302
+	let            reduce using rule 106
+	run            reduce using rule 106
+	type           reduce using rule 106
+	'='            reduce using rule 106
+	')'            reduce using rule 106
+	'}'            reduce using rule 106
+	']'            reduce using rule 106
+	','            reduce using rule 106
+	';'            reduce using rule 106
+	%eof           reduce using rule 106
 
 
-State 302
+State 306
 
-	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' Type '=' . Expr    (rule 129)
+	Type -> fn '[' Params ']' '->' Type .               (rule 108)
+
+	let            reduce using rule 108
+	run            reduce using rule 108
+	type           reduce using rule 108
+	'='            reduce using rule 108
+	')'            reduce using rule 108
+	'}'            reduce using rule 108
+	']'            reduce using rule 108
+	','            reduce using rule 108
+	';'            reduce using rule 108
+	%eof           reduce using rule 108
+
+
+State 307
+
+	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' Type . '=' Expr    (rule 134)
+
+	'='            shift, and enter state 308
+
+
+State 308
+
+	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' Type '=' . Expr    (rule 134)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
@@ -5567,26 +5646,26 @@ State 302
 	Id             goto state 13
 	Ct             goto state 14
 	Int            goto state 15
-	Expr           goto state 303
+	Expr           goto state 309
 	Bin            goto state 17
 	App            goto state 18
 	Atom           goto state 19
 
-State 303
+State 309
 
-	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr .    (rule 129)
+	Defn -> let Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr .    (rule 134)
 
-	let            reduce using rule 129
-	run            reduce using rule 129
-	type           reduce using rule 129
-	';'            reduce using rule 129
-	%eof           reduce using rule 129
+	let            reduce using rule 134
+	run            reduce using rule 134
+	type           reduce using rule 134
+	';'            reduce using rule 134
+	%eof           reduce using rule 134
 
 
 -----------------------------------------------------------------------------
 Grammar Totals
 -----------------------------------------------------------------------------
-Number of rules: 140
+Number of rules: 145
 Number of terminals: 53
-Number of non-terminals: 46
-Number of states: 304
+Number of non-terminals: 49
+Number of states: 310
