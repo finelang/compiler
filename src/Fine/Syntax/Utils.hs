@@ -100,31 +100,24 @@ mkAppOrFun r f args =
   fromRight (Right x) = x
   fromRight _ = errorUNREACHABLE
 
-mkBinOrFun :: Op -> Either Range (Expr Parsed) -> Either Range (Expr Parsed) -> Expr Parsed
-mkBinOrFun op (Left lr) (Left rr) =
-  let r = lr <> rr
-      x = Id lr "x"
-      y = Id rr "y"
-   in Fun r (x :| [y]) (Bin r op (Var lr x) (Var rr y))
-mkBinOrFun op (Right left) (Left rr) =
-  let r = range left <> rr
-      x = Id rr "x"
-   in Fun r (x :| []) (Bin r op left (Var rr x))
-mkBinOrFun op (Left lr) (Right right) =
-  let r = lr <> range right
-      x = Id lr "x"
-   in Fun r (x :| []) (Bin r op (Var lr x) right)
-mkBinOrFun op (Right left) (Right right) = Bin (range left <> range right) op left right
+mkBinOrFun :: Range -> Op -> Maybe (Either (Expr Parsed) (Expr Parsed)) -> Expr Parsed
+mkBinOrFun r op Nothing =
+  let x = Id NoRange "x"
+      y = Id NoRange "y"
+   in Fun r (x :| [y]) (Bin r op (Var NoRange x) (Var NoRange y))
+mkBinOrFun r op (Just (Left left)) =
+  let x = Id NoRange "x"
+   in Fun r (x :| []) (Bin r op left (Var NoRange x))
+mkBinOrFun r op (Just (Right right)) =
+  let x = Id NoRange "x"
+   in Fun r (x :| []) (Bin r op (Var NoRange x) right)
 
-mkPipeOrFun :: Either Range (Expr Parsed) -> Either Range (Expr Parsed) -> Expr Parsed
-mkPipeOrFun (Left lr) (Left rr) =
-  let r = lr <> rr
-      f = Id rr "f"
-      x = Id lr "x"
-   in Fun r (x :| [f]) (App r (Var rr f) (Var lr x :| []))
-mkPipeOrFun (Right arg) (Left rr) =
-  let r = range arg <> rr
-      f = Id rr "f"
-   in Fun r (f :| []) (App r (Var rr f) (arg :| []))
-mkPipeOrFun (Left _) (Right f) = f
-mkPipeOrFun (Right arg) (Right f) = App (range arg <> range f) f (arg :| [])
+mkPipeOrFun :: Range -> Maybe (Either (Expr Parsed) (Expr Parsed)) -> Expr Parsed
+mkPipeOrFun r Nothing =
+  let f = Id NoRange "f"
+      x = Id NoRange "x"
+   in Fun r (x :| [f]) (App r (Var NoRange f) (Var NoRange x :| []))
+mkPipeOrFun _ (Just (Left f)) = f
+mkPipeOrFun r (Just (Right arg)) =
+  let f = Id NoRange "f"
+   in Fun r (f :| []) (App r (Var NoRange f) (arg :| []))

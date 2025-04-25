@@ -176,25 +176,22 @@ Expr : Bin                            { $1 }
      | fn '(' OptParams ')' '->' Expr { Fun (range $1 <> range $6) $3 $6 }
      | fn '[' Params ']' '->' Expr    { GenFun (range $1 <> range $6) $3 $6 }
 
-Bin : Operand '|>' Operand  { mkPipeOrFun $1 $3 }
-    | Operand '&&' Operand  { mkBinOrFun And $1 $3 }
-    | Operand '||' Operand  { mkBinOrFun Or $1 $3 }
-    | Operand '<=' Operand  { mkBinOrFun Le $1 $3 }
-    | Operand '>=' Operand  { mkBinOrFun Ge $1 $3 }
-    | Operand '==' Operand  { mkBinOrFun Eq $1 $3 }
-    | Operand '!=' Operand  { mkBinOrFun Neq $1 $3 }
-    | Operand '>' Operand   { mkBinOrFun Gt $1 $3 }
-    | Operand '<' Operand   { mkBinOrFun Lt $1 $3 }
-    | Operand '+' Operand   { mkBinOrFun Add $1 $3 }
-    | Operand '-' Operand   { mkBinOrFun Sub $1 $3 }
-    | Operand '*' Operand   { mkBinOrFun Mult $1 $3 }
-    | Operand '/' Operand   { mkBinOrFun Div $1 $3 }
-    | Operand '%' Operand   { mkBinOrFun Rest $1 $3 }
-    | Operand '@' Operand   { mkBinOrFun Concat $1 $3 }
-    | App                   { $1 }
-
-Operand : Bin     { Right $1 }
-        | discard { Left (range $1) }
+Bin : Bin '|>' Bin  { App (range $1 <> range $3) $3 ($1 :| []) }
+    | Bin '&&' Bin  { Bin (range $1 <> range $3) And $1 $3 }
+    | Bin '||' Bin  { Bin (range $1 <> range $3) Or $1 $3 }
+    | Bin '<=' Bin  { Bin (range $1 <> range $3) Le $1 $3 }
+    | Bin '>=' Bin  { Bin (range $1 <> range $3) Ge $1 $3 }
+    | Bin '==' Bin  { Bin (range $1 <> range $3) Eq $1 $3 }
+    | Bin '!=' Bin  { Bin (range $1 <> range $3) Neq $1 $3 }
+    | Bin '>' Bin   { Bin (range $1 <> range $3) Gt $1 $3 }
+    | Bin '<' Bin   { Bin (range $1 <> range $3) Lt $1 $3 }
+    | Bin '+' Bin   { Bin (range $1 <> range $3) Add $1 $3 }
+    | Bin '-' Bin   { Bin (range $1 <> range $3) Sub $1 $3 }
+    | Bin '*' Bin   { Bin (range $1 <> range $3) Mult $1 $3 }
+    | Bin '/' Bin   { Bin (range $1 <> range $3) Div $1 $3 }
+    | Bin '%' Bin   { Bin (range $1 <> range $3) Rest $1 $3 }
+    | Bin '@' Bin   { Bin (range $1 <> range $3) Concat $1 $3 }
+    | App           { $1 }
 
 Arg : Expr    { Right $1 }
     | discard { Left (range $1) }
@@ -227,6 +224,29 @@ Atom : '(' Exprs ')'                      { if NonEmpty.length $2 > 1 then Tuple
      | match Expr '{' Matches '}'         { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
      | fn '(' OptParams ')' '{' Expr '}'  { Fun (range $1 <> range $7) $3 $6 }
      | fn '(' OptParams ')' '{' Block '}' { Fun (range $1 <> range $7) $3 (Block (range $5 <> range $7) $6) }
+     | PartialBin                         { $1 }
+
+PartialBin : fn '(' Op ')'        { mkBinOrFun (range $1 <> range $4) $3 Nothing }
+           | fn '(' App Op ')'    { mkBinOrFun (range $1 <> range $5) $4 (Just (Right $3)) }
+           | fn '(' Op App ')'    { mkBinOrFun (range $1 <> range $5) $3 (Just (Left $4)) }
+           | fn '(' '|>' ')'      { mkPipeOrFun (range $1 <> range $4) Nothing }
+           | fn '(' App '|>' ')'  { mkPipeOrFun (range $1 <> range $5) (Just (Right $3)) }
+           | fn '(' '|>' App ')'  { mkPipeOrFun (range $1 <> range $5) (Just (Left $4)) }
+
+Op : '&&' { And }
+   | '||' { Or }
+   | '<=' { Le }
+   | '>=' { Ge }
+   | '==' { Eq }
+   | '!=' { Neq }
+   | '<'  { Lt }
+   | '>'  { Gt }
+   | '+'  { Add }
+   | '-'  { Sub }
+   | '*'  { Mult }
+   | '/'  { Div }
+   | '%'  { Rest }
+   | '@'  { Concat }
 
 -- TYPE
 
