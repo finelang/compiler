@@ -79,6 +79,8 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun, mkBinOrFun, mkPipe
 %left '+' '-' %right '@'
 %left '*' '/' '%'
 
+%expect 0
+
 %%
 
 Module : Defns Entry  { ParsedModule (reverse $1) $2 }
