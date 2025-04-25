@@ -115,3 +115,16 @@ mkBinOrFun op (Left lr) (Right right) =
       x = Id lr "x"
    in Fun r (x :| []) (Bin r op (Var lr x) right)
 mkBinOrFun op (Right left) (Right right) = Bin (range left <> range right) op left right
+
+mkPipeOrFun :: Either Range (Expr Parsed) -> Either Range (Expr Parsed) -> Expr Parsed
+mkPipeOrFun (Left lr) (Left rr) =
+  let r = lr <> rr
+      f = Id rr "f"
+      x = Id lr "x"
+   in Fun r (x :| [f]) (App r (Var rr f) (Var lr x :| []))
+mkPipeOrFun (Right arg) (Left rr) =
+  let r = range arg <> rr
+      f = Id rr "f"
+   in Fun r (f :| []) (App r (Var rr f) (arg :| []))
+mkPipeOrFun (Left _) (Right f) = f
+mkPipeOrFun (Right arg) (Right f) = App (range arg <> range f) f (arg :| [])

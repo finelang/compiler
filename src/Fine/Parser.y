@@ -10,7 +10,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
-import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun, mkBinOrFun)
+import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
 }
 
 %name parseTokens
@@ -48,6 +48,7 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun, mkBinOrFun)
   '='       { Token Lex.Assign _ _ }
   '.'       { Token Lex.Dot _ _ }
   ':'       { Token Lex.Colon _ _ }
+  '|>'      { Token Lex.Pipe _ _ }
   '&&'      { Token Lex.And _ _ }
   '||'      { Token Lex.Or _ _ }
   '<='      { Token Lex.Le _ _ }
@@ -71,13 +72,12 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun, mkBinOrFun)
   ','       { Token Lex.Comma _ _ }
   ';'       { Token Lex.Semi _ _ }
 
+%left '|>'
 %right '||'
 %right '&&'
 %nonassoc '<=' '>=' '==' '!=' '<' '>'
 %left '+' '-' %right '@'
 %left '*' '/' '%'
-
-%expect 0
 
 %%
 
@@ -174,7 +174,8 @@ Expr : Bin                            { $1 }
      | fn '(' OptParams ')' '->' Expr { Fun (range $1 <> range $6) $3 $6 }
      | fn '[' Params ']' '->' Expr    { GenFun (range $1 <> range $6) $3 $6 }
 
-Bin : Operand '&&' Operand  { mkBinOrFun And $1 $3 }
+Bin : Operand '|>' Operand  { mkPipeOrFun $1 $3 }
+    | Operand '&&' Operand  { mkBinOrFun And $1 $3 }
     | Operand '||' Operand  { mkBinOrFun Or $1 $3 }
     | Operand '<=' Operand  { mkBinOrFun Le $1 $3 }
     | Operand '>=' Operand  { mkBinOrFun Ge $1 $3 }
@@ -208,20 +209,22 @@ App : App '(' Args ')'  { mkAppOrFun (range $1 <> range $4) $1 $3 }
     | App '.' nat       { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }
     | Atom              { $1 }
 
-Atom ::                           { Expr Parsed }
-Atom : '(' Exprs ')'              { if NonEmpty.length $2 > 1 then Tuple (range $1 <> range $3) $2 else NonEmpty.head $2 }
-     | '(' ')'                    { Literal (range $1 <> range $2) Unit }
-     | '{' Props '}'              { Record (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
-     | '{' Block '}'              { Block (range $1 <> range $3) $2 }
-     | '{' Expr '}'               { $2 }
-     | Int                        { $1 }
-     | floatlit                   { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
-     | true                       { Literal (range $1) (Bool True) }
-     | false                      { Literal (range $1) (Bool False) }
-     | strlit                     { Literal (range $1) (Str $ extractStr $1) }
-     | Id                         { Var (range $1) $1 }
-     | Ct                         { Var (range $1) $1 }
-     | match Expr '{' Matches '}' { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
+Atom ::                                   { Expr Parsed }
+Atom : '(' Exprs ')'                      { if NonEmpty.length $2 > 1 then Tuple (range $1 <> range $3) $2 else NonEmpty.head $2 }
+     | '(' ')'                            { Literal (range $1 <> range $2) Unit }
+     | '{' Props '}'                      { Record (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
+     | '{' Block '}'                      { Block (range $1 <> range $3) $2 }
+     | '{' Expr '}'                       { $2 }
+     | Int                                { $1 }
+     | floatlit                           { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
+     | true                               { Literal (range $1) (Bool True) }
+     | false                              { Literal (range $1) (Bool False) }
+     | strlit                             { Literal (range $1) (Str $ extractStr $1) }
+     | Id                                 { Var (range $1) $1 }
+     | Ct                                 { Var (range $1) $1 }
+     | match Expr '{' Matches '}'         { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
+     | fn '(' OptParams ')' '{' Expr '}'  { Fun (range $1 <> range $7) $3 $6 }
+     | fn '(' OptParams ')' '{' Block '}' { Fun (range $1 <> range $7) $3 (Block (range $5 <> range $7) $6) }
 
 -- TYPE
 

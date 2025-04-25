@@ -63,6 +63,7 @@ tokens :-
   "="                         { mkt Assign }
   "."                         { mkt Dot }
   ":"                         { mkt Colon }
+  "|>"                        { mkt Pipe }
   "&&"                        { mkt And }
   "||"                        { mkt Or }
   "@"                         { mkt Ccat }
@@ -122,6 +123,7 @@ tokens :-
   | Assign
   | Dot
   | Colon
+  | Pipe
   | And | Or
   | Ccat
   | Le | Lt | Ge | Gt | Eq | Neq
