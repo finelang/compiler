@@ -65,7 +65,6 @@ tokens :-
   ":"                         { mkt Colon }
   "&&"                        { mkt And }
   "||"                        { mkt Or }
-  "@@"                        { mkt SpaceCcat }
   "@"                         { mkt Ccat }
   "<="                        { mkt Le }
   ">="                        { mkt Ge }
@@ -124,7 +123,7 @@ tokens :-
   | Dot
   | Colon
   | And | Or
-  | Ccat | SpaceCcat
+  | Ccat
   | Le | Lt | Ge | Gt | Eq | Neq
   | Add | Sub | Mult | Div | Rest
   | Opar

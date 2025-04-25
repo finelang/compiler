@@ -10,7 +10,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
-import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun)
+import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun, mkBinOrFun)
 }
 
 %name parseTokens
@@ -53,7 +53,6 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun)
   '<='      { Token Lex.Le _ _ }
   '>='      { Token Lex.Ge _ _ }
   '@'       { Token Lex.Ccat _ _ }
-  '@@'      { Token Lex.SpaceCcat _ _ }
   '=='      { Token Lex.Eq _ _ }
   '!='      { Token Lex.Neq _ _ }
   '>'       { Token Lex.Gt _ _ }
@@ -75,8 +74,10 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun)
 %right '||'
 %right '&&'
 %nonassoc '<=' '>=' '==' '!=' '<' '>'
-%left '+' '-' %right '@' '@@'
+%left '+' '-' %right '@'
 %left '*' '/' '%'
+
+%expect 0
 
 %%
 
@@ -173,22 +174,24 @@ Expr : Bin                            { $1 }
      | fn '(' OptParams ')' '->' Expr { Fun (range $1 <> range $6) $3 $6 }
      | fn '[' Params ']' '->' Expr    { GenFun (range $1 <> range $6) $3 $6 }
 
-Bin : Bin '&&' Bin  { Bin (range $1 <> range $3) And $1 $3 }
-    | Bin '||' Bin  { Bin (range $1 <> range $3) Or $1 $3 }
-    | Bin '<=' Bin  { Bin (range $1 <> range $3) Le $1 $3 }
-    | Bin '>=' Bin  { Bin (range $1 <> range $3) Ge $1 $3 }
-    | Bin '==' Bin  { Bin (range $1 <> range $3) Eq $1 $3 }
-    | Bin '!=' Bin  { Bin (range $1 <> range $3) Neq $1 $3 }
-    | Bin '>' Bin   { Bin (range $1 <> range $3) Gt $1 $3 }
-    | Bin '<' Bin   { Bin (range $1 <> range $3) Lt $1 $3 }
-    | Bin '+' Bin   { Bin (range $1 <> range $3) Add $1 $3 }
-    | Bin '-' Bin   { Bin (range $1 <> range $3) Sub $1 $3 }
-    | Bin '*' Bin   { Bin (range $1 <> range $3) Mult $1 $3 }
-    | Bin '/' Bin   { Bin (range $1 <> range $3) Div $1 $3 }
-    | Bin '%' Bin   { Bin (range $1 <> range $3) Rest $1 $3 }
-    | Bin '@' Bin   { Bin (range $1 <> range $3) Concat $1 $3 }
-    | Bin '@@' Bin  { Bin (range $1 <> range $3) Concat $1 (Bin NoRange Concat (Literal NoRange (Str " ")) $3) }
-    | App           { $1 }
+Bin : Operand '&&' Operand  { mkBinOrFun And $1 $3 }
+    | Operand '||' Operand  { mkBinOrFun Or $1 $3 }
+    | Operand '<=' Operand  { mkBinOrFun Le $1 $3 }
+    | Operand '>=' Operand  { mkBinOrFun Ge $1 $3 }
+    | Operand '==' Operand  { mkBinOrFun Eq $1 $3 }
+    | Operand '!=' Operand  { mkBinOrFun Neq $1 $3 }
+    | Operand '>' Operand   { mkBinOrFun Gt $1 $3 }
+    | Operand '<' Operand   { mkBinOrFun Lt $1 $3 }
+    | Operand '+' Operand   { mkBinOrFun Add $1 $3 }
+    | Operand '-' Operand   { mkBinOrFun Sub $1 $3 }
+    | Operand '*' Operand   { mkBinOrFun Mult $1 $3 }
+    | Operand '/' Operand   { mkBinOrFun Div $1 $3 }
+    | Operand '%' Operand   { mkBinOrFun Rest $1 $3 }
+    | Operand '@' Operand   { mkBinOrFun Concat $1 $3 }
+    | App                   { $1 }
+
+Operand : Bin     { Right $1 }
+        | discard { Left (range $1) }
 
 Arg : Expr    { Right $1 }
     | discard { Left (range $1) }

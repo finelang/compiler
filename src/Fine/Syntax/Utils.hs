@@ -1,7 +1,7 @@
 module Fine.Syntax.Utils where
 
 import Data.Functor qualified as Functor
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.String.Interpolate (i)
 
@@ -10,8 +10,9 @@ import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (
   Bind (ExprBind, TypeBind),
   Defn (DataDefn, Defn),
-  Expr (App, Data, Fun, GenFun, Var),
+  Expr (App, Bin, Data, Fun, GenFun, Var),
   Id (Id),
+  Op,
   Pattern (..),
   Phase (Parsed),
   Range (NoRange),
@@ -98,3 +99,19 @@ mkAppOrFun r f args =
 
   fromRight (Right x) = x
   fromRight _ = errorUNREACHABLE
+
+mkBinOrFun :: Op -> Either Range (Expr Parsed) -> Either Range (Expr Parsed) -> Expr Parsed
+mkBinOrFun op (Left lr) (Left rr) =
+  let r = lr <> rr
+      x = Id lr "x"
+      y = Id rr "y"
+   in Fun r (x :| [y]) (Bin r op (Var lr x) (Var rr y))
+mkBinOrFun op (Right left) (Left rr) =
+  let r = range left <> rr
+      x = Id rr "x"
+   in Fun r (x :| []) (Bin r op left (Var rr x))
+mkBinOrFun op (Left lr) (Right right) =
+  let r = lr <> range right
+      x = Id lr "x"
+   in Fun r (x :| []) (Bin r op (Var lr x) right)
+mkBinOrFun op (Right left) (Right right) = Bin (range left <> range right) op left right
