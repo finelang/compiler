@@ -87,5 +87,5 @@ renameModule mdule@(Module exprs _ entry) = do
 
 runRenamer :: [Text] -> Module Transformed -> Module Transformed
 runRenamer invalidNames mdule =
-  let initialSubtss = map (\text -> (Id NoRange text, Id NoRange $ Text.append "var$" text)) invalidNames
+  let initialSubtss = map (\text -> (Id NoRange text, Id NoRange $ Text.cons '$' text)) invalidNames
    in runReader (renameModule mdule) (Map.fromList initialSubtss)

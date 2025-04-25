@@ -75,7 +75,7 @@ applyPath mut matched path =
 type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) after typer impl
 
 matchedIdn :: Id
-matchedIdn = Id NoRange "$$matched"
+matchedIdn = Id NoRange "$"
 
 matchedVar :: Expr Ready
 matchedVar = Var () matchedIdn
