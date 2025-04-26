@@ -14,7 +14,7 @@ import Fine.Syntax (
   Module (Module),
   Op (And, Eq),
   Pattern (..),
-  Phase (Ready, Transformed),
+  Phase (Parsed, Ready),
   Range (NoRange),
   idText,
  )
@@ -72,7 +72,7 @@ applyPath mut matched path =
   applyEnd expr (EqualsTo expr') = Left (Bin () Eq expr expr')
   applyEnd expr (Is var) = Right $ (if mut then Mut else Let False) var expr
 
-type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) after typer impl
+type Typed = Parsed -- TODO: remove this line (and import 'Typed' phase) after typer impl
 
 matchedIdn :: Id
 matchedIdn = Id NoRange "$"

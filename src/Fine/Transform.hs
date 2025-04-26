@@ -20,15 +20,12 @@ import Fine.Syntax (
   Id,
   Module (Module),
   ParsedModule (ParsedModule),
-  Phase (Parsed, Transformed),
+  Phase (Parsed),
   Type (..),
   binder,
  )
 import Fine.Syntax.Utils (isFunction)
-import Fine.Transform.Expr (runExprTransformer)
-import Fine.Transform.Type (transformType)
-import Fine.Transform.Vars (alreadyDefined)
-import Fine.Transform.Vars qualified as Vars
+import Fine.Transform.Check qualified as Check
 
 data Env = Env
   { currentExprBinders :: Set Id,
@@ -51,40 +48,31 @@ initEnv (defn : defns) = do
 
 -- TYPE
 
-handleTypeVars :: Maybe Id -> Type Transformed -> SEC Env Error Warning ()
-handleTypeVars optBinder type' = do
+checkType :: Maybe Id -> Type Parsed -> SEC Env Error Warning ()
+checkType optBinder type' = do
   let isTFun = case type' of
         TFun _ _ _ -> True
         _ -> False
   tVars <- gets (if isTFun then allTypeBinders else currentTypeBinders)
-  let (usedTVars, errs, wrns) = Vars.handleTypeVars tVars type'
+  let (usedTVars, errs, wrns) = Check.checkType tVars type'
   forM_ errs fail'
   forM_ wrns warn
   unless isTFun $ forM_ optBinder $ \binder' ->
     when (Set.member binder' usedTVars) (fail' $ UsageBeforeInit binder')
   modify (\st -> st{usedTypeBinders = Set.union usedTVars (usedTypeBinders st)})
 
-transformTypeBind :: Bind OfType Parsed -> SEC Env Error Warning (Bind OfType Transformed)
-transformTypeBind (TypeBind binder' type') = do
+checkTypeBind :: Bind OfType Parsed -> SEC Env Error Warning ()
+checkTypeBind (TypeBind binder' type') = do
   modify (\st -> st{currentTypeBinders = Set.insert binder' (currentTypeBinders st)})
-  let type'' = transformType type'
-  handleTypeVars (Just binder') type''
-  return (TypeBind binder' type'')
+  checkType (Just binder') type'
 
 -- EXPR
 
-transformExpr :: Expr Parsed -> SEC Env Error Warning (Expr Transformed)
-transformExpr expr = do
-  let (expr', errs, wrns) = runExprTransformer expr
-  forM_ errs fail'
-  forM_ wrns warn
-  return expr'
-
-handleExprVars :: Maybe Id -> (Expr Transformed) -> SEC Env Error Warning ()
-handleExprVars optBinder expr = do
+checkExpr :: Maybe Id -> Expr Parsed -> SEC Env Error Warning ()
+checkExpr optBinder expr = do
   vars <- gets currentExprBinders
   tVars <- gets allTypeBinders
-  let (usedVars, usedTVars, errs, wrns) = Vars.handleExprVars vars tVars expr
+  let (usedVars, usedTVars, errs, wrns) = Check.checkExpr vars tVars expr
   forM_ errs fail'
   forM_ wrns warn
   unless (isFunction expr) $ forM_ optBinder $ \binder' ->
@@ -97,35 +85,24 @@ handleExprVars optBinder expr = do
           }
     )
 
-transformEntryExpr :: Expr Parsed -> SEC Env Error Warning (Expr Transformed)
-transformEntryExpr expr = do
-  expr' <- transformExpr expr
-  handleExprVars Nothing expr'
-  return expr'
-
-transformExprBind :: Bind OfExpr Parsed -> SEC Env Error Warning (Bind OfExpr Transformed)
-transformExprBind bind = do
+checkExprBind :: Bind OfExpr Parsed -> SEC Env Error Warning ()
+checkExprBind bind = do
   do
     let binder' = binder bind
     modify (\st -> st{currentExprBinders = Set.insert binder' (currentExprBinders st)})
   case bind of
     ExprBind binder' type' expr -> do
-      let type'' = transformType type'
-      handleTypeVars Nothing type''
-      expr' <- transformExpr expr
-      handleExprVars (Just binder') expr'
-      return (ExprBind binder' type'' expr')
-    ForeignBind binder' type' code -> do
-      let type'' = transformType type'
-      handleTypeVars Nothing type''
-      return (ForeignBind binder' type'' code)
+      checkType Nothing type'
+      checkExpr (Just binder') expr
+    ForeignBind _ type' _ -> do
+      checkType Nothing type'
 
 -- MODULE
 
 checkRepeatedBinders :: [Defn] -> SEC r Error w ()
 checkRepeatedBinders defns = do
-  forM_ (alreadyDefined $ concat $ map exprDefnBinders defns) fail'
-  forM_ (alreadyDefined $ mapMaybe typeDefnBinder defns) fail'
+  forM_ (Check.alreadyDefined $ concat $ map exprDefnBinders defns) fail'
+  forM_ (Check.alreadyDefined $ mapMaybe typeDefnBinder defns) fail'
  where
   exprDefnBinders (Defn bind) = [binder bind]
   exprDefnBinders (DataDefn _ ctors) = NonEmpty.toList $ NonEmpty.map binder ctors
@@ -135,17 +112,17 @@ checkRepeatedBinders defns = do
   typeDefnBinder (DataDefn bind _) = Just (binder bind)
   typeDefnBinder _ = Nothing
 
-transformDefn :: Defn -> SEC Env Error Warning [Either (Bind OfExpr Transformed) (Bind OfType Transformed)]
+transformDefn :: Defn -> SEC Env Error Warning [Either (Bind OfExpr Parsed) (Bind OfType Parsed)]
 transformDefn (Defn bind) = do
-  bind' <- transformExprBind bind
-  return [Left bind']
+  checkExprBind bind
+  return [Left bind]
 transformDefn (TypeDefn bind) = do
-  bind' <- transformTypeBind bind
-  return [Right bind']
+  checkTypeBind bind
+  return [Right bind]
 transformDefn (DataDefn bind ctBinds) = do
-  bind' <- transformTypeBind bind
-  ctBinds' <- mapM transformExprBind ctBinds
-  return (Right bind' : (map Left . NonEmpty.toList) ctBinds')
+  checkTypeBind bind
+  forM_ ctBinds checkExprBind
+  return (Right bind : (map Left . NonEmpty.toList) ctBinds)
 
 warnUnusedBinders :: SEC Env e Warning ()
 warnUnusedBinders = do
@@ -158,16 +135,16 @@ warnUnusedBinders = do
     used <- gets usedTypeBinders
     forM_ (Set.difference all' used) (warn . UnusedVar)
 
-transformModule :: ParsedModule -> SEC Env Error Warning (Module Transformed)
+transformModule :: ParsedModule -> SEC Env Error Warning (Module Parsed)
 transformModule (ParsedModule defns entry) = do
   checkRepeatedBinders defns
   initEnv defns
   (exprBinds, typeBinds) <- partitionEithers . concat <$> mapM transformDefn defns
-  entry' <- mapM transformEntryExpr entry
+  forM_ entry (checkExpr Nothing)
   warnUnusedBinders
-  return (Module exprBinds typeBinds entry')
+  return (Module exprBinds typeBinds entry)
 
-runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Transformed), [Warning])
+runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Parsed), [Warning])
 runTransformer mdule =
   let env =
         Env Set.empty Set.empty Set.empty Set.empty Set.empty

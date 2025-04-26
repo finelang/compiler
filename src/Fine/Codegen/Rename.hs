@@ -14,7 +14,7 @@ import Fine.Syntax (
   Id (Id),
   Module (Module, moduleEntry, moduleExprs),
   Pattern (..),
-  Phase (Transformed),
+  Phase (Parsed),
   Range (NoRange),
  )
 import Fine.Syntax.Utils (isCtor)
@@ -24,7 +24,7 @@ type Substts = Map Id Id
 substt :: Id -> Reader Substts Id
 substt name = asks (Map.findWithDefault name name)
 
-renameBlock :: Block Transformed -> Reader Substts (Block Transformed)
+renameBlock :: Block Parsed -> Reader Substts (Block Parsed)
 renameBlock (Return expr) = Return <$> renameExpr expr
 renameBlock block@Void = return block
 renameBlock (Do action block) = Do <$> renameExpr action <*> renameBlock block
@@ -46,10 +46,10 @@ renamePatt (TupleP r patts) = TupleP r <$> mapM renamePatt patts
 renamePatt (Capture name) = Capture <$> substt name
 renamePatt patt@(Discard _) = return patt
 
-renameMatch :: (Pattern, Expr Transformed) -> Reader Substts (Pattern, Expr Transformed)
+renameMatch :: (Pattern, Expr Parsed) -> Reader Substts (Pattern, Expr Parsed)
 renameMatch (patt, expr) = (,) <$> renamePatt patt <*> renameExpr expr
 
-renameExpr :: Expr Transformed -> Reader Substts (Expr Transformed)
+renameExpr :: Expr Parsed -> Reader Substts (Expr Parsed)
 renameExpr expr@(Literal _ _) = return expr
 renameExpr (Data ext tag exprs) = Data ext tag <$> mapM renameExpr exprs
 renameExpr (Record ext props) = Record ext <$> (mapM . mapM) renameExpr props
@@ -70,7 +70,7 @@ renameExpr (Block ext block) =
 renameExpr (PatternMatching ext expr matches) =
   PatternMatching ext <$> renameExpr expr <*> mapM renameMatch matches
 
-renameBind :: Bind OfExpr Transformed -> Reader Substts (Bind OfExpr Transformed)
+renameBind :: Bind OfExpr Parsed -> Reader Substts (Bind OfExpr Parsed)
 renameBind (ExprBind binder' type' expr) = do
   binder'' <- substt binder'
   expr' <- (if isCtor expr then return else renameExpr) expr
@@ -79,13 +79,13 @@ renameBind (ForeignBind binder' type' code) = do
   binder'' <- substt binder'
   return (ForeignBind binder'' type' code)
 
-renameModule :: Module Transformed -> Reader Substts (Module Transformed)
+renameModule :: Module Parsed -> Reader Substts (Module Parsed)
 renameModule mdule@(Module exprs _ entry) = do
   exprs' <- mapM renameBind exprs
   entry' <- mapM renameExpr entry
   return (mdule{moduleExprs = exprs', moduleEntry = entry'})
 
-runRenamer :: [Text] -> Module Transformed -> Module Transformed
+runRenamer :: [Text] -> Module Parsed -> Module Parsed
 runRenamer invalidNames mdule =
   let initialSubtss = map (\text -> (Id NoRange text, Id NoRange $ Text.cons '$' text)) invalidNames
    in runReader (renameModule mdule) (Map.fromList initialSubtss)

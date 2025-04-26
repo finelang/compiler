@@ -17,12 +17,12 @@ import Fine.Syntax (
   Lit (..),
   Module (Module),
   Op (..),
-  Phase (Ready, Transformed),
+  Phase (Parsed, Ready),
   Range (NoRange),
   idText,
  )
 
-type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) after typer impl
+type Typed = Parsed -- TODO: remove this line (and import 'Typed' phase) after typer impl
 
 type Indentation = Text
 

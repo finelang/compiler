@@ -86,7 +86,6 @@ instance Show Id where
 
 data Phase
   = Parsed -- after parsing
-  | Transformed -- after transformation and semantic checking
   | Typed -- after type checking/inference
   | Ready -- ready for codegen
   deriving (Show)
@@ -144,10 +143,6 @@ typeExt (TFun ext _ _) = ext
 
 instance HasRange (Type Parsed) where
   range :: Type Parsed -> Range
-  range = typeExt
-
-instance HasRange (Type Transformed) where
-  range :: Type Transformed -> Range
   range = typeExt
 
 instance HasRange (Type Typed) where
@@ -212,11 +207,6 @@ type family NonReadyExprX (p :: Phase) where
   NonReadyExprX Typed = (Range, Type Typed)
   NonReadyExprX _ = Range
 
--- for CST only
-type family ParsedX (p :: Phase) where
-  ParsedX Parsed = Range
-  ParsedX _ = Void
-
 data Expr (p :: Phase)
   = Literal (ExprX p) Lit
   | Data (ExprX p) Id [Expr p]
@@ -237,7 +227,6 @@ data Expr (p :: Phase)
 deriving instance
   ( Show (ExprX p),
     Show (NonReadyExprX p),
-    Show (ParsedX p),
     Show (ReadyX p),
     Show (NonReadyX p),
     Show (Type p)

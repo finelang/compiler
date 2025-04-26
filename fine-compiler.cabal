@@ -48,9 +48,7 @@ library
     Fine.Syntax
     Fine.Syntax.Utils
     Fine.Transform
-    Fine.Transform.Expr
-    Fine.Transform.Type
-    Fine.Transform.Vars
+    Fine.Transform.Check
   hs-source-dirs:
     src
   default-extensions:
