@@ -9,7 +9,7 @@ import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Fine.Error (
-  Error (UsageBeforeInit),
+  Error (MutRecBindNotFun, UsageBeforeInit),
   Warning (UnusedVar),
  )
 import Fine.Syntax (
@@ -44,6 +44,7 @@ initEnv (defn : defns) = do
       modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
     DataDefn (TypeBind binder' _) _ -> do
       modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
+    MutRecDefns _ -> return ()
   initEnv defns
 
 -- TYPE
@@ -105,7 +106,8 @@ checkRepeatedBinders defns = do
   forM_ (Check.alreadyDefined $ mapMaybe typeDefnBinder defns) fail'
  where
   exprDefnBinders (Defn bind) = [binder bind]
-  exprDefnBinders (DataDefn _ ctors) = NonEmpty.toList $ NonEmpty.map binder ctors
+  exprDefnBinders (DataDefn _ ctors) = map binder $ NonEmpty.toList ctors
+  exprDefnBinders (MutRecDefns binds) = map binder $ NonEmpty.toList binds
   exprDefnBinders _ = []
 
   typeDefnBinder (TypeDefn bind) = Just (binder bind)
@@ -123,6 +125,21 @@ transformDefn (DataDefn bind ctBinds) = do
   checkTypeBind bind
   forM_ ctBinds checkExprBind
   return (Right bind : (map Left . NonEmpty.toList) ctBinds)
+transformDefn (MutRecDefns binds) = do
+  currentBinders <- gets currentExprBinders
+  let binders = Set.fromList $ map binder $ NonEmpty.toList binds
+  forM_ binds $ \bind -> do
+    let binder' = binder bind
+    unless (hasFunExpr bind) (fail' $ MutRecBindNotFun $ binder')
+    let rest = Set.delete binder' binders
+    modify (\st -> st{currentExprBinders = Set.union rest currentBinders})
+    checkExprBind bind
+  modify (\st -> st{currentExprBinders = Set.union binders currentBinders})
+  return (map Left $ NonEmpty.toList binds)
+ where
+  hasFunExpr :: Bind OfExpr Parsed -> Bool
+  hasFunExpr (ExprBind _ _ expr) = isFunction expr
+  hasFunExpr (ForeignBind _ _ _) = False
 
 warnUnusedBinders :: SEC Env e Warning ()
 warnUnusedBinders = do

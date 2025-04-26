@@ -28,6 +28,7 @@ data Error
   | UnusedUniVar Id
   | AlreadyDefined Id Id
   | UsageBeforeInit Id
+  | MutRecBindNotFun Id
 
 instance Show Error where
   show :: Error -> String
@@ -39,6 +40,8 @@ instance Show Error where
     [i|Variable #{hl repeated} is already defined.|]
   show (UsageBeforeInit var) =
     [i|Variable #{hl var} cannot be read during its own initialization.|]
+  show (MutRecBindNotFun var) =
+    [i|The expression bound to #{hl var} must be a function expression.|]
 
 errorPrefix :: String
 errorPrefix = red "Error: "

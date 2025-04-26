@@ -10,7 +10,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
-import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
+import Fine.Syntax.Utils (mkDataDefn, mkExprBind, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
 }
 
 %name parseTokens
@@ -18,6 +18,7 @@ import Fine.Syntax.Utils (mkDataDefn, mkExprDefn, mkAppOrFun, mkBinOrFun, mkPipe
 %error { parseError }
 
 %token
+  and       { Token Lex.AndKw _ _ }
   debug     { Token Lex.Debug _ _ }
   else      { Token Lex.Else _ _ }
   fn        { Token Lex.Fn _ _ }
@@ -288,15 +289,22 @@ Entry : run Expr    { Just $2 }
 Defns : Defns Defn OptSemi  { $2 : $1 }
       | {- empty -}         { [] }
 
-Defn : type Id '[' Params ']' '=' Type                              { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
-     | type Id '=' Type                                             { TypeDefn (TypeBind $2 $4) }
-     | type Ct '[' Params ']' '{' Ctors '}'                         { mkDataDefn $2 (Just $4) $7 }
-     | type Ct '{' Ctors '}'                                        { mkDataDefn $2 Nothing $4 }
-     | let Id ':' Type '=' Expr                                     { Defn (ExprBind $2 $4 $6) }
-     | let foreign Id ':' Type '=' strlit                           { Defn (ForeignBind $3 $5 (extractStr $7)) }
-     | let Id '[' Params ']' ':' Type '=' Expr                      { Defn (ExprBind $2 (Forall NoRange $4 $7) (GenFun NoRange $4 $9)) }
-     | let Id '(' TypedParams ')' ':' Type '=' Expr                 { mkExprDefn $2 Nothing $4 $7 $9 }
-     | let Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr  { mkExprDefn $2 (Just $4) $7 $10 $12 }
+Defn : type Id '[' Params ']' '=' Type      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
+     | type Id '=' Type                     { TypeDefn (TypeBind $2 $4) }
+     | type Ct '[' Params ']' '{' Ctors '}' { mkDataDefn $2 (Just $4) $7 }
+     | type Ct '{' Ctors '}'                { mkDataDefn $2 Nothing $4 }
+     | let foreign Id ':' Type '=' strlit   { Defn (ForeignBind $3 $5 (extractStr $7)) }
+     | let MutRecBinds                      { if NonEmpty.length $2 > 1 then MutRecDefns $2 else Defn (NonEmpty.head $2) }
+
+MutRecBinds_ : MutRecBinds_ and ExprBind  { $3 : $1 }
+             | ExprBind                   { [$1] }
+
+MutRecBinds : MutRecBinds_  { toNonEmptyPARTIAL (reverse $1) }
+
+ExprBind : Id ':' Type '=' Expr                                     { ExprBind $1 $3 $5 }
+         | Id '[' Params ']' ':' Type '=' Expr                      { ExprBind $1 (Forall NoRange $3 $6) (GenFun NoRange $3 $8) }
+         | Id '(' TypedParams ')' ':' Type '=' Expr                 { mkExprBind $1 Nothing $3 $6 $8 }
+         | Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr  { mkExprBind $1 (Just $3) $6 $9 $11 }
 
 TypedParams_ : TypedParams_ ',' TypedParam  { $3 : $1 }
              | TypedParam                   { [$1] }

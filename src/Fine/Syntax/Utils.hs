@@ -9,7 +9,8 @@ import Data.Either (isLeft, isRight)
 import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (
   Bind (ExprBind, TypeBind),
-  Defn (DataDefn, Defn),
+  BindType (OfExpr),
+  Defn (DataDefn),
   Expr (App, Bin, Data, Fun, GenFun, Var),
   Id (Id),
   Op,
@@ -69,15 +70,15 @@ mkDataDefn ctTag optTParams ctors =
           _ -> (type', expr)
      in ExprBind tag type'' expr'
 
-mkExprDefn :: Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, Type Parsed) -> Type Parsed -> Expr Parsed -> Defn
-mkExprDefn binder optTParams typedParams retType body =
+mkExprBind :: Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, Type Parsed) -> Type Parsed -> Expr Parsed -> Bind OfExpr Parsed
+mkExprBind binder optTParams typedParams retType body =
   let (params, types) = Functor.unzip typedParams
       type' = FunT NoRange types retType
       expr = Fun NoRange params body
       (type'', expr') = case optTParams of
         Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
         _ -> (type', expr)
-   in Defn (ExprBind binder type'' expr')
+   in ExprBind binder type'' expr'
 
 mkAppOrFun :: Range -> Expr Parsed -> NonEmpty (Either Range (Expr Parsed)) -> Expr Parsed
 mkAppOrFun r f args =

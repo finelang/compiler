@@ -297,6 +297,7 @@ data Defn
   = Defn (Bind OfExpr Parsed)
   | TypeDefn (Bind OfType Parsed)
   | DataDefn (Bind OfType Parsed) (NonEmpty (Bind OfExpr Parsed))
+  | MutRecDefns (NonEmpty (Bind OfExpr Parsed))
 
 data ParsedModule
   = ParsedModule [Defn] (Maybe (Expr Parsed))
