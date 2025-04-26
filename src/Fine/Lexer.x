@@ -32,7 +32,7 @@ $charesc      = [abfnrtv\\\"\'\&]
 tokens :-
 
   $white+                     ;
-  "--"\-*[^$symbol].*         ;
+  "//"\-*[^$symbol].*         ;
   "and"                       { mkt AndKw }
   "bool"                      { mkt Bool }
   "debug"                     { mkt Debug }
