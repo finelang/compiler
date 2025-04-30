@@ -10,7 +10,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
-import Fine.Syntax.Utils (mkDataDefn, mkExprBind, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
+import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
 }
 
 %name parseTokens
@@ -301,10 +301,7 @@ MutRecBinds_ : MutRecBinds_ and ExprBind  { $3 : $1 }
 
 MutRecBinds : MutRecBinds_  { toNonEmptyPARTIAL (reverse $1) }
 
-ExprBind : Id ':' Type '=' Expr                                     { ExprBind $1 $3 $5 }
-         | Id '[' Params ']' ':' Type '=' Expr                      { ExprBind $1 (Forall NoRange $3 $6) (GenFun NoRange $3 $8) }
-         | Id '(' TypedParams ')' ':' Type '=' Expr                 { mkExprBind $1 Nothing $3 $6 $8 }
-         | Id '[' Params ']' '(' TypedParams ')' ':' Type '=' Expr  { mkExprBind $1 (Just $3) $6 $9 $11 }
+ExprBind : Id ':' Type '=' Expr { ExprBind $1 $3 $5 }
 
 TypedParams_ : TypedParams_ ',' TypedParam  { $3 : $1 }
              | TypedParam                   { [$1] }
