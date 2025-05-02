@@ -10,7 +10,7 @@ import Fine.Syntax (
   Block (..),
   Expr (..),
   Id (Id),
-  Lit (Bool, Str, Unit),
+  Lit (Bool, Int, Str, Unit),
   Module (Module),
   Op (And, Eq),
   Pattern (..),
@@ -50,6 +50,9 @@ extractPaths (RecordP _ props) =
     (\(prop, patt) -> map (Continue $ PropTo prop) (extractPaths patt))
     props
 extractPaths (TupleP _ patts) = indexedPaths (NonEmpty.toList patts)
+extractPaths (ListP _ patts) =
+  let lenCheck = Continue (PropTo $ Id NoRange "length") (End $ EqualsTo $ Literal () $ Int $ length patts)
+   in lenCheck : indexedPaths patts
 extractPaths (Capture var) = [End $ Is var]
 extractPaths (Discard _) = []
 
@@ -123,6 +126,7 @@ getExprReady (Literal _ lit) = Literal () lit
 getExprReady (Data _ tag exprs) = Data () tag (map getExprReady exprs)
 getExprReady (Record _ props) = Record () $ (fmap . fmap) getExprReady props
 getExprReady (Tuple _ exprs) = Tuple () (NonEmpty.map getExprReady exprs)
+getExprReady (List _ exprs) = List () (map getExprReady exprs)
 getExprReady (Var _ var) = Var () var
 getExprReady (Bin _ op left right) = Bin () op (getExprReady left) (getExprReady right)
 getExprReady (App _ f args) = App () (getExprReady f) (NonEmpty.map getExprReady args)

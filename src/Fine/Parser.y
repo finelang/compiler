@@ -123,6 +123,7 @@ PropPattern : Id '=' Pattern  { ($1, $3) }
 
 Pattern : Ct          { DataP (range $1) $1 [] }
         | '(' ')'     { LiteralP (range $1 <> range $2) Unit }
+        | '[' ']'     { ListP (range $1 <> range $2) [] }
         | IntPatt     { $1 }
         | floatlit    { LiteralP (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
         | true        { LiteralP (range $1) (Bool True) }
@@ -135,6 +136,7 @@ Pattern : Ct          { DataP (range $1) $1 [] }
 DeepPattern : Ct '(' Patterns ')'   { DataP (range $1 <> range $4) $1 (NonEmpty.toList $3) }
             | '(' Patterns ')'      { if NonEmpty.length $2 > 1 then TupleP (range $1 <> range $3) $2 else NonEmpty.head $2 }
             | '{' PropPatterns '}'  { RecordP (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
+            | '[' Patterns ']'      { ListP (range $1 <> range $3) (NonEmpty.toList $2) }
 
 -- BLOCK
 
@@ -217,6 +219,8 @@ Atom : '(' Exprs ')'                      { if NonEmpty.length $2 > 1 then Tuple
      | '{' Props '}'                      { Record (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
      | '{' Block '}'                      { Block (range $1 <> range $3) $2 }
      | '{' Expr '}'                       { $2 }
+     | '[' Exprs ']'                      { List (range $1 <> range $3) (NonEmpty.toList $2) }
+     | '[' ']'                            { List (range $1 <> range $2) [] }
      | Int                                { $1 }
      | floatlit                           { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
      | true                               { Literal (range $1) (Bool True) }
@@ -277,6 +281,7 @@ TAtom ::                  { Type Parsed }
 TAtom : '(' Types ')'     { if NonEmpty.length $2 > 1 then TupleT (range $1 <> range $3) $2 else NonEmpty.head $2 }
       | '{' PropTypes '}' { RecordT (range $1 <> range $3) (toNonEmptyPARTIAL (reverse $2)) }
       | '(' ')'           { LiteralT (range $1 <> range $2) UnitT }
+      | '[' Type ']'      { ListT (range $1 <> range $3) $2 }
       | bool              { LiteralT (range $1) BoolT }
       | int               { LiteralT (range $1) IntT }
       | str               { LiteralT (range $1) StrT }

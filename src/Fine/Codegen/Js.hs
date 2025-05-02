@@ -147,6 +147,9 @@ genExprCode (Record _ props) = do
 genExprCode (Tuple _ exprs) = do
   exprs' <- genIndexedPropsCode (NonEmpty.toList exprs)
   return [i|({#{exprs'}})|]
+genExprCode (List _ exprs) = do
+  exprs' <- Text.intercalate ", " <$> mapM genExprCode exprs
+  return [i|[#{exprs'}]|]
 genExprCode (Var _ var) = return (idText var)
 genExprCode (Bin _ op left right) = do
   let op' = genOpCode op

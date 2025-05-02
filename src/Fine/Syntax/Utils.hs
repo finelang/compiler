@@ -24,6 +24,7 @@ patternBoundVars (LiteralP _ _) = []
 patternBoundVars (DataP _ _ patts) = concatMap patternBoundVars patts
 patternBoundVars (RecordP _ props) = foldMap (patternBoundVars . snd) props
 patternBoundVars (TupleP _ patts) = foldMap patternBoundVars patts
+patternBoundVars (ListP _ patts) = concatMap patternBoundVars patts
 patternBoundVars (Capture idn) = [idn]
 patternBoundVars (Discard _) = []
 
