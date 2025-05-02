@@ -22,6 +22,7 @@ import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
   debug     { Token Lex.Debug _ _ }
   else      { Token Lex.Else _ _ }
   fn        { Token Lex.Fn _ _ }
+  forall    { Token Lex.Forall _ _ }
   foreign   { Token Lex.Foreign _ _ }
   if        { Token Lex.If _ _ }
   let       { Token Lex.Let _ _ }
@@ -72,6 +73,7 @@ import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
   ']'       { Token Lex.Csquare _ _ }
   ','       { Token Lex.Comma _ _ }
   ';'       { Token Lex.Semi _ _ }
+  '\''      { Token Lex.Tick _ _ }
 
 %left '|>'
 %right '||'
@@ -172,10 +174,10 @@ Matches : Matches Match ';' { $2 : $1 }
 
 Match : Pattern '->' Expr { ($1, $3) }
 
-Expr : Bin                            { $1 }
-     | if Expr then Expr else Expr    { Cond (range $1 <> range $6) $2 $4 $6 }
-     | fn '(' OptParams ')' '->' Expr { Fun (range $1 <> range $6) $3 $6 }
-     | fn '[' Params ']' '->' Expr    { GenFun (range $1 <> range $6) $3 $6 }
+Expr : Bin                              { $1 }
+     | if Expr then Expr else Expr      { Cond (range $1 <> range $6) $2 $4 $6 }
+     | fn '(' OptParams ')' '->' Expr   { Fun (range $1 <> range $6) $3 $6 }
+     | fn '\'' '(' Params ')' '->' Expr { GenFun (range $1 <> range $7) $4 $7 }
 
 Bin : Bin '|>' Bin  { App (range $1 <> range $3) $3 ($1 :| []) }
     | Bin '&&' Bin  { Bin (range $1 <> range $3) And $1 $3 }
@@ -202,12 +204,12 @@ Args_ : Args_ ',' Arg { $3 : $1 }
 
 Args : Args_  { toNonEmptyPARTIAL (reverse $1) }
 
-App : App '(' Args ')'  { mkAppOrFun (range $1 <> range $4) $1 $3 }
-    | App '(' ')'       { mkAppOrFun (range $1 <> range $3) $1 ((Right $ Literal (range $2 <> range $3) Unit) :| []) }
-    | App '[' Types ']' { GenApp (range $1 <> range $4) $1 $3 }
-    | App '.' Id        { Access (range $1 <> range $3) $1 $3 }
-    | App '.' nat       { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }
-    | Atom              { $1 }
+App : App '(' Args ')'        { mkAppOrFun (range $1 <> range $4) $1 $3 }
+    | App '(' ')'             { mkAppOrFun (range $1 <> range $3) $1 ((Right $ Literal (range $2 <> range $3) Unit) :| []) }
+    | App '\'' '(' Types ')'  { GenApp (range $1 <> range $5) $1 $4 }
+    | App '.' Id              { Access (range $1 <> range $3) $1 $3 }
+    | App '.' nat             { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }
+    | Atom                    { $1 }
 
 Atom ::                                   { Expr Parsed }
 Atom : '(' Exprs ')'                      { if NonEmpty.length $2 > 1 then Tuple (range $1 <> range $3) $2 else NonEmpty.head $2 }
@@ -261,11 +263,14 @@ Types_ : Types_ ',' Type  { $3 : $1 }
 
 Types : Types_  { toNonEmptyPARTIAL (reverse $1) }
 
-Type : '[' Params ']' Type  { Forall (range $1 <> range $4) $2 $4 }
-     | TApp '->' Type       { FunT (range $1 <> range $3) $1 $3 }
-     | TApp                 { $1 }
+TVars : TVars Id  { $2 : $1 }
+      | Id        { [$1] }
 
-TApp : TApp '[' Types ']' { TApp (range $1 <> range $4) $1 $3 }
+Type : forall TVars '.' Type  { Forall (range $1 <> range $4) (toNonEmptyPARTIAL (reverse $2)) $4 }
+     | TApp '->' Type         { FunT (range $1 <> range $3) $1 $3 }
+     | TApp                   { $1 }
+
+TApp : TApp '(' Types ')' { TApp (range $1 <> range $4) $1 $3 }
      | TAtom              { $1 }
 
 TAtom ::                  { Type Parsed }
@@ -288,9 +293,9 @@ Entry : run Expr    { Just $2 }
 Defns : Defns Defn OptSemi  { $2 : $1 }
       | {- empty -}         { [] }
 
-Defn : type Id '[' Params ']' '=' Type      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
+Defn : type Id '(' Params ')' '=' Type      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
      | type Id '=' Type                     { TypeDefn (TypeBind $2 $4) }
-     | type Ct '[' Params ']' '{' Ctors '}' { mkDataDefn $2 (Just $4) $7 }
+     | type Ct '(' Params ')' '{' Ctors '}' { mkDataDefn $2 (Just $4) $7 }
      | type Ct '{' Ctors '}'                { mkDataDefn $2 Nothing $4 }
      | let foreign Id ':' Type '=' strlit   { Defn (ForeignBind $3 $5 (extractStr $7)) }
      | let MutRecBinds                      { if NonEmpty.length $2 > 1 then MutRecDefns $2 else Defn (NonEmpty.head $2) }
