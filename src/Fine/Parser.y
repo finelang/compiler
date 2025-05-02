@@ -303,21 +303,13 @@ MutRecBinds : MutRecBinds_  { toNonEmptyPARTIAL (reverse $1) }
 
 ExprBind : Id ':' Type '=' Expr { ExprBind $1 $3 $5 }
 
-TypedParams_ : TypedParams_ ',' TypedParam  { $3 : $1 }
-             | TypedParam                   { [$1] }
-
-TypedParam: Id ':' Type { ($1, $3) }
-
-TypedParams : TypedParams_  { toNonEmptyPARTIAL (reverse $1) }
-            | {- empty -}   { (Id NoRange "_", LiteralT NoRange UnitT) :| [] }
-
-Ctors_ : Ctors_ Ctor OptSemi  { $2 : $1 }
-       | Ctor OptSemi         { [$1] }
+Ctors_ : Ctors_ Ctor ';'  { $2 : $1 }
+       | Ctor ';'         { [$1] }
 
 Ctors : Ctors_  { toNonEmptyPARTIAL (reverse $1) }
 
-Ctor : Ct                     { ($1, Nothing) }
-     | Ct '(' TypedParams ')' { ($1, Just $3) }
+Ctor : Ct       { ($1, Nothing) }
+     | Ct Type  { ($1, Just $2) }
 
 {
 extractStr = Text.tail . Text.init . tokenLexeme
