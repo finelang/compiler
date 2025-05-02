@@ -73,7 +73,6 @@ import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
   ','       { Token Lex.Comma _ _ }
   ';'       { Token Lex.Semi _ _ }
 
-%right '->'
 %left '|>'
 %right '||'
 %right '&&'
@@ -262,9 +261,9 @@ Types_ : Types_ ',' Type  { $3 : $1 }
 
 Types : Types_  { toNonEmptyPARTIAL (reverse $1) }
 
-Type : Type '->' Type           { FunT (range $1 <> range $3) $1 $3 }
-     | '[' Params ']' '->' Type { Forall (range $1 <> range $5) $2 $5 }
-     | TApp                     { $1 }
+Type : '[' Params ']' Type  { Forall (range $1 <> range $4) $2 $4 }
+     | TApp '->' Type       { FunT (range $1 <> range $3) $1 $3 }
+     | TApp                 { $1 }
 
 TApp : TApp '[' Types ']' { TApp (range $1 <> range $4) $1 $3 }
      | TAtom              { $1 }
