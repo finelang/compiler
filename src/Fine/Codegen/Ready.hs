@@ -49,7 +49,7 @@ extractPaths (RecordP _ props) =
   foldMap
     (\(prop, patt) -> map (Continue $ PropTo prop) (extractPaths patt))
     props
-extractPaths (TupleP _ patts) = indexedPaths (NonEmpty.toList patts)
+extractPaths (TupleP _ fst' snd' rest) = indexedPaths (fst' : snd' : rest)
 extractPaths (ListP _ patts) =
   let lenCheck = Continue (PropTo $ Id NoRange "length") (End $ EqualsTo $ Literal () $ Int $ length patts)
    in lenCheck : indexedPaths patts
@@ -125,7 +125,8 @@ getExprReady :: Expr Typed -> Expr Ready
 getExprReady (Literal _ lit) = Literal () lit
 getExprReady (Data _ tag exprs) = Data () tag (map getExprReady exprs)
 getExprReady (Record _ props) = Record () $ (map . fmap) getExprReady props
-getExprReady (Tuple _ exprs) = Tuple () (NonEmpty.map getExprReady exprs)
+getExprReady (Tuple _ fst' snd' rest) =
+  Tuple () (getExprReady fst') (getExprReady snd') (map getExprReady rest)
 getExprReady (List _ exprs) = List () (map getExprReady exprs)
 getExprReady (Var _ var) = Var () var
 getExprReady (Bin _ op left right) = Bin () op (getExprReady left) (getExprReady right)

@@ -116,6 +116,7 @@ IntPatt : nat     { LiteralP (range $1) (Int $ read $ Text.unpack $ tokenLexeme 
         | nonnat  { LiteralP (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
 
 PropPatterns : PropPatterns ',' PropPattern { $3 : $1 }
+             | PropPattern                  { [$1] }
              | {- empty -}                  { [] }
 
 PropPattern : Id '=' Pattern  { ($1, $3) }
@@ -134,7 +135,7 @@ Pattern : Ct          { DataP (range $1) $1 [] }
         | DeepPattern { $1 }
 
 DeepPattern : Ct '(' Patterns ')'   { DataP (range $1 <> range $4) $1 (NonEmpty.toList $3) }
-            | '(' Patterns ')'      { if NonEmpty.length $2 > 1 then TupleP (range $1 <> range $3) $2 else NonEmpty.head $2 }
+            | '(' Patterns ')'      { if NonEmpty.length $2 >= 2 then uncurry3 (TupleP (range $1 <> range $3)) (uncons2 $2) else NonEmpty.head $2 }
             | '{' PropPatterns '}'  { RecordP (range $1 <> range $3) (reverse $2) }
             | '[' Patterns ']'      { ListP (range $1 <> range $3) (NonEmpty.toList $2) }
 
@@ -161,6 +162,7 @@ Int : nat     { Literal (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
     | nonnat  { Literal (range $1) (Int $ read $ Text.unpack $ tokenLexeme $1) }
 
 Props : Props ',' Prop  { $3 : $1 }
+      | Prop            { [$1] }
       | {- empty -}     { [] }
 
 Prop : Id '=' Expr  { ($1, $3) }
@@ -214,7 +216,7 @@ App : App '(' Args ')'        { mkAppOrFun (range $1 <> range $4) $1 $3 }
     | Atom                    { $1 }
 
 Atom ::                                   { Expr Parsed }
-Atom : '(' Exprs ')'                      { if NonEmpty.length $2 > 1 then Tuple (range $1 <> range $3) $2 else NonEmpty.head $2 }
+Atom : '(' Exprs ')'                      { if NonEmpty.length $2 >= 2 then uncurry3 (Tuple (range $1 <> range $3)) (uncons2 $2) else NonEmpty.head $2 }
      | '(' ')'                            { Literal (range $1 <> range $2) Unit }
      | '{' Props '}'                      { Record (range $1 <> range $3) (reverse $2) }
      | '{' Block '}'                      { Block (range $1 <> range $3) $2 }
@@ -258,6 +260,7 @@ Op : '&&' { And }
 -- TYPE
 
 PropTypes : PropTypes ',' PropType  { $3 : $1 }
+          | PropType                { [$1] }
           | {- empty -}             { [] }
 
 PropType : Id ':' Type  { ($1, $3) }
@@ -279,7 +282,7 @@ TApp : TApp '(' Types ')' { TApp (range $1 <> range $4) $1 $3 }
      | TAtom              { $1 }
 
 TAtom ::                  { Type Parsed }
-TAtom : '(' Types ')'     { if NonEmpty.length $2 > 1 then TupleT (range $1 <> range $3) $2 else NonEmpty.head $2 }
+TAtom : '(' Types ')'     { if NonEmpty.length $2 >= 2 then uncurry3 (TupleT (range $1 <> range $3)) (uncons2 $2) else NonEmpty.head $2 }
       | '{' PropTypes '}' { RecordT (range $1 <> range $3) (reverse $2) }
       | '(' ')'           { LiteralT (range $1 <> range $2) UnitT }
       | '[' Type ']'      { ListT (range $1 <> range $3) $2 }
@@ -326,6 +329,10 @@ extractStr = Text.tail . Text.init . tokenLexeme
 
 tryUnblock _ (Return expr) = expr
 tryUnblock r block = Block r block
+
+uncurry3 f (x, y, z) = f x y z
+
+uncons2 (x :| (y : zs)) = (x, y, zs)
 
 parseError tokens = error . show . head $ tokens
 }

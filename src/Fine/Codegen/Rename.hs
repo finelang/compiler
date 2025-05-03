@@ -42,7 +42,8 @@ renamePatt :: Pattern -> Reader Substts Pattern
 renamePatt patt@(LiteralP _ _) = return patt
 renamePatt (DataP r tag patts) = DataP r tag <$> mapM renamePatt patts
 renamePatt (RecordP r props) = RecordP r <$> (mapM . mapM) renamePatt props
-renamePatt (TupleP r patts) = TupleP r <$> mapM renamePatt patts
+renamePatt (TupleP r fst' snd' rest) =
+  TupleP r <$> renamePatt fst' <*> renamePatt snd' <*> mapM renamePatt rest
 renamePatt (ListP r patts) = ListP r <$> mapM renamePatt patts
 renamePatt (Capture name) = Capture <$> substt name
 renamePatt patt@(Discard _) = return patt
@@ -54,7 +55,8 @@ renameExpr :: Expr Parsed -> Reader Substts (Expr Parsed)
 renameExpr expr@(Literal _ _) = return expr
 renameExpr (Data ext tag exprs) = Data ext tag <$> mapM renameExpr exprs
 renameExpr (Record ext props) = Record ext <$> (mapM . mapM) renameExpr props
-renameExpr (Tuple ext exprs) = Tuple ext <$> mapM renameExpr exprs
+renameExpr (Tuple ext fst' snd' rest) =
+  Tuple ext <$> renameExpr fst' <*> renameExpr snd' <*> mapM renameExpr rest
 renameExpr (List ext exprs) = List ext <$> mapM renameExpr exprs
 renameExpr (Var ext name) = Var ext <$> substt name
 renameExpr (Bin ext op left right) = Bin ext op <$> renameExpr left <*> renameExpr right

@@ -48,7 +48,7 @@ type Type' = Type Parsed
 checkType' :: Type' -> RW (Set Id) Errors' (Set Id)
 checkType' (LiteralT _ _) = return Set.empty
 checkType' (VoidT _) = return Set.empty
-checkType' (TupleT _ types) = Set.unions <$> mapM checkType' types
+checkType' (TupleT _ fst' snd' rest) = Set.unions <$> mapM checkType' (fst' : snd' : rest)
 checkType' (ListT _ type') = checkType' type'
 checkType' (RecordT _ propTypes) = Set.unions <$> mapM (checkType' . snd) propTypes
 checkType' (FunT _ argTypes bodyType) = do
@@ -173,7 +173,7 @@ checkPattern (DataP _ tag patts) = do
   check tag
   return (Set.insert tag pattsVars)
 checkPattern (RecordP _ props) = Set.unions <$> mapM (checkPattern . snd) props
-checkPattern (TupleP _ patts) = Set.unions <$> mapM checkPattern patts
+checkPattern (TupleP _ fst' snd' rest) = Set.unions <$> mapM checkPattern (fst' : snd' : rest)
 checkPattern (ListP _ patts) = Set.unions <$> mapM checkPattern patts
 checkPattern (Capture _) = return Set.empty
 checkPattern (Discard _) = return Set.empty
@@ -197,7 +197,7 @@ checkExpr' :: Expr' -> RW Vars Errors' Vars
 checkExpr' (Literal _ _) = return emptyVars
 checkExpr' (Data _ _ exprs) = unions' <$> mapM checkExpr' exprs
 checkExpr' (Record _ props) = unions' <$> mapM (checkExpr' . snd) props
-checkExpr' (Tuple _ exprs) = unions' <$> mapM checkExpr' exprs
+checkExpr' (Tuple _ fst' snd' rest) = unions' <$> mapM checkExpr' (fst' : snd' : rest)
 checkExpr' (List _ exprs) = unions' <$> mapM checkExpr' exprs
 checkExpr' (Var _ var) = withReader vars (check var) >> return (singleVar var)
 checkExpr' (Bin _ _ left right) = union' <$> checkExpr' left <*> checkExpr' right

@@ -144,8 +144,8 @@ genExprCode (Data _ tag exprs) = do
 genExprCode (Record _ props) = do
   props' <- genPropsCode props
   return [i|({#{props'}})|]
-genExprCode (Tuple _ exprs) = do
-  exprs' <- genIndexedPropsCode (NonEmpty.toList exprs)
+genExprCode (Tuple _ fst' snd' rest) = do
+  exprs' <- genIndexedPropsCode (fst' : snd' : rest)
   return [i|({#{exprs'}})|]
 genExprCode (List _ exprs) = do
   exprs' <- Text.intercalate ", " <$> mapM genExprCode exprs

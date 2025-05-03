@@ -118,7 +118,7 @@ type family UniVar (p :: Phase) where
 data Type (p :: Phase)
   = LiteralT (TypeX p) LitT
   | VoidT (TypeX p)
-  | TupleT (TypeX p) (NonEmpty (Type p))
+  | TupleT (TypeX p) (Type p) (Type p) [Type p]
   | ListT (TypeX p) (Type p)
   | RecordT (TypeX p) [(Id, Type p)]
   | FunT (TypeX p) (NonEmpty (Type p)) (Type p) -- type of a normal function
@@ -133,7 +133,7 @@ deriving instance (Show (TypeX p), Show (UniVar p)) => Show (Type p)
 typeExt :: Type p -> TypeX p
 typeExt (LiteralT ext _) = ext
 typeExt (VoidT ext) = ext
-typeExt (TupleT ext _) = ext
+typeExt (TupleT ext _ _ _) = ext
 typeExt (ListT ext _) = ext
 typeExt (RecordT ext _) = ext
 typeExt (FunT ext _ _) = ext
@@ -213,7 +213,7 @@ data Expr (p :: Phase)
   = Literal (ExprX p) Lit
   | Data (ExprX p) Id [Expr p]
   | Record (ExprX p) [(Id, Expr p)]
-  | Tuple (ExprX p) (NonEmpty (Expr p))
+  | Tuple (ExprX p) (Expr p) (Expr p) [Expr p]
   | List (ExprX p) [Expr p]
   | Var (ExprX p) Id
   | Bin (ExprX p) Op (Expr p) (Expr p)
@@ -241,7 +241,7 @@ instance HasRange (Expr Parsed) where
   range (Literal r _) = r
   range (Data r _ _) = r
   range (Record r _) = r
-  range (Tuple r _) = r
+  range (Tuple r _ _ _) = r
   range (List r _) = r
   range (Var r _) = r
   range (Bin r _ _ _) = r
@@ -261,7 +261,7 @@ data Pattern
   = LiteralP Range Lit
   | DataP Range Id [Pattern]
   | RecordP Range [(Id, Pattern)]
-  | TupleP Range (NonEmpty Pattern)
+  | TupleP Range Pattern Pattern [Pattern]
   | ListP Range [Pattern]
   | Capture Id
   | Discard Range
@@ -272,7 +272,7 @@ instance HasRange Pattern where
   range (LiteralP r _) = r
   range (DataP r _ _) = r
   range (RecordP r _) = r
-  range (TupleP r _) = r
+  range (TupleP r _ _ _) = r
   range (ListP r _) = r
   range (Capture var) = range var
   range (Discard r) = r
