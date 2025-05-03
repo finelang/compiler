@@ -121,7 +121,7 @@ data Type (p :: Phase)
   | TupleT (TypeX p) (NonEmpty (Type p))
   | ListT (TypeX p) (Type p)
   | RecordT (TypeX p) (NonEmpty (Id, Type p))
-  | FunT (TypeX p) (Type p) (Type p) -- type of a normal function
+  | FunT (TypeX p) (NonEmpty (Type p)) (Type p) -- type of a normal function
   | Forall (TypeX p) (NonEmpty (UniVar p)) (Type p) -- type of a generic function
   | TData (TypeX p) Id [Type p]
   | TVar (TypeX p) Id

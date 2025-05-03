@@ -270,9 +270,10 @@ Types : Types_  { toNonEmptyPARTIAL (reverse $1) }
 TVars : TVars Id  { $2 : $1 }
       | Id        { [$1] }
 
-Type : forall TVars '.' Type  { Forall (range $1 <> range $4) (toNonEmptyPARTIAL (reverse $2)) $4 }
-     | TApp '->' Type         { FunT (range $1 <> range $3) $1 $3 }
-     | TApp                   { $1 }
+Type : forall TVars '.' Type      { Forall (range $1 <> range $4) (toNonEmptyPARTIAL (reverse $2)) $4 }
+     | fn '(' Types ')' '->' Type { FunT (range $1 <> range $6) $3 $6 }
+     | TApp '->' Type             { FunT (range $1 <> range $3) ($1 :| []) $3 }
+     | TApp                       { $1 }
 
 TApp : TApp '(' Types ')' { TApp (range $1 <> range $4) $1 $3 }
      | TAtom              { $1 }
@@ -312,13 +313,13 @@ MutRecBinds : MutRecBinds_  { toNonEmptyPARTIAL (reverse $1) }
 
 ExprBind : Id ':' Type '=' Expr { ExprBind $1 $3 $5 }
 
-Ctors_ : Ctors_ Ctor ';'  { $2 : $1 }
-       | Ctor ';'         { [$1] }
+Ctors_ : Ctors_ Ctor OptSemi  { $2 : $1 }
+       | Ctor OptSemi         { [$1] }
 
 Ctors : Ctors_  { toNonEmptyPARTIAL (reverse $1) }
 
-Ctor : Ct       { ($1, Nothing) }
-     | Ct Type  { ($1, Just $2) }
+Ctor : Ct               { ($1, []) }
+     | Ct '(' Types ')' { ($1, NonEmpty.toList $3) }
 
 {
 extractStr = Text.tail . Text.init . tokenLexeme

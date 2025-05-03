@@ -51,8 +51,10 @@ checkType' (VoidT _) = return Set.empty
 checkType' (TupleT _ types) = Set.unions <$> mapM checkType' types
 checkType' (ListT _ type') = checkType' type'
 checkType' (RecordT _ propTypes) = Set.unions <$> mapM (checkType' . snd) propTypes
-checkType' (FunT _ argType bodyType) =
-  Set.union <$> checkType' argType <*> checkType' bodyType
+checkType' (FunT _ argTypes bodyType) = do
+  argVars <- Set.unions <$> mapM checkType' argTypes
+  bodyVars <- checkType' bodyType
+  return (Set.union argVars bodyVars)
 checkType' (Forall _ univars type') = do
   let univarList = NonEmpty.toList univars
   forM_ (alreadyDefined univarList) (tell . error')
