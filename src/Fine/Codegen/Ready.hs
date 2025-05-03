@@ -124,7 +124,7 @@ getBlockReady (LetPatt _ patt expr block) =
 getExprReady :: Expr Typed -> Expr Ready
 getExprReady (Literal _ lit) = Literal () lit
 getExprReady (Data _ tag exprs) = Data () tag (map getExprReady exprs)
-getExprReady (Record _ props) = Record () $ (fmap . fmap) getExprReady props
+getExprReady (Record _ props) = Record () $ (map . fmap) getExprReady props
 getExprReady (Tuple _ exprs) = Tuple () (NonEmpty.map getExprReady exprs)
 getExprReady (List _ exprs) = List () (map getExprReady exprs)
 getExprReady (Var _ var) = Var () var

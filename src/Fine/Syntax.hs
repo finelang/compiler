@@ -120,7 +120,7 @@ data Type (p :: Phase)
   | VoidT (TypeX p)
   | TupleT (TypeX p) (NonEmpty (Type p))
   | ListT (TypeX p) (Type p)
-  | RecordT (TypeX p) (NonEmpty (Id, Type p))
+  | RecordT (TypeX p) [(Id, Type p)]
   | FunT (TypeX p) (NonEmpty (Type p)) (Type p) -- type of a normal function
   | Forall (TypeX p) (NonEmpty (UniVar p)) (Type p) -- type of a generic function
   | TData (TypeX p) Id [Type p]
@@ -212,7 +212,7 @@ type family NonReadyExprX (p :: Phase) where
 data Expr (p :: Phase)
   = Literal (ExprX p) Lit
   | Data (ExprX p) Id [Expr p]
-  | Record (ExprX p) (NonEmpty (Id, Expr p))
+  | Record (ExprX p) [(Id, Expr p)]
   | Tuple (ExprX p) (NonEmpty (Expr p))
   | List (ExprX p) [Expr p]
   | Var (ExprX p) Id
@@ -260,7 +260,7 @@ instance HasRange (Expr Parsed) where
 data Pattern
   = LiteralP Range Lit
   | DataP Range Id [Pattern]
-  | RecordP Range (NonEmpty (Id, Pattern))
+  | RecordP Range [(Id, Pattern)]
   | TupleP Range (NonEmpty Pattern)
   | ListP Range [Pattern]
   | Capture Id

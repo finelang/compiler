@@ -142,7 +142,7 @@ genExprCode (Data _ tag exprs) = do
       then [i|({#{tagged}})|]
       else [i|({#{tagged}, #{exprs'}})|]
 genExprCode (Record _ props) = do
-  props' <- genPropsCode (NonEmpty.toList props)
+  props' <- genPropsCode props
   return [i|({#{props'}})|]
 genExprCode (Tuple _ exprs) = do
   exprs' <- genIndexedPropsCode (NonEmpty.toList exprs)
