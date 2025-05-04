@@ -11,6 +11,7 @@ module Fine.Syntax (
   Type (..),
   typeExt,
   Op (..),
+  Equation (..),
   Lit (..),
   Block (..),
   Expr (..),
@@ -86,6 +87,7 @@ instance Show Id where
 
 data Phase
   = Parsed -- after parsing
+  | Transformed
   | Typed -- after type checking/inference
   | Ready -- ready for codegen
   deriving (Show)
@@ -168,7 +170,14 @@ data Op
   | And
   | Or
   | Concat
+  | Pipe
   deriving (Show)
+
+data Equation (p :: Phase)
+  = Operand (Expr p)
+  | Operation (Expr p) Op (Equation p)
+
+deriving instance (Show (Expr p)) => Show (Equation p)
 
 data Lit
   = Int Int
@@ -178,13 +187,13 @@ data Lit
   | Unit
   deriving (Show)
 
-type family ReadyX (p :: Phase) where
-  ReadyX Ready = ()
-  ReadyX _ = Void
+type family ReadyBlock (p :: Phase) where
+  ReadyBlock Ready = ()
+  ReadyBlock _ = Void
 
-type family NonReadyX (p :: Phase) where
-  NonReadyX Ready = Void
-  NonReadyX _ = ()
+type family NonReadyBlock (p :: Phase) where
+  NonReadyBlock Ready = Void
+  NonReadyBlock _ = ()
 
 data Block (p :: Phase)
   = Return (Expr p)
@@ -194,10 +203,10 @@ data Block (p :: Phase)
   | Debug (Expr p) (Block p)
   | Let Bool Id (Expr p) (Block p)
   | Loop (Expr p) (Block p) (Block p)
-  | If (ReadyX p) (Expr p) (Block p) (Block p)
-  | LetPatt (NonReadyX p) Pattern (Expr p) (Block p)
+  | If (ReadyBlock p) (Expr p) (Block p) (Block p)
+  | LetPatt (NonReadyBlock p) Pattern (Expr p) (Block p)
 
-deriving instance (Show (ReadyX p), Show (NonReadyX p), Show (Expr p)) => Show (Block p)
+deriving instance (Show (ReadyBlock p), Show (NonReadyBlock p), Show (Expr p)) => Show (Block p)
 
 type family ExprX (p :: Phase) where
   ExprX Ready = ()
@@ -209,6 +218,16 @@ type family NonReadyExprX (p :: Phase) where
   NonReadyExprX Typed = (Range, Type Typed)
   NonReadyExprX _ = Range
 
+type family AbstractExprX (p :: Phase) where
+  AbstractExprX Ready = ()
+  AbstractExprX Typed = (Range, Type Typed)
+  AbstractExprX Transformed = Range
+  AbstractExprX Parsed = Void
+
+type family ConcreteExprX (p :: Phase) where
+  ConcreteExprX Parsed = Range
+  ConcreteExprX _ = Void
+
 data Expr (p :: Phase)
   = Literal (ExprX p) Lit
   | Data (ExprX p) Id [Expr p]
@@ -216,7 +235,7 @@ data Expr (p :: Phase)
   | Tuple (ExprX p) (Expr p) (Expr p) [Expr p]
   | List (ExprX p) [Expr p]
   | Var (ExprX p) Id
-  | Bin (ExprX p) Op (Expr p) (Expr p)
+  | Bin (AbstractExprX p) Op (Expr p) (Expr p)
   | App (ExprX p) (Expr p) (NonEmpty (Expr p))
   | GenApp (NonReadyExprX p) (Expr p) (NonEmpty (Type p))
   | Access (ExprX p) (Expr p) Id
@@ -226,18 +245,42 @@ data Expr (p :: Phase)
   | GenFun (NonReadyExprX p) (NonEmpty Id) (Expr p)
   | Block (ExprX p) (Block p)
   | PatternMatching (NonReadyExprX p) (Expr p) (NonEmpty (Pattern, Expr p))
+  | Equation (ConcreteExprX p) (Equation p)
+  | Grouping (ConcreteExprX p) (Expr p)
 
 deriving instance
   ( Show (ExprX p),
     Show (NonReadyExprX p),
-    Show (ReadyX p),
-    Show (NonReadyX p),
+    Show (ReadyBlock p),
+    Show (NonReadyBlock p),
+    Show (ConcreteExprX p),
+    Show (AbstractExprX p),
     Show (Type p)
   ) =>
   Show (Expr p)
 
 instance HasRange (Expr Parsed) where
   range :: Expr Parsed -> Range
+  range (Literal r _) = r
+  range (Data r _ _) = r
+  range (Record r _) = r
+  range (Tuple r _ _ _) = r
+  range (List r _) = r
+  range (Var r _) = r
+  range (App r _ _) = r
+  range (GenApp r _ _) = r
+  range (Access r _ _) = r
+  range (Index r _ _) = r
+  range (Cond r _ _ _) = r
+  range (Fun r _ _) = r
+  range (GenFun r _ _) = r
+  range (Block r _) = r
+  range (PatternMatching r _ _) = r
+  range (Equation r _) = r
+  range (Grouping r _) = r
+
+instance HasRange (Expr Transformed) where
+  range :: Expr Transformed -> Range
   range (Literal r _) = r
   range (Data r _ _) = r
   range (Record r _) = r

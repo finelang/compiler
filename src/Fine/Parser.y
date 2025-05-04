@@ -10,7 +10,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
-import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
+import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun)
 }
 
 %name parseTokens
@@ -74,13 +74,6 @@ import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun, mkBinOrFun, mkPipeOrFun)
   ','       { Token Lex.Comma _ _ }
   ';'       { Token Lex.Semi _ _ }
   '\''      { Token Lex.Tick _ _ }
-
-%left '|>'
-%right '||'
-%right '&&'
-%nonassoc '<=' '>=' '==' '!=' '<' '>'
-%left '+' '-' %right '@'
-%left '*' '/' '%'
 
 %expect 0
 
@@ -178,27 +171,10 @@ Matches : Matches Match ';' { $2 : $1 }
 
 Match : Pattern '->' Expr { ($1, $3) }
 
-Expr : Bin                              { $1 }
+Expr : Equation                         { equationToExpr $1 }
      | if Expr then Expr else Expr      { Cond (range $1 <> range $6) $2 $4 $6 }
      | fn '(' OptParams ')' '->' Expr   { Fun (range $1 <> range $6) $3 $6 }
      | fn '\'' '(' Params ')' '->' Expr { GenFun (range $1 <> range $7) $4 $7 }
-
-Bin : Bin '|>' Bin  { App (range $1 <> range $3) $3 ($1 :| []) }
-    | Bin '&&' Bin  { Bin (range $1 <> range $3) And $1 $3 }
-    | Bin '||' Bin  { Bin (range $1 <> range $3) Or $1 $3 }
-    | Bin '<=' Bin  { Bin (range $1 <> range $3) Le $1 $3 }
-    | Bin '>=' Bin  { Bin (range $1 <> range $3) Ge $1 $3 }
-    | Bin '==' Bin  { Bin (range $1 <> range $3) Eq $1 $3 }
-    | Bin '!=' Bin  { Bin (range $1 <> range $3) Neq $1 $3 }
-    | Bin '>' Bin   { Bin (range $1 <> range $3) Gt $1 $3 }
-    | Bin '<' Bin   { Bin (range $1 <> range $3) Lt $1 $3 }
-    | Bin '+' Bin   { Bin (range $1 <> range $3) Add $1 $3 }
-    | Bin '-' Bin   { Bin (range $1 <> range $3) Sub $1 $3 }
-    | Bin '*' Bin   { Bin (range $1 <> range $3) Mult $1 $3 }
-    | Bin '/' Bin   { Bin (range $1 <> range $3) Div $1 $3 }
-    | Bin '%' Bin   { Bin (range $1 <> range $3) Rest $1 $3 }
-    | Bin '@' Bin   { Bin (range $1 <> range $3) Concat $1 $3 }
-    | App           { $1 }
 
 Arg : Expr    { Right $1 }
     | discard { Left (range $1) }
@@ -233,16 +209,12 @@ Atom : '(' Exprs ')'                      { if NonEmpty.length $2 >= 2 then uncu
      | match Expr '{' Matches '}'         { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
      | fn '(' OptParams ')' '{' Expr '}'  { Fun (range $1 <> range $7) $3 $6 }
      | fn '(' OptParams ')' '{' Block '}' { Fun (range $1 <> range $7) $3 (Block (range $5 <> range $7) $6) }
-     | PartialBin                         { $1 }
 
-PartialBin : fn '(' Op ')'        { mkBinOrFun (range $1 <> range $4) $3 Nothing }
-           | fn '(' App Op ')'    { mkBinOrFun (range $1 <> range $5) $4 (Just (Right $3)) }
-           | fn '(' Op App ')'    { mkBinOrFun (range $1 <> range $5) $3 (Just (Left $4)) }
-           | fn '(' '|>' ')'      { mkPipeOrFun (range $1 <> range $4) Nothing }
-           | fn '(' App '|>' ')'  { mkPipeOrFun (range $1 <> range $5) (Just (Right $3)) }
-           | fn '(' '|>' App ')'  { mkPipeOrFun (range $1 <> range $5) (Just (Left $4)) }
+Equation : App Op Equation  { Operation $1 $2 $3 }
+         | App              { Operand $1 }
 
-Op : '&&' { And }
+Op : '|>' { Pipe }
+   | '&&' { And }
    | '||' { Or }
    | '<=' { Le }
    | '>=' { Ge }
@@ -333,6 +305,9 @@ tryUnblock r block = Block r block
 uncurry3 f (x, y, z) = f x y z
 
 uncons2 (x :| (y : zs)) = (x, y, zs)
+
+equationToExpr (Operand expr) = expr
+equationToExpr equation = Equation NoRange equation
 
 parseError tokens = error . show . head $ tokens
 }

@@ -1,13 +1,14 @@
 module Fine.Codegen.Js (runCodegen) where
 
 import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Fine.Codegen.Ready (getModuleReady)
 import Fine.Codegen.Rename (runRenamer)
+import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (
   Bind (ExprBind, ForeignBind),
   BindType (OfExpr),
@@ -17,12 +18,12 @@ import Fine.Syntax (
   Lit (..),
   Module (Module),
   Op (..),
-  Phase (Parsed, Ready),
+  Phase (Ready, Transformed),
   Range (NoRange),
   idText,
  )
 
-type Typed = Parsed -- TODO: remove this line (and import 'Typed' phase) after typer impl
+type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) after typer impl
 
 type Indentation = Text
 
@@ -61,6 +62,7 @@ genOpCode Mult = "*"
 genOpCode Div = "/"
 genOpCode Rest = "%"
 genOpCode Concat = "+"
+genOpCode Pipe = errorUNREACHABLE -- pipe operation generates function app code
 
 genPropCode :: (Id, Expr') -> Reader Indentation Text
 genPropCode (prop, value) = do
@@ -151,6 +153,7 @@ genExprCode (List _ exprs) = do
   exprs' <- Text.intercalate ", " <$> mapM genExprCode exprs
   return [i|[#{exprs'}]|]
 genExprCode (Var _ var) = return (idText var)
+genExprCode (Bin _ Pipe arg f) = genExprCode (App () f (arg :| []))
 genExprCode (Bin _ op left right) = do
   let op' = genOpCode op
   left' <- genExprCode left

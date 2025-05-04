@@ -10,7 +10,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax (Id, Range)
+import Fine.Syntax (Id, Op, Range)
 import GHC.Stack (HasCallStack)
 import String.ANSI (red, yellow)
 
@@ -29,6 +29,7 @@ data Error
   | AlreadyDefined Id Id
   | UsageBeforeInit Id
   | MutRecBindNotFun Id
+  | SameInfixPrecedence Op Op
 
 instance Show Error where
   show :: Error -> String
@@ -42,6 +43,7 @@ instance Show Error where
     [i|Variable #{hl var} cannot be read during its own initialization.|]
   show (MutRecBindNotFun var) =
     [i|The expression bound to #{hl var} must be a function expression.|]
+  show (SameInfixPrecedence _ _) = errorTODO
 
 errorPrefix :: String
 errorPrefix = red "Error: "

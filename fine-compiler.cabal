@@ -49,6 +49,8 @@ library
     Fine.Syntax.Utils
     Fine.Transform
     Fine.Transform.Check
+    Fine.Transform.ShuntingYard
+    Fine.Transform.Term
   hs-source-dirs:
     src
   default-extensions:

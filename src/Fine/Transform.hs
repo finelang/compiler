@@ -1,6 +1,6 @@
 module Fine.Transform (runTransformer) where
 
-import Control.Monad (forM_, unless, when)
+import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Trans.SEC (SEC, fail', gets, modify, runSEC, warn)
 import Data.Either (partitionEithers)
 import Data.List.NonEmpty (NonEmpty)
@@ -20,12 +20,13 @@ import Fine.Syntax (
   Id,
   Module (Module),
   ParsedModule (ParsedModule),
-  Phase (Parsed),
+  Phase (Parsed, Transformed),
   Type (..),
   binder,
  )
 import Fine.Syntax.Utils (isFunction)
 import Fine.Transform.Check qualified as Check
+import Fine.Transform.Term (runExprTransformer, transformType)
 
 data Env = Env
   { currentExprBinders :: Set Id,
@@ -62,10 +63,11 @@ checkType optBinder type' = do
     when (Set.member binder' usedTVars) (fail' $ UsageBeforeInit binder')
   modify (\st -> st{usedTypeBinders = Set.union usedTVars (usedTypeBinders st)})
 
-checkTypeBind :: Bind OfType Parsed -> SEC Env Error Warning ()
-checkTypeBind (TypeBind binder' type') = do
+transformTypeBind :: Bind OfType Parsed -> SEC Env Error Warning (Bind OfType Transformed)
+transformTypeBind (TypeBind binder' type') = do
   modify (\st -> st{currentTypeBinders = Set.insert binder' (currentTypeBinders st)})
   checkType (Just binder') type'
+  return (TypeBind binder' (transformType type'))
 
 -- EXPR
 
@@ -86,8 +88,8 @@ checkExpr optBinder expr = do
           }
     )
 
-checkExprBind :: Bind OfExpr Parsed -> SEC Env Error Warning ()
-checkExprBind bind = do
+transformExprBind :: Bind OfExpr Parsed -> SEC Env Error Warning (Bind OfExpr Transformed)
+transformExprBind bind = do
   do
     let binder' = binder bind
     modify (\st -> st{currentExprBinders = Set.insert binder' (currentExprBinders st)})
@@ -95,8 +97,12 @@ checkExprBind bind = do
     ExprBind binder' type' expr -> do
       checkType Nothing type'
       checkExpr (Just binder') expr
-    ForeignBind _ type' _ -> do
+      let (expr', errs) = runExprTransformer expr
+      forM_ errs fail'
+      return (ExprBind binder' (transformType type') expr')
+    ForeignBind binder' type' code -> do
       checkType Nothing type'
+      return (ForeignBind binder' (transformType type') code)
 
 -- MODULE
 
@@ -114,28 +120,28 @@ checkRepeatedBinders defns = do
   typeDefnBinder (DataDefn bind _) = Just (binder bind)
   typeDefnBinder _ = Nothing
 
-transformDefn :: Defn -> SEC Env Error Warning [Either (Bind OfExpr Parsed) (Bind OfType Parsed)]
+transformDefn :: Defn -> SEC Env Error Warning [Either (Bind OfExpr Transformed) (Bind OfType Transformed)]
 transformDefn (Defn bind) = do
-  checkExprBind bind
-  return [Left bind]
+  bind' <- transformExprBind bind
+  return [Left bind']
 transformDefn (TypeDefn bind) = do
-  checkTypeBind bind
-  return [Right bind]
+  bind' <- transformTypeBind bind
+  return [Right bind']
 transformDefn (DataDefn bind ctBinds) = do
-  checkTypeBind bind
-  forM_ ctBinds checkExprBind
-  return (Right bind : (map Left . NonEmpty.toList) ctBinds)
+  bind' <- transformTypeBind bind
+  ctBinds' <- mapM transformExprBind ctBinds
+  return (Right bind' : (map Left . NonEmpty.toList) ctBinds')
 transformDefn (MutRecDefns binds) = do
   currentBinders <- gets currentExprBinders
   let binders = Set.fromList $ map binder $ NonEmpty.toList binds
-  forM_ binds $ \bind -> do
+  binds' <- forM binds $ \bind -> do
     let binder' = binder bind
     unless (hasFunExpr bind) (fail' $ MutRecBindNotFun $ binder')
     let rest = Set.delete binder' binders
     modify (\st -> st{currentExprBinders = Set.union rest currentBinders})
-    checkExprBind bind
+    transformExprBind bind
   modify (\st -> st{currentExprBinders = Set.union binders currentBinders})
-  return (map Left $ NonEmpty.toList binds)
+  return (map Left $ NonEmpty.toList binds')
  where
   hasFunExpr :: Bind OfExpr Parsed -> Bool
   hasFunExpr (ExprBind _ _ expr) = isFunction expr
@@ -152,16 +158,20 @@ warnUnusedBinders = do
     used <- gets usedTypeBinders
     forM_ (Set.difference all' used) (warn . UnusedVar)
 
-transformModule :: ParsedModule -> SEC Env Error Warning (Module Parsed)
+transformModule :: ParsedModule -> SEC Env Error Warning (Module Transformed)
 transformModule (ParsedModule defns entry) = do
   checkRepeatedBinders defns
   initEnv defns
   (exprBinds, typeBinds) <- partitionEithers . concat <$> mapM transformDefn defns
-  forM_ entry (checkExpr Nothing)
+  entry' <- forM entry $ \expr -> do
+    checkExpr Nothing expr
+    let (expr', errs) = runExprTransformer expr
+    forM_ errs fail'
+    return expr'
   warnUnusedBinders
-  return (Module exprBinds typeBinds entry)
+  return (Module exprBinds typeBinds entry')
 
-runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Parsed), [Warning])
+runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Transformed), [Warning])
 runTransformer mdule =
   let env =
         Env Set.empty Set.empty Set.empty Set.empty Set.empty

@@ -17,6 +17,7 @@ import Fine.Error (
  )
 import Fine.Syntax (
   Block (..),
+  Equation (..),
   Expr (..),
   Id,
   Pattern (..),
@@ -123,6 +124,8 @@ memberVar var (Vars _ vs) = Set.member var vs
 deleteVar :: Id -> Vars -> Vars
 deleteVar var (Vars tvs vs) = Vars tvs (Set.delete var vs)
 
+type Equation' = Equation Parsed
+
 type Block' = Block Parsed
 
 type Expr' = Expr Parsed
@@ -136,6 +139,11 @@ blockBoundVars (Debug _ block) = blockBoundVars block
 blockBoundVars (Let _ binder _ block) = binder : blockBoundVars block
 blockBoundVars (Loop _ _ block) = blockBoundVars block
 blockBoundVars (LetPatt _ patt _ block) = patternBoundVars patt ++ blockBoundVars block
+
+checkEquation :: Equation' -> RW Vars Errors' Vars
+checkEquation (Operand expr) = checkExpr' expr
+checkEquation (Operation left _ equation) =
+  union' <$> checkExpr' left <*> checkEquation equation
 
 checkBlock :: Block' -> RW Vars Errors' Vars
 checkBlock (Return expr) = checkExpr' expr
@@ -200,7 +208,6 @@ checkExpr' (Record _ props) = unions' <$> mapM (checkExpr' . snd) props
 checkExpr' (Tuple _ fst' snd' rest) = unions' <$> mapM checkExpr' (fst' : snd' : rest)
 checkExpr' (List _ exprs) = unions' <$> mapM checkExpr' exprs
 checkExpr' (Var _ var) = withReader vars (check var) >> return (singleVar var)
-checkExpr' (Bin _ _ left right) = union' <$> checkExpr' left <*> checkExpr' right
 checkExpr' (App _ f args) = do
   fVars <- checkExpr' f
   argsVars <- unions' <$> mapM checkExpr' args
@@ -243,6 +250,8 @@ checkExpr' (GenFun _ typeParams body) = do
 checkExpr' (Block _ block) = do
   forM_ (alreadyDefined $ blockBoundVars block) (tell . error')
   checkBlock block
+checkExpr' (Equation _ equation) = checkEquation equation
+checkExpr' (Grouping _ expr) = checkExpr' expr
 
 checkExpr :: Set Id -> Set Id -> Expr' -> (Set Id, Set Id, [Error], [Warning])
 checkExpr vars tVars expr =

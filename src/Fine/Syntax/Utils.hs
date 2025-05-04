@@ -9,9 +9,8 @@ import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (
   Bind (ExprBind, TypeBind),
   Defn (DataDefn),
-  Expr (App, Bin, Data, Fun, GenFun, Var),
+  Expr (App, Data, Fun, GenFun, Var),
   Id (Id),
-  Op,
   Pattern (..),
   Phase (Parsed),
   Range (NoRange),
@@ -93,25 +92,3 @@ mkAppOrFun r f args =
 
   fromRight (Right x) = x
   fromRight _ = errorUNREACHABLE
-
-mkBinOrFun :: Range -> Op -> Maybe (Either (Expr Parsed) (Expr Parsed)) -> Expr Parsed
-mkBinOrFun r op Nothing =
-  let x = Id NoRange "x"
-      y = Id NoRange "y"
-   in Fun r (x :| [y]) (Bin r op (Var NoRange x) (Var NoRange y))
-mkBinOrFun r op (Just (Left left)) =
-  let x = Id NoRange "x"
-   in Fun r (x :| []) (Bin r op left (Var NoRange x))
-mkBinOrFun r op (Just (Right right)) =
-  let x = Id NoRange "x"
-   in Fun r (x :| []) (Bin r op (Var NoRange x) right)
-
-mkPipeOrFun :: Range -> Maybe (Either (Expr Parsed) (Expr Parsed)) -> Expr Parsed
-mkPipeOrFun r Nothing =
-  let f = Id NoRange "f"
-      x = Id NoRange "x"
-   in Fun r (x :| [f]) (App r (Var NoRange f) (Var NoRange x :| []))
-mkPipeOrFun _ (Just (Left f)) = f
-mkPipeOrFun r (Just (Right arg)) =
-  let f = Id NoRange "f"
-   in Fun r (f :| []) (App r (Var NoRange f) (arg :| []))
