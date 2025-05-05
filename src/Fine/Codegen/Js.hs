@@ -62,7 +62,7 @@ genOpCode Mult = "*"
 genOpCode Div = "/"
 genOpCode Rest = "%"
 genOpCode Concat = "+"
-genOpCode Pipe = errorUNREACHABLE -- pipe operation generates function app code
+genOpCode Pipe = errorUNREACHABLE "Pipe operation generates function application code."
 
 genPropCode :: (Id, Expr') -> Reader Indentation Text
 genPropCode (prop, value) = do

@@ -47,19 +47,19 @@ modifyOperands f = modify $ \(opns, ops) -> (f opns, ops)
 modifyOperators :: (Monoid w) => ([Op] -> [Op]) -> SW SYStack w ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
-mkTopApp :: [Expr'] -> Op -> [Expr']
-mkTopApp (right : left : rest) op =
+mkBinOp :: [Expr'] -> Op -> [Expr']
+mkBinOp (right : left : rest) op =
   Bin (range left <> range right) op left right : rest
-mkTopApp _ _ = errorUNREACHABLE
+mkBinOp _ _ = errorUNREACHABLE "Operand stack does not contains two operands."
 
 consume :: [Expr'] -> [Op] -> [Expr']
-consume = foldl mkTopApp
+consume = foldl mkBinOp
 
 continueWithOp :: Op -> Equation' -> SW SYStack [Error] Expr'
 continueWithOp curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
-  modifyOperands (`mkTopApp` top) -- create app
+  modifyOperands (`mkBinOp` top) -- create app
   sy' curr chain
 
 continueWithEquation :: Op -> Equation' -> SW SYStack [Error] Expr'

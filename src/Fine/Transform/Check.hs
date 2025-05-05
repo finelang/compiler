@@ -245,7 +245,7 @@ checkExpr' (Fun _ params body) = do
  where
   relevant var = case Text.uncons (idText var) of
     Just (ch', _) -> ch' /= '_'
-    _ -> errorUNREACHABLE
+    _ -> errorUNREACHABLE "Found a variable with empty name."
 checkExpr' (GenFun _ typeParams body) = do
   let typeParamList = NonEmpty.toList typeParams
   forM_ (alreadyDefined typeParamList) (tell . error')

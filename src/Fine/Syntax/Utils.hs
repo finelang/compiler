@@ -91,4 +91,4 @@ mkAppOrFun r f args =
   go (Right arg : rest) count params' args' = go rest count params' (arg : args')
 
   fromRight (Right x) = x
-  fromRight _ = errorUNREACHABLE
+  fromRight _ = errorUNREACHABLE ""
