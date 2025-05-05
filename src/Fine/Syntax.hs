@@ -171,6 +171,7 @@ data Op
   | Or
   | Concat
   | Pipe
+  | RPipe
   deriving (Show)
 
 data Equation t

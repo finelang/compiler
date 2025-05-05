@@ -16,7 +16,8 @@ data Assoc = NonAssoc | LeftAssoc | RightAssoc
   deriving (Eq)
 
 fixity :: Op -> (Assoc, Int)
-fixity Pipe = (LeftAssoc, 1)
+fixity Pipe = (LeftAssoc, 0)
+fixity RPipe = (RightAssoc, 0)
 fixity Or = (RightAssoc, 2)
 fixity And = (RightAssoc, 3)
 fixity Eq = (NonAssoc, 4)

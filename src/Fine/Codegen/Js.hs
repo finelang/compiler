@@ -63,6 +63,7 @@ genOpCode Div = "/"
 genOpCode Rest = "%"
 genOpCode Concat = "+"
 genOpCode Pipe = errorUNREACHABLE "Pipe operation generates function application code."
+genOpCode RPipe = errorUNREACHABLE "Reverse pipe operation generates function application code."
 
 genPropCode :: (Id, Expr') -> Reader Indentation Text
 genPropCode (prop, value) = do
@@ -154,6 +155,7 @@ genExprCode (List _ exprs) = do
   return [i|[#{exprs'}]|]
 genExprCode (Var _ var) = return (idText var)
 genExprCode (Bin _ Pipe arg f) = genExprCode (App () f (arg :| []))
+genExprCode (Bin _ RPipe f arg) = genExprCode (App () f (arg :| []))
 genExprCode (Bin _ op left right) = do
   let op' = genOpCode op
   left' <- genExprCode left

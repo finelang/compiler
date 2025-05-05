@@ -51,6 +51,7 @@ import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun)
   '.'       { Token Lex.Dot _ _ }
   ':'       { Token Lex.Colon _ _ }
   '|>'      { Token Lex.Pipe _ _ }
+  '<|'      { Token Lex.RPipe _ _ }
   '&&'      { Token Lex.And _ _ }
   '||'      { Token Lex.Or _ _ }
   '<='      { Token Lex.Le _ _ }
@@ -215,6 +216,7 @@ Equation : App Op Equation  { Operation $1 $2 $3 }
          | App              { Operand $1 }
 
 Op : '|>' { Pipe }
+   | '<|' { RPipe }
    | '&&' { And }
    | '||' { Or }
    | '<=' { Le }
