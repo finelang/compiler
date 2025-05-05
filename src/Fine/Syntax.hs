@@ -173,11 +173,10 @@ data Op
   | Pipe
   deriving (Show)
 
-data Equation (p :: Phase)
-  = Operand (Expr p)
-  | Operation (Expr p) Op (Equation p)
-
-deriving instance (Show (Expr p)) => Show (Equation p)
+data Equation t
+  = Operand t
+  | Operation t Op (Equation t)
+  deriving (Show)
 
 data Lit
   = Int Int
@@ -245,7 +244,8 @@ data Expr (p :: Phase)
   | GenFun (NonReadyExprX p) (NonEmpty Id) (Expr p)
   | Block (ExprX p) (Block p)
   | PatternMatching (NonReadyExprX p) (Expr p) (NonEmpty (Pattern, Expr p))
-  | Equation (ConcreteExprX p) (Equation p)
+  | Equation (ConcreteExprX p) (Equation (Expr p))
+  | PartialEquation (ConcreteExprX p) (Equation (Either Range (Expr p)))
   | Grouping (ConcreteExprX p) (Expr p)
 
 deriving instance
@@ -277,6 +277,7 @@ instance HasRange (Expr Parsed) where
   range (Block r _) = r
   range (PatternMatching r _ _) = r
   range (Equation r _) = r
+  range (PartialEquation r _) = r
   range (Grouping r _) = r
 
 instance HasRange (Expr Transformed) where

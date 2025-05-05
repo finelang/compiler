@@ -34,7 +34,7 @@ fixity Rest = (LeftAssoc, 7)
 
 type Expr' = Expr Transformed
 
-type Equation' = Equation Transformed
+type Equation' = Equation Expr'
 
 type SYStack = ([Expr'], [Op])
 
@@ -92,7 +92,7 @@ sy (Operand expr) = do
   return $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
-runShuntingYard :: Equation Transformed -> (Expr Transformed, [Error])
+runShuntingYard :: Equation (Expr Transformed) -> (Expr Transformed, [Error])
 runShuntingYard (Operand expr) = (expr, [])
 runShuntingYard (Operation left op chain) =
   let (expr, _, errs) = runSW (sy chain) ([left], [op])

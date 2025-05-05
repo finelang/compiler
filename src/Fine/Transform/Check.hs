@@ -124,8 +124,6 @@ memberVar var (Vars _ vs) = Set.member var vs
 deleteVar :: Id -> Vars -> Vars
 deleteVar var (Vars tvs vs) = Vars tvs (Set.delete var vs)
 
-type Equation' = Equation Parsed
-
 type Block' = Block Parsed
 
 type Expr' = Expr Parsed
@@ -140,10 +138,17 @@ blockBoundVars (Let _ binder _ block) = binder : blockBoundVars block
 blockBoundVars (Loop _ _ block) = blockBoundVars block
 blockBoundVars (LetPatt _ patt _ block) = patternBoundVars patt ++ blockBoundVars block
 
-checkEquation :: Equation' -> RW Vars Errors' Vars
+checkEquation :: Equation Expr' -> RW Vars Errors' Vars
 checkEquation (Operand expr) = checkExpr' expr
 checkEquation (Operation left _ equation) =
   union' <$> checkExpr' left <*> checkEquation equation
+
+checkPartialEquation :: Equation (Either a (Expr Parsed)) -> RW Vars Errors' Vars
+checkPartialEquation (Operand xOrExpr) = unions' <$> mapM checkExpr' xOrExpr
+checkPartialEquation (Operation xOrExpr _ equation) = do
+  exprVars <- unions' <$> mapM checkExpr' xOrExpr
+  equationVars <- checkPartialEquation equation
+  return (union' exprVars equationVars)
 
 checkBlock :: Block' -> RW Vars Errors' Vars
 checkBlock (Return expr) = checkExpr' expr
@@ -251,6 +256,7 @@ checkExpr' (Block _ block) = do
   forM_ (alreadyDefined $ blockBoundVars block) (tell . error')
   checkBlock block
 checkExpr' (Equation _ equation) = checkEquation equation
+checkExpr' (PartialEquation _ equation) = checkPartialEquation equation
 checkExpr' (Grouping _ expr) = checkExpr' expr
 
 checkExpr :: Set Id -> Set Id -> Expr' -> (Set Id, Set Id, [Error], [Warning])

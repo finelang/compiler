@@ -30,6 +30,7 @@ data Error
   | UsageBeforeInit Id
   | MutRecBindNotFun Id
   | SameInfixPrecedence Op Op
+  | NonPartialEquation Range
 
 instance Show Error where
   show :: Error -> String
@@ -44,6 +45,8 @@ instance Show Error where
   show (MutRecBindNotFun var) =
     [i|The expression bound to #{hl var} must be a function expression.|]
   show (SameInfixPrecedence _ _) = errorTODO
+  show (NonPartialEquation _) =
+    [i|The equation is not partial. There is no usage of '_' wildcard.|]
 
 errorPrefix :: String
 errorPrefix = red "Error: "

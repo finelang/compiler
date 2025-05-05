@@ -1,13 +1,18 @@
 module Fine.Transform.Term (transformType, runExprTransformer) where
 
 import Control.Monad.Trans.RW (RW, runRW, tell, withReader)
+import Control.Monad.Trans.State.Strict (get, put, runState)
+import Data.List.Extra (toNonEmptyPARTIAL)
 import Data.List.NonEmpty qualified as NonEmpty
-import Fine.Error (Error)
+import Data.String.Interpolate (i)
+import Fine.Error (Error (NonPartialEquation))
 import Fine.Syntax (
   Block (..),
   Equation (..),
   Expr (..),
+  Id (Id),
   Phase (Parsed, Transformed),
+  Range (NoRange),
   Type (..),
  )
 import Fine.Transform.ShuntingYard (runShuntingYard)
@@ -31,12 +36,40 @@ transformType (TFun r typeParams typeBody) = TFun r typeParams (transformType ty
 
 type ParentExpr = Expr Parsed
 
-transformEquation :: Equation Parsed -> RW (Maybe ParentExpr) [Error] (Equation Transformed)
-transformEquation (Operand expr) = Operand <$> transformExpr expr
-transformEquation (Operation left op equation) = do
-  left' <- transformExpr left
-  equation' <- transformEquation equation
-  return (Operation left' op equation')
+transformEquation :: Equation (Expr Parsed) -> RW (Maybe ParentExpr) [Error] (Expr Transformed)
+transformEquation equation' = do
+  equation'' <- go equation'
+  let (expr', errs) = runShuntingYard equation''
+  tell errs
+  return expr'
+ where
+  go (Operand expr) = Operand <$> transformExpr expr
+  go (Operation left op equation) =
+    Operation <$> transformExpr left <*> return op <*> go equation
+
+transformPartialEquation ::
+  Range -> Equation (Either Range (Expr Parsed)) -> RW (Maybe ParentExpr) [Error] (Expr Transformed)
+transformPartialEquation r' equation' = do
+  let (equation'', paramCount) = runState (go equation') (0 :: Int)
+  body <- transformEquation equation''
+  if (paramCount == 0)
+    then tell [NonPartialEquation r'] >> return body
+    else do
+      let params = toNonEmptyPARTIAL $ map (\n -> Id NoRange [i|x#{n}|]) [0 .. paramCount - 1]
+      return (Fun r' params body)
+ where
+  go (Operand (Right expr)) = return (Operand expr)
+  go (Operand (Left r)) = do
+    var <- Id r <$> newName
+    return (Operand (Var r var))
+  go (Operation (Right expr) op equation) = Operation expr op <$> go equation
+  go (Operation (Left r) op equation) = do
+    var <- Id r <$> newName
+    Operation (Var r var) op <$> go equation
+  newName = do
+    n <- get
+    put (n + 1)
+    return [i|x#{n}|]
 
 transformBlock :: Block Parsed -> RW (Maybe ParentExpr) [Error] (Block Transformed)
 transformBlock (Return expr) = Return <$> transformExpr expr
@@ -75,11 +108,8 @@ transformExpr expr = withReader (const $ Just expr) $ case expr of
   Block r block -> Block r <$> transformBlock block
   PatternMatching r matched matches ->
     PatternMatching r <$> transformExpr matched <*> (mapM . mapM) transformExpr matches
-  Equation _ equation -> do
-    equation' <- transformEquation equation
-    let (expr', errs) = runShuntingYard equation'
-    tell errs
-    return expr'
+  Equation _ equation -> transformEquation equation
+  PartialEquation r equation -> transformPartialEquation r equation
   Grouping _ expr' -> transformExpr expr'
 
 runExprTransformer :: Expr Parsed -> (Expr Transformed, [Error])

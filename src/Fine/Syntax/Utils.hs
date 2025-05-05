@@ -68,7 +68,7 @@ mkDataDefn ctTag optTParams ctors =
           Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
           _ -> (type', expr)
      in ExprBind tag type'' expr'
-  paramsFromTypes (_ :| []) = Id NoRange "x" :| []
+  paramsFromTypes (_ :| []) = Id NoRange "x0" :| []
   paramsFromTypes (_ :| ts) =
     Id NoRange "x0" :| map (\n -> Id NoRange [i|x#{n}|]) [1 .. length ts]
 

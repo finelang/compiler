@@ -209,6 +209,7 @@ Atom : '(' Exprs ')'                      { if NonEmpty.length $2 >= 2 then uncu
      | match Expr '{' Matches '}'         { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
      | fn '(' OptParams ')' '{' Expr '}'  { Fun (range $1 <> range $7) $3 $6 }
      | fn '(' OptParams ')' '{' Block '}' { Fun (range $1 <> range $7) $3 (Block (range $5 <> range $7) $6) }
+     | fn '(' PartialEquation ')'         { PartialEquation (range $1 <> range $4) $3 }
 
 Equation : App Op Equation  { Operation $1 $2 $3 }
          | App              { Operand $1 }
@@ -228,6 +229,14 @@ Op : '|>' { Pipe }
    | '/'  { Div }
    | '%'  { Rest }
    | '@'  { Concat }
+
+PartialEquation : PartialOperand Op PartialEquation_  { Operation $1 $2 $3 }
+
+PartialEquation_ : PartialOperand Op PartialEquation_ { Operation $1 $2 $3 }
+                 | PartialOperand                     { Operand $1 }
+
+PartialOperand : App      { Right $1 }
+               | discard  { Left (range $1) }
 
 -- TYPE
 
