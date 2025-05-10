@@ -247,7 +247,6 @@ data Expr (p :: Phase)
   | PatternMatching (NonReadyExprX p) (Expr p) (NonEmpty (Pattern, Expr p))
   | Equation (ConcreteExprX p) (Equation (Expr p))
   | PartialEquation (ConcreteExprX p) (Equation (Either Range (Expr p)))
-  | Grouping (ConcreteExprX p) (Expr p)
 
 deriving instance
   ( Show (ExprX p),
@@ -279,7 +278,6 @@ instance HasRange (Expr Parsed) where
   range (PatternMatching r _ _) = r
   range (Equation r _) = r
   range (PartialEquation r _) = r
-  range (Grouping r _) = r
 
 instance HasRange (Expr Transformed) where
   range :: Expr Transformed -> Range

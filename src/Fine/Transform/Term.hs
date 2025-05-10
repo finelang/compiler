@@ -1,11 +1,11 @@
 module Fine.Transform.Term (transformType, runExprTransformer) where
 
-import Control.Monad.Trans.RW (RW, runRW, tell, withReader)
-import Control.Monad.Trans.State.Strict (get, put, runState)
-import Data.List.Extra (toNonEmptyPARTIAL)
+import Control.Monad.Trans.State.Strict (gets, modify, runState)
+import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.String.Interpolate (i)
-import Fine.Error (Error (NonPartialEquation))
+import Fine.Error (Error)
 import Fine.Syntax (
   Block (..),
   Equation (..),
@@ -34,9 +34,7 @@ transformType (TApp r typeFun typeArgs) =
   TApp r (transformType typeFun) (NonEmpty.map transformType typeArgs)
 transformType (TFun r typeParams typeBody) = TFun r typeParams (transformType typeBody)
 
-type ParentExpr = Expr Parsed
-
-transformEquation :: Equation (Expr Parsed) -> RW (Maybe ParentExpr) [Error] (Expr Transformed)
+transformEquation :: Equation (Expr Parsed) -> Writer [Error] (Expr Transformed)
 transformEquation equation' = do
   equation'' <- go equation'
   let (expr', errs) = runShuntingYard equation''
@@ -48,30 +46,29 @@ transformEquation equation' = do
     Operation <$> transformExpr left <*> return op <*> go equation
 
 transformPartialEquation ::
-  Range -> Equation (Either Range (Expr Parsed)) -> RW (Maybe ParentExpr) [Error] (Expr Transformed)
+  Range -> Equation (Either Range (Expr Parsed)) -> Writer [Error] (Expr Transformed)
 transformPartialEquation r' equation' = do
-  let (equation'', paramCount) = runState (go equation') (0 :: Int)
+  let (equation'', (_, params)) = runState (go equation') (0 :: Int, [])
   body <- transformEquation equation''
-  if (paramCount == 0)
-    then tell [NonPartialEquation r'] >> return body
-    else do
-      let params = toNonEmptyPARTIAL $ map (\n -> Id NoRange [i|x#{n}|]) [0 .. paramCount - 1]
-      return (Fun r' params body)
+  return $ case reverse params of
+    [] -> Fun r' (Id NoRange "_" :| []) body
+    (p : ps) -> Fun r' (p :| ps) body
  where
   go (Operand (Right expr)) = return (Operand expr)
   go (Operand (Left r)) = do
-    var <- Id r <$> newName
+    var <- newParam r
     return (Operand (Var r var))
   go (Operation (Right expr) op equation) = Operation expr op <$> go equation
   go (Operation (Left r) op equation) = do
-    var <- Id r <$> newName
+    var <- newParam r
     Operation (Var r var) op <$> go equation
-  newName = do
-    n <- get
-    put (n + 1)
-    return [i|x#{n}|]
+  newParam r = do
+    n <- gets fst
+    let param = Id r [i|x#{n}|]
+    modify $ \(_, ps) -> (n + 1, param : ps)
+    return param
 
-transformBlock :: Block Parsed -> RW (Maybe ParentExpr) [Error] (Block Transformed)
+transformBlock :: Block Parsed -> Writer [Error] (Block Transformed)
 transformBlock (Return expr) = Return <$> transformExpr expr
 transformBlock Void = return Void
 transformBlock (Do action block) =
@@ -87,30 +84,28 @@ transformBlock (Loop cond actions block) =
 transformBlock (LetPatt x pattern value block) =
   LetPatt x pattern <$> transformExpr value <*> transformBlock block
 
-transformExpr :: Expr Parsed -> RW (Maybe ParentExpr) [Error] (Expr Transformed)
-transformExpr expr = withReader (const $ Just expr) $ case expr of
-  Literal r lit -> return (Literal r lit)
-  Data r tag exprs -> Data r tag <$> mapM transformExpr exprs
-  Record r props -> Record r <$> (mapM . mapM) transformExpr props
-  Tuple r fst' snd' rest ->
-    Tuple r <$> transformExpr fst' <*> transformExpr snd' <*> mapM transformExpr rest
-  List r exprs -> List r <$> mapM transformExpr exprs
-  Var r var -> return (Var r var)
-  App r f args -> App r <$> transformExpr f <*> mapM transformExpr args
-  GenApp r f types ->
-    GenApp r <$> transformExpr f <*> return (NonEmpty.map transformType types)
-  Access r expr' prop -> Access r <$> transformExpr expr' <*> return prop
-  Index r expr' ix -> Index r <$> transformExpr expr' <*> return ix
-  Cond r cond yes no ->
-    Cond r <$> transformExpr cond <*> transformExpr yes <*> transformExpr no
-  Fun r params body -> Fun r params <$> transformExpr body
-  GenFun r tparams body -> GenFun r tparams <$> transformExpr body
-  Block r block -> Block r <$> transformBlock block
-  PatternMatching r matched matches ->
-    PatternMatching r <$> transformExpr matched <*> (mapM . mapM) transformExpr matches
-  Equation _ equation -> transformEquation equation
-  PartialEquation r equation -> transformPartialEquation r equation
-  Grouping _ expr' -> transformExpr expr'
+transformExpr :: Expr Parsed -> Writer [Error] (Expr Transformed)
+transformExpr (Literal r lit) = return (Literal r lit)
+transformExpr (Data r tag exprs) = Data r tag <$> mapM transformExpr exprs
+transformExpr (Record r props) = Record r <$> (mapM . mapM) transformExpr props
+transformExpr (Tuple r fst' snd' rest) =
+  Tuple r <$> transformExpr fst' <*> transformExpr snd' <*> mapM transformExpr rest
+transformExpr (List r exprs) = List r <$> mapM transformExpr exprs
+transformExpr (Var r var) = return (Var r var)
+transformExpr (App r f args) = App r <$> transformExpr f <*> mapM transformExpr args
+transformExpr (GenApp r f types) =
+  GenApp r <$> transformExpr f <*> return (NonEmpty.map transformType types)
+transformExpr (Access r expr' prop) = Access r <$> transformExpr expr' <*> return prop
+transformExpr (Index r expr' ix) = Index r <$> transformExpr expr' <*> return ix
+transformExpr (Cond r cond yes no) =
+  Cond r <$> transformExpr cond <*> transformExpr yes <*> transformExpr no
+transformExpr (Fun r params body) = Fun r params <$> transformExpr body
+transformExpr (GenFun r tparams body) = GenFun r tparams <$> transformExpr body
+transformExpr (Block r block) = Block r <$> transformBlock block
+transformExpr (PatternMatching r matched matches) =
+  PatternMatching r <$> transformExpr matched <*> (mapM . mapM) transformExpr matches
+transformExpr (Equation _ equation) = transformEquation equation
+transformExpr (PartialEquation r equation) = transformPartialEquation r equation
 
 runExprTransformer :: Expr Parsed -> (Expr Transformed, [Error])
-runExprTransformer expr = runRW (transformExpr expr) Nothing
+runExprTransformer expr = runWriter (transformExpr expr)

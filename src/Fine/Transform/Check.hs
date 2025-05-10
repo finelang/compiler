@@ -257,7 +257,6 @@ checkExpr' (Block _ block) = do
   checkBlock block
 checkExpr' (Equation _ equation) = checkEquation equation
 checkExpr' (PartialEquation _ equation) = checkPartialEquation equation
-checkExpr' (Grouping _ expr) = checkExpr' expr
 
 checkExpr :: Set Id -> Set Id -> Expr' -> (Set Id, Set Id, [Error], [Warning])
 checkExpr vars tVars expr =
