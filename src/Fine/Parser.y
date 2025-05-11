@@ -89,6 +89,7 @@ Id : id { Id (range $1) (tokenLexeme $1) }
 Ct : capid  { Id (range $1) (tokenLexeme $1) }
 
 Params_ : Params_ ',' Id  { $3 : $1 }
+        | Params_ ','     { $1 }
         | Id              { [$1] }
 
 Params : Params_  { toNonEmptyPARTIAL (reverse $1) }
@@ -167,8 +168,10 @@ Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
 
 Exprs : Exprs_  { toNonEmptyPARTIAL (reverse $1) }
 
-Matches : Matches Match ';' { $2 : $1 }
-        | Match ';'         { [$1] }
+Matches_ : Matches_ Match ';' { $2 : $1 }
+         | Match ';'          { [$1] }
+
+Matches : Matches_  { toNonEmptyPARTIAL (reverse $1) }
 
 Match : Pattern '->' Expr { ($1, $3) }
 
@@ -192,25 +195,27 @@ App : App '(' Args ')'        { mkAppOrFun (range $1 <> range $4) $1 $3 }
     | App '.' nat             { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }
     | Atom                    { $1 }
 
-Atom ::                                   { Expr Parsed }
-Atom : '(' Exprs ')'                      { if NonEmpty.length $2 >= 2 then uncurry3 (Tuple (range $1 <> range $3)) (uncons2 $2) else NonEmpty.head $2 }
-     | '(' ')'                            { Literal (range $1 <> range $2) Unit }
-     | '{' Props '}'                      { Record (range $1 <> range $3) (reverse $2) }
-     | '{' Block '}'                      { Block (range $1 <> range $3) $2 }
-     | '{' Expr '}'                       { $2 }
-     | '[' Exprs ']'                      { List (range $1 <> range $3) (NonEmpty.toList $2) }
-     | '[' ']'                            { List (range $1 <> range $2) [] }
-     | Int                                { $1 }
-     | floatlit                           { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
-     | true                               { Literal (range $1) (Bool True) }
-     | false                              { Literal (range $1) (Bool False) }
-     | strlit                             { Literal (range $1) (Str $ extractStr $1) }
-     | Id                                 { Var (range $1) $1 }
-     | Ct                                 { Var (range $1) $1 }
-     | match Expr '{' Matches '}'         { PatternMatching (range $1 <> range $5) $2 (toNonEmptyPARTIAL (reverse $4)) }
-     | fn '(' OptParams ')' '{' Expr '}'  { Fun (range $1 <> range $7) $3 $6 }
-     | fn '(' OptParams ')' '{' Block '}' { Fun (range $1 <> range $7) $3 (Block (range $5 <> range $7) $6) }
-     | fn '(' PartialEquation ')'         { PartialEquation (range $1 <> range $4) $3 }
+Atom ::                                           { Expr Parsed }
+Atom : '(' Exprs ')'                              { if NonEmpty.length $2 >= 2 then uncurry3 (Tuple (range $1 <> range $3)) (uncons2 $2) else NonEmpty.head $2 }
+     | '(' ')'                                    { Literal (range $1 <> range $2) Unit }
+     | '{' Props '}'                              { Record (range $1 <> range $3) (reverse $2) }
+     | '{' Block '}'                              { Block (range $1 <> range $3) $2 }
+     | '{' Expr '}'                               { $2 }
+     | '[' Exprs ']'                              { List (range $1 <> range $3) (NonEmpty.toList $2) }
+     | '[' ']'                                    { List (range $1 <> range $2) [] }
+     | Int                                        { $1 }
+     | floatlit                                   { Literal (range $1) (Float $ read $ Text.unpack $ tokenLexeme $1) }
+     | true                                       { Literal (range $1) (Bool True) }
+     | false                                      { Literal (range $1) (Bool False) }
+     | strlit                                     { Literal (range $1) (Str $ extractStr $1) }
+     | Id                                         { Var (range $1) $1 }
+     | Ct                                         { Var (range $1) $1 }
+     | match Expr '{' Matches '}'                 { PatternMatching (range $1 <> range $5) $2 $4 }
+     | fn '(' OptParams ')' '{' Expr '}'          { Fun (range $1 <> range $7) $3 $6 }
+     | fn '(' OptParams ')' '{' Block '}'         { Fun (range $1 <> range $7) $3 (Block (range $5 <> range $7) $6) }
+     | fn '(' match Id ')' '{' Matches '}'        { Fun (range $1 <> range $8) ($4 :| []) (PatternMatching (range $3 <> range $8) (Var (range $4) $4) $7) }
+     | fn '(' Params match Id ')' '{' Matches '}' { Fun (range $1 <> range $9) (snoc $3 $5) (PatternMatching (range $4 <> range $9) (Var (range $5) $5) $8) }
+     | fn '(' PartialEquation ')'                 { PartialEquation (range $1 <> range $4) $3 }
 
 Equation : App Op Equation  { Operation $1 $2 $3 }
          | App              { Operand $1 }
@@ -316,6 +321,8 @@ tryUnblock r block = Block r block
 uncurry3 f (x, y, z) = f x y z
 
 uncons2 (x :| (y : zs)) = (x, y, zs)
+
+snoc (x :| xs) y = x :| xs ++ [y]
 
 equationToExpr (Operand expr) = expr
 equationToExpr equation = Equation NoRange equation
