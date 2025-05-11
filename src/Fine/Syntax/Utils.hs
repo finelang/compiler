@@ -10,11 +10,12 @@ import Fine.Syntax (
   Bind (ExprBind, TypeBind),
   Defn (DataDefn),
   Expr (App, Data, Fun, GenFun, Var),
+  Forall (Forall),
   Id (Id),
   Pattern (..),
   Phase (Parsed),
   Range (NoRange),
-  Type (Forall, FunT, TApp, TData, TFun, TVar),
+  Type (FunT, TApp, TData, TFun, TVar),
   range,
  )
 
@@ -65,8 +66,8 @@ mkDataDefn ctTag optTParams ctors =
                   (FunT NoRange argTypes retType)
                   (Fun NoRange params $ Data NoRange tag $ map (Var NoRange) $ NonEmpty.toList params)
         (type'', expr') = case optTParams' of
-          Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
-          _ -> (type', expr)
+          Just tparams -> (Forall NoRange (NonEmpty.toList tparams) type', GenFun NoRange tparams expr)
+          _ -> (Forall NoRange [] type', expr)
      in ExprBind tag type'' expr'
   paramsFromTypes (_ :| []) = Id NoRange "x0" :| []
   paramsFromTypes (_ :| ts) =

@@ -22,7 +22,6 @@ import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun)
   debug     { Token Lex.Debug _ _ }
   else      { Token Lex.Else _ _ }
   fn        { Token Lex.Fn _ _ }
-  forall    { Token Lex.Forall _ _ }
   foreign   { Token Lex.Foreign _ _ }
   if        { Token Lex.If _ _ }
   let       { Token Lex.Let _ _ }
@@ -74,7 +73,6 @@ import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun)
   ']'       { Token Lex.Csquare _ _ }
   ','       { Token Lex.Comma _ _ }
   ';'       { Token Lex.Semi _ _ }
-  '\''      { Token Lex.Tick _ _ }
 
 %expect 0
 
@@ -176,10 +174,9 @@ Matches : Matches_  { toNonEmptyPARTIAL (reverse $1) }
 
 Match : Pattern '->' Expr { ($1, $3) }
 
-Expr : Equation                         { equationToExpr $1 }
-     | if Expr then Expr else Expr      { Cond (range $1 <> range $6) $2 $4 $6 }
-     | fn '(' OptParams ')' '->' Expr   { Fun (range $1 <> range $6) $3 $6 }
-     | fn '\'' '(' Params ')' '->' Expr { GenFun (range $1 <> range $7) $4 $7 }
+Expr : Equation                       { equationToExpr $1 }
+     | if Expr then Expr else Expr    { Cond (range $1 <> range $6) $2 $4 $6 }
+     | fn '(' OptParams ')' '->' Expr { Fun (range $1 <> range $6) $3 $6 }
 
 Arg : Expr    { Right $1 }
     | discard { Left (range $1) }
@@ -189,12 +186,12 @@ Args_ : Args_ ',' Arg { $3 : $1 }
 
 Args : Args_  { toNonEmptyPARTIAL (reverse $1) }
 
-App : App '(' Args ')'        { mkAppOrFun (range $1 <> range $4) $1 $3 }
-    | App '(' ')'             { mkAppOrFun (range $1 <> range $3) $1 ((Right $ Literal (range $2 <> range $3) Unit) :| []) }
-    | App '\'' '(' Types ')'  { GenApp (range $1 <> range $5) $1 $4 }
-    | App '.' Id              { Access (range $1 <> range $3) $1 $3 }
-    | App '.' nat             { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }
-    | Atom                    { $1 }
+App : App '(' Args ')'  { mkAppOrFun (range $1 <> range $4) $1 $3 }
+    | App '(' ')'       { mkAppOrFun (range $1 <> range $3) $1 ((Right $ Literal (range $2 <> range $3) Unit) :| []) }
+    | App '[' Types ']' { GenApp (range $1 <> range $4) $1 $3 }
+    | App '.' Id        { Access (range $1 <> range $3) $1 $3 }
+    | App '.' nat       { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }
+    | Atom              { $1 }
 
 Atom ::                                           { Expr Parsed }
 Atom : '(' Exprs ')'                              { if NonEmpty.length $2 >= 2 then uncurry3 (Tuple (range $1 <> range $3)) (uncons2 $2) else NonEmpty.head $2 }
@@ -259,22 +256,21 @@ Types_ : Types_ ',' Type  { $3 : $1 }
 
 Types : Types_  { toNonEmptyPARTIAL (reverse $1) }
 
-TVars : TVars Id  { $2 : $1 }
-      | Id        { [$1] }
+Forall : '[' Params ']' Type  { Forall (range $1 <> range $4) (NonEmpty.toList $2) $4 }
+       | Type                 { Forall (range $1) [] $1 }
 
-Type : forall TVars '.' Type      { Forall (range $1 <> range $4) (toNonEmptyPARTIAL (reverse $2)) $4 }
-     | fn '(' Types ')' '->' Type { FunT (range $1 <> range $6) $3 $6 }
+Type : fn '(' Types ')' '->' Type { FunT (range $1 <> range $6) $3 $6 }
      | TApp '->' Type             { FunT (range $1 <> range $3) ($1 :| []) $3 }
      | TApp                       { $1 }
 
-TApp : TApp '(' Types ')' { TApp (range $1 <> range $4) $1 $3 }
+TApp : TApp '[' Types ']' { TApp (range $1 <> range $4) $1 $3 }
+     | TApp '[' ']'       { ListT (range $1 <> range $3) $1 }
      | TAtom              { $1 }
 
 TAtom ::                  { Type Parsed }
 TAtom : '(' Types ')'     { if NonEmpty.length $2 >= 2 then uncurry3 (TupleT (range $1 <> range $3)) (uncons2 $2) else NonEmpty.head $2 }
       | '{' PropTypes '}' { RecordT (range $1 <> range $3) (reverse $2) }
       | '(' ')'           { LiteralT (range $1 <> range $2) UnitT }
-      | '[' Type ']'      { ListT (range $1 <> range $3) $2 }
       | bool              { LiteralT (range $1) BoolT }
       | int               { LiteralT (range $1) IntT }
       | str               { LiteralT (range $1) StrT }
@@ -291,11 +287,11 @@ Entry : run Expr    { Just $2 }
 Defns : Defns Defn OptSemi  { $2 : $1 }
       | {- empty -}         { [] }
 
-Defn : type Id '(' Params ')' '=' Type      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
+Defn : type Id '[' Params ']' '=' Type      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
      | type Id '=' Type                     { TypeDefn (TypeBind $2 $4) }
-     | type Ct '(' Params ')' '{' Ctors '}' { mkDataDefn $2 (Just $4) $7 }
+     | type Ct '[' Params ']' '{' Ctors '}' { mkDataDefn $2 (Just $4) $7 }
      | type Ct '{' Ctors '}'                { mkDataDefn $2 Nothing $4 }
-     | let foreign Id ':' Type '=' strlit   { Defn (ForeignBind $3 $5 (extractStr $7)) }
+     | let foreign Id ':' Forall '=' strlit { Defn (ForeignBind $3 $5 (extractStr $7)) }
      | let MutRecBinds                      { if NonEmpty.length $2 > 1 then MutRecDefns $2 else Defn (NonEmpty.head $2) }
 
 MutRecBinds_ : MutRecBinds_ and ExprBind  { $3 : $1 }
@@ -303,7 +299,7 @@ MutRecBinds_ : MutRecBinds_ and ExprBind  { $3 : $1 }
 
 MutRecBinds : MutRecBinds_  { toNonEmptyPARTIAL (reverse $1) }
 
-ExprBind : Id ':' Type '=' Expr { ExprBind $1 $3 $5 }
+ExprBind : Id ':' Forall '=' Expr { ExprBind $1 $3 (generic $3 $5) }
 
 Ctors_ : Ctors_ ';' Ctor  { $3 : $1 }
        | Ctors_ ';'       { $1 }
@@ -328,6 +324,9 @@ snoc (x :| xs) y = x :| xs ++ [y]
 
 equationToExpr (Operand expr) = expr
 equationToExpr equation = Equation NoRange equation
+
+generic (Forall _ [] _) expr = expr
+generic (Forall _ (t : ts) _) expr = GenFun NoRange (t :| ts) expr
 
 parseError tokens = error . show . head $ tokens
 }

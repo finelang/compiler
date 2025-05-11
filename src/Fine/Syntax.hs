@@ -10,6 +10,7 @@ module Fine.Syntax (
   LitT (..),
   Type (..),
   typeExt,
+  Forall (..),
   Op (..),
   Equation (..),
   Lit (..),
@@ -113,10 +114,6 @@ type family TypeX (p :: Phase) where
   TypeX Typed = (Range, Kind)
   TypeX _ = Range
 
-type family UniVar (p :: Phase) where
-  UniVar Typed = (Id, Kind)
-  UniVar _ = Id
-
 data Type (p :: Phase)
   = LiteralT (TypeX p) LitT
   | VoidT (TypeX p)
@@ -124,7 +121,6 @@ data Type (p :: Phase)
   | ListT (TypeX p) (Type p)
   | RecordT (TypeX p) [(Id, Type p)]
   | FunT (TypeX p) (NonEmpty (Type p)) (Type p) -- type of a normal function
-  | Forall (TypeX p) (NonEmpty (UniVar p)) (Type p) -- type of a generic function
   | TData (TypeX p) Id [Type p]
   | TVar (TypeX p) Id
   | TApp (TypeX p) (Type p) (NonEmpty (Type p))
@@ -139,7 +135,6 @@ typeExt (TupleT ext _ _ _) = ext
 typeExt (ListT ext _) = ext
 typeExt (RecordT ext _) = ext
 typeExt (FunT ext _ _) = ext
-typeExt (Forall ext _ _) = ext
 typeExt (TData ext _ _) = ext
 typeExt (TVar ext _) = ext
 typeExt (TApp ext _ _) = ext
@@ -149,9 +144,14 @@ instance HasRange (Type Parsed) where
   range :: Type Parsed -> Range
   range = typeExt
 
-instance HasRange (Type Typed) where
-  range :: Type Typed -> Range
-  range = fst . typeExt
+type family UniVar (p :: Phase) where
+  UniVar Typed = (Id, Kind)
+  UniVar _ = Id
+
+data Forall (p :: Phase)
+  = Forall (TypeX p) [UniVar p] (Type p)
+
+deriving instance (Show (TypeX p), Show (UniVar p)) => Show (Forall p)
 
 -- EXPR
 
@@ -325,17 +325,18 @@ instance HasRange Pattern where
 data BindType = OfExpr | OfType
   deriving (Show)
 
-type family BoundType (p :: Phase) where
-  BoundType Ready = ()
-  BoundType p = Type p
+type family BoundType (t :: BindType) (p :: Phase) where
+  BoundType _ Ready = ()
+  BoundType OfExpr p = Forall p
+  BoundType OfType p = Type p
 
 data Bind :: BindType -> Phase -> HsKind.Type where
-  ExprBind :: Id -> BoundType p -> Expr p -> Bind OfExpr p
-  TypeBind :: Id -> BoundType p -> Bind OfType p
+  ExprBind :: Id -> BoundType OfExpr p -> Expr p -> Bind OfExpr p
+  TypeBind :: Id -> BoundType OfType p -> Bind OfType p
   -- binding for external code
-  ForeignBind :: Id -> BoundType p -> Text -> Bind OfExpr p
+  ForeignBind :: Id -> BoundType OfExpr p -> Text -> Bind OfExpr p
 
-deriving instance (Show (BoundType p), Show (Expr p)) => Show (Bind t p)
+deriving instance (Show (BoundType t p), Show (Expr p)) => Show (Bind t p)
 
 binder :: Bind t p -> Id
 binder (ExprBind idn _ _) = idn
@@ -364,7 +365,7 @@ data Module (p :: Phase)
 
 deriving instance
   ( Show (ModuleTypes p),
-    Show (BoundType p),
+    Show (BoundType OfExpr p),
     Show (Expr p)
   ) =>
   Show (Module p)

@@ -1,4 +1,4 @@
-module Fine.Transform.Check (checkType, checkExpr, alreadyDefined) where
+module Fine.Transform.Check (checkType, checkForall, checkExpr, alreadyDefined) where
 
 import Control.Monad (forM_, unless, when)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
@@ -19,6 +19,7 @@ import Fine.Syntax (
   Block (..),
   Equation (..),
   Expr (..),
+  Forall (Forall),
   Id,
   Pattern (..),
   Phase (Parsed),
@@ -56,13 +57,6 @@ checkType' (FunT _ argTypes bodyType) = do
   argVars <- Set.unions <$> mapM checkType' argTypes
   bodyVars <- checkType' bodyType
   return (Set.union argVars bodyVars)
-checkType' (Forall _ univars type') = do
-  let univarList = NonEmpty.toList univars
-  forM_ (alreadyDefined univarList) (tell . error')
-  let univars' = Set.fromList univarList
-  typeVars <- withReader (Set.union univars') (checkType' type')
-  forM_ (Set.difference univars' typeVars) (tell . error' . UnusedUniVar)
-  return (Set.difference typeVars univars')
 checkType' (TData _ _ types) = Set.unions <$> mapM checkType' types
 checkType' (TVar _ var) = check var >> return (Set.singleton var)
 checkType' (TApp _ typeFun typeArgs) = do
@@ -80,6 +74,21 @@ checkType' (TFun _ typeParams typeBody) = do
 checkType :: Set Id -> Type' -> (Set Id, [Error], [Warning])
 checkType vars type' =
   let (free, Errors errs wrns) = runRW (checkType' type') vars
+   in (free, errs, wrns)
+
+type Forall' = Forall Parsed
+
+checkForall' :: Forall' -> RW (Set Id) Errors' (Set Id)
+checkForall' (Forall _ univars type') = do
+  forM_ (alreadyDefined univars) (tell . error')
+  let univars' = Set.fromList univars
+  typeVars <- withReader (Set.union univars') (checkType' type')
+  forM_ (Set.difference univars' typeVars) (tell . error' . UnusedUniVar)
+  return (Set.difference typeVars univars')
+
+checkForall :: Set Id -> Forall' -> (Set Id, [Error], [Warning])
+checkForall vars type' =
+  let (free, Errors errs wrns) = runRW (checkForall' type') vars
    in (free, errs, wrns)
 
 -- EXPR

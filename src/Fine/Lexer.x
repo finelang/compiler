@@ -40,7 +40,6 @@ tokens :-
   "false"                     { mkt FalseTok }
   "float"                     { mkt Float }
   "fn"                        { mkt Fn }
-  "forall"                    { mkt Forall }
   "foreign"                   { mkt Foreign }
   "if"                        { mkt If }
   "int"                       { mkt Int }
@@ -89,7 +88,6 @@ tokens :-
   "]"                         { mkt Csquare }
   ","                         { mkt Comma }
   ";"                         { mkt Semi }
-  "'"                         { mkt Tick }
 
 {
   data TokenType
@@ -98,7 +96,6 @@ tokens :-
   | Debug
   | Else
   | Fn
-  | Forall
   | Foreign
   | If
   | Let
@@ -142,7 +139,6 @@ tokens :-
   | Csquare
   | Comma
   | Semi
-  | Tick
   deriving (Show)
 
 data TokenPosn = TokenPosn
