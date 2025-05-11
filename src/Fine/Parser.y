@@ -168,8 +168,9 @@ Exprs_ : Exprs_ ',' Expr  { $3 : $1 }
 
 Exprs : Exprs_  { toNonEmptyPARTIAL (reverse $1) }
 
-Matches_ : Matches_ Match ';' { $2 : $1 }
-         | Match ';'          { [$1] }
+Matches_ : Matches_ ';' Match { $3 : $1 }
+         | Matches_ ';'       { $1 }
+         | Match              { [$1] }
 
 Matches : Matches_  { toNonEmptyPARTIAL (reverse $1) }
 
@@ -304,8 +305,9 @@ MutRecBinds : MutRecBinds_  { toNonEmptyPARTIAL (reverse $1) }
 
 ExprBind : Id ':' Type '=' Expr { ExprBind $1 $3 $5 }
 
-Ctors_ : Ctors_ Ctor OptSemi  { $2 : $1 }
-       | Ctor OptSemi         { [$1] }
+Ctors_ : Ctors_ ';' Ctor  { $3 : $1 }
+       | Ctors_ ';'       { $1 }
+       | Ctor             { [$1] }
 
 Ctors : Ctors_  { toNonEmptyPARTIAL (reverse $1) }
 
