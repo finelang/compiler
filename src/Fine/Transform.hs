@@ -17,7 +17,6 @@ import Fine.Syntax (
   BindType (..),
   Defn (..),
   Expr (..),
-  Forall,
   Id,
   Module (Module),
   ParsedModule (ParsedModule),
@@ -27,7 +26,7 @@ import Fine.Syntax (
  )
 import Fine.Syntax.Utils (isFunction)
 import Fine.Transform.Check qualified as Check
-import Fine.Transform.Term (runExprTransformer, transformForall, transformType)
+import Fine.Transform.Term (runExprTransformer, transformType)
 
 data Env = Env
   { currentExprBinders :: Set Id,
@@ -64,14 +63,6 @@ checkType optBinder type' = do
     when (Set.member binder' usedTVars) (fail' $ UsageBeforeInit binder')
   modify (\st -> st{usedTypeBinders = Set.union usedTVars (usedTypeBinders st)})
 
-checkForall :: Forall Parsed -> SEC Env Error Warning ()
-checkForall type' = do
-  tVars <- gets allTypeBinders
-  let (usedTVars, errs, wrns) = Check.checkForall tVars type'
-  forM_ errs fail'
-  forM_ wrns warn
-  modify (\st -> st{usedTypeBinders = Set.union usedTVars (usedTypeBinders st)})
-
 transformTypeBind :: Bind OfType Parsed -> SEC Env Error Warning (Bind OfType Transformed)
 transformTypeBind (TypeBind binder' type') = do
   modify (\st -> st{currentTypeBinders = Set.insert binder' (currentTypeBinders st)})
@@ -104,14 +95,14 @@ transformExprBind bind = do
     modify (\st -> st{currentExprBinders = Set.insert binder' (currentExprBinders st)})
   case bind of
     ExprBind binder' type' expr -> do
-      checkForall type'
+      checkType Nothing type'
       checkExpr (Just binder') expr
       let (expr', errs) = runExprTransformer expr
       forM_ errs fail'
-      return (ExprBind binder' (transformForall type') expr')
+      return (ExprBind binder' (transformType type') expr')
     ForeignBind binder' type' code -> do
-      checkForall type'
-      return (ForeignBind binder' (transformForall type') code)
+      checkType Nothing type'
+      return (ForeignBind binder' (transformType type') code)
 
 -- MODULE
 

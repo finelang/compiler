@@ -1,4 +1,4 @@
-module Fine.Transform.Term (transformType, transformForall, runExprTransformer) where
+module Fine.Transform.Term (transformType, runExprTransformer) where
 
 import Control.Monad.Trans.State.Strict (gets, modify, runState)
 import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
@@ -9,7 +9,6 @@ import Fine.Syntax (
   Block (..),
   Equation (..),
   Expr (..),
-  Forall (Forall),
   Phase (Parsed, Transformed),
   Range,
   Type (..),
@@ -27,14 +26,12 @@ transformType (RecordT r propTypes) =
   RecordT r $ (map . fmap) transformType propTypes
 transformType (FunT r argTypes bodyType) =
   FunT r (NonEmpty.map transformType argTypes) (transformType bodyType)
+transformType (Forall r univars type') = Forall r univars (transformType type')
 transformType (TData r tag types) = TData r tag (map transformType types)
 transformType (TVar r var) = TVar r var
 transformType (TApp r typeFun typeArgs) =
   TApp r (transformType typeFun) (NonEmpty.map transformType typeArgs)
 transformType (TFun r typeParams typeBody) = TFun r typeParams (transformType typeBody)
-
-transformForall :: Forall Parsed -> Forall Transformed
-transformForall (Forall r univars type') = Forall r univars (transformType type')
 
 transformEquation :: Equation (Expr Parsed) -> Writer [Error] (Expr Transformed)
 transformEquation equation' = do

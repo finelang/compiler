@@ -257,8 +257,8 @@ Types_ : Types_ ',' Type  { $3 : $1 }
 
 Types : Types_  { toNonEmptyPARTIAL (reverse $1) }
 
-Forall : '[' Params ']' Type  { Forall (range $1 <> range $4) (NonEmpty.toList $2) $4 }
-       | Type                 { Forall (range $1) [] $1 }
+Forall : '[' Params ']' Type  { Forall (range $1 <> range $4) $2 $4 }
+       | Type                 { $1 }
 
 Type : fn '(' Types ')' '->' Type { FunT (range $1 <> range $6) $3 $6 }
      | TApp '->' Type             { FunT (range $1 <> range $3) ($1 :| []) $3 }
@@ -326,8 +326,8 @@ snoc (x :| xs) y = x :| xs ++ [y]
 equationToExpr (Operand expr) = expr
 equationToExpr equation = Equation NoRange equation
 
-generic (Forall _ [] _) expr = expr
-generic (Forall _ (t : ts) _) expr = GenFun NoRange (t :| ts) expr
+generic (Forall _ (t :| ts) _) expr = GenFun NoRange (t :| ts) expr
+generic _ expr = expr
 
 parseError tokens = error . show . head $ tokens
 }
