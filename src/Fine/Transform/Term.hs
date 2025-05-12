@@ -4,18 +4,17 @@ import Control.Monad.Trans.State.Strict (gets, modify, runState)
 import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.String.Interpolate (i)
 import Fine.Error (Error)
 import Fine.Syntax (
   Block (..),
   Equation (..),
   Expr (..),
   Forall (Forall),
-  Id (Id),
   Phase (Parsed, Transformed),
-  Range (NoRange),
+  Range,
   Type (..),
  )
+import Fine.Syntax.Name (irrelevant, param)
 import Fine.Transform.ShuntingYard (runShuntingYard)
 
 transformType :: Type Parsed -> Type Transformed
@@ -54,7 +53,7 @@ transformPartialEquation r' equation' = do
   let (equation'', (_, params)) = runState (go equation') (0 :: Int, [])
   body <- transformEquation equation''
   return $ case reverse params of
-    [] -> Fun r' (Id NoRange "_" :| []) body
+    [] -> Fun r' (irrelevant :| []) body
     (p : ps) -> Fun r' (p :| ps) body
  where
   go (Operand (Right expr)) = return (Operand expr)
@@ -67,9 +66,9 @@ transformPartialEquation r' equation' = do
     Operation (Var r var) op <$> go equation
   newParam r = do
     n <- gets fst
-    let param = Id r [i|x#{n}|]
-    modify $ \(_, ps) -> (n + 1, param : ps)
-    return param
+    let p = param (Just r) n
+    modify $ \(_, ps) -> (n + 1, p : ps)
+    return p
 
 transformBlock :: Block Parsed -> Writer [Error] (Block Transformed)
 transformBlock (Return expr) = Return <$> transformExpr expr

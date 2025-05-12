@@ -1,23 +1,22 @@
 module Fine.Syntax.Utils where
 
+import Data.Either (isLeft, isRight)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.String.Interpolate (i)
-
-import Data.Either (isLeft, isRight)
 import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (
   Bind (ExprBind, TypeBind),
   Defn (DataDefn),
   Expr (App, Data, Fun, GenFun, Var),
   Forall (Forall),
-  Id (Id),
+  Id,
   Pattern (..),
   Phase (Parsed),
   Range (NoRange),
   Type (FunT, TApp, TData, TFun, TVar),
   range,
  )
+import Fine.Syntax.Name (param)
 
 patternBoundVars :: Pattern -> [Id]
 patternBoundVars (LiteralP _ _) = []
@@ -46,13 +45,13 @@ mkDataDefn ctTag optTParams ctors =
       tc = TVar (range ctTag) ctTag
       retType = case optTParams of
         Just tparams ->
-          TApp NoRange tc $ NonEmpty.map (\param -> TVar (range param) param) tparams
+          TApp NoRange tc $ NonEmpty.map (\p -> TVar (range p) p) tparams
         _ -> tc
       ctBinds = NonEmpty.map (mkCtor optTParams retType) ctors
       tBind = TypeBind ctTag $ case optTParams of
         Just tparams ->
           (TFun NoRange tparams)
-            (TData NoRange ctTag $ map (\param -> TVar (range param) param) $ NonEmpty.toList tparams)
+            (TData NoRange ctTag $ map (\p -> TVar (range p) p) $ NonEmpty.toList tparams)
         _ -> TData NoRange ctTag []
    in DataDefn tBind ctBinds
  where
@@ -69,9 +68,9 @@ mkDataDefn ctTag optTParams ctors =
           Just tparams -> (Forall NoRange (NonEmpty.toList tparams) type', GenFun NoRange tparams expr)
           _ -> (Forall NoRange [] type', expr)
      in ExprBind tag type'' expr'
-  paramsFromTypes (_ :| []) = Id NoRange "x0" :| []
+  paramsFromTypes (_ :| []) = param Nothing 0 :| []
   paramsFromTypes (_ :| ts) =
-    Id NoRange "x0" :| map (\n -> Id NoRange [i|x#{n}|]) [1 .. length ts]
+    param Nothing 0 :| map (\n -> param Nothing n) [1 .. length ts]
 
 mkAppOrFun :: Range -> Expr Parsed -> NonEmpty (Either Range (Expr Parsed)) -> Expr Parsed
 mkAppOrFun r f args =
@@ -87,8 +86,8 @@ mkAppOrFun r f args =
   go :: [Either Range (Expr Parsed)] -> Int -> [Id] -> [Expr Parsed] -> (NonEmpty Id, NonEmpty (Expr Parsed))
   go [] _ params' args' = (NonEmpty.fromList $ reverse params', NonEmpty.fromList $ reverse args')
   go (Left r' : rest) count params' args' =
-    let param = Id r' [i|x#{count}|]
-     in go rest (count + 1) (param : params') (Var r' param : args')
+    let p = param (Just r) count
+     in go rest (count + 1) (p : params') (Var r' p : args')
   go (Right arg : rest) count params' args' = go rest count params' (arg : args')
 
   fromRight (Right x) = x

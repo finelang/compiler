@@ -9,15 +9,15 @@ import Fine.Syntax (
   BindType (OfExpr),
   Block (..),
   Expr (..),
-  Id (Id),
+  Id,
   Lit (Bool, Int, Str, Unit),
   Module (Module),
   Op (And, Eq),
   Pattern (..),
   Phase (Ready, Transformed),
-  Range (NoRange),
   idText,
  )
+import Fine.Syntax.Name (lengthProp, matchedVar, tagProp)
 import Fine.Syntax.Utils (patternBoundVars)
 
 data PathEnd
@@ -43,7 +43,7 @@ indexedPaths patts =
 extractPaths :: Pattern -> [PatternPath]
 extractPaths (LiteralP _ lit) = [End $ EqualsTo (Literal () lit)]
 extractPaths (DataP _ tag patts) =
-  let fromTag = Continue (PropTo $ Id NoRange "$tag") (End $ EqualsTo $ Literal () $ Str $ idText tag)
+  let fromTag = Continue (PropTo $ tagProp) (End $ EqualsTo $ Literal () $ Str $ idText tag)
    in fromTag : indexedPaths patts
 extractPaths (RecordP _ props) =
   foldMap
@@ -51,7 +51,7 @@ extractPaths (RecordP _ props) =
     props
 extractPaths (TupleP _ fst' snd' rest) = indexedPaths (fst' : snd' : rest)
 extractPaths (ListP _ patts) =
-  let lenCheck = Continue (PropTo $ Id NoRange "length") (End $ EqualsTo $ Literal () $ Int $ length patts)
+  let lenCheck = Continue (PropTo $ lengthProp) (End $ EqualsTo $ Literal () $ Int $ length patts)
    in lenCheck : indexedPaths patts
 extractPaths (Capture var) = [End $ Is var]
 extractPaths (Discard _) = []
@@ -77,11 +77,11 @@ applyPath mut matched path =
 
 type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) after typer impl
 
-matchedIdn :: Id
-matchedIdn = Id NoRange "$"
+matchedVar' :: Id
+matchedVar' = matchedVar Nothing
 
-matchedVar :: Expr Ready
-matchedVar = Var () matchedIdn
+matchedExpr :: Expr Ready
+matchedExpr = Var () matchedVar'
 
 transformMatches :: Expr Ready -> (NonEmpty (Pattern, Expr Ready)) -> Block Ready
 transformMatches matched matches =
@@ -117,8 +117,8 @@ getBlockReady (LetPatt _ patt expr block) =
         vars ->
           let lets = map (\var -> Let True var $ Literal () Unit) vars
               paths = extractPaths patt
-              stmts = rights $ map (applyPath True matchedVar) paths
-              setterBlock = foldr ($) Void (Let False matchedIdn expr' : stmts)
+              stmts = rights $ map (applyPath True matchedExpr) paths
+              setterBlock = foldr ($) Void (Let False matchedVar' expr' : stmts)
            in foldr ($) (Do (Block () setterBlock) block') lets
 
 getExprReady :: Expr Typed -> Expr Ready
@@ -139,7 +139,7 @@ getExprReady (Cond _ cond yes no) =
 getExprReady (PatternMatching _ expr matches) =
   let expr' = getExprReady expr
       matches' = (NonEmpty.map . fmap) getExprReady matches
-      block = Let False matchedIdn expr' $ transformMatches matchedVar matches'
+      block = Let False matchedVar' expr' $ transformMatches matchedExpr matches'
    in Block () block
 getExprReady (Fun _ params body) = Fun () params (getExprReady body)
 getExprReady (GenFun _ _ body) = getExprReady body

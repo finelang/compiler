@@ -46,6 +46,7 @@ library
     Fine.Lexer
     Fine.Parser
     Fine.Syntax
+    Fine.Syntax.Name
     Fine.Syntax.Utils
     Fine.Transform
     Fine.Transform.Check

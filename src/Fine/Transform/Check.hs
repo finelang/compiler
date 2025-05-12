@@ -3,17 +3,14 @@ module Fine.Transform.Check (checkType, checkForall, checkExpr, alreadyDefined) 
 import Control.Monad (forM_, unless, when)
 import Control.Monad.Trans.RW (RW, asks, runRW, tell, withReader)
 import Data.Errors (Errors (Errors), error', warning)
-
 import Data.List (group, sort)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text qualified as Text
 import Fine.Error (
   Error (AlreadyDefined, UndefinedVar, UnusedUniVar, UsageBeforeInit),
   Warning (DebugKeywordUsage, UnusedVar),
-  errorUNREACHABLE,
  )
 import Fine.Syntax (
   Block (..),
@@ -24,9 +21,9 @@ import Fine.Syntax (
   Pattern (..),
   Phase (Parsed),
   Type (..),
-  idText,
   range,
  )
+import Fine.Syntax.Name (isRelevant)
 import Fine.Syntax.Utils (isFunction, patternBoundVars)
 
 alreadyDefined :: [Id] -> [Error]
@@ -248,13 +245,9 @@ checkExpr' (Fun _ params body) = do
       forM_ (alreadyDefined paramList) (tell . error')
       withReader (unionVars params') (checkExpr' body)
   do
-    let unused = Set.difference (Set.filter relevant params') (vars bodyVars)
+    let unused = Set.difference (Set.filter isRelevant params') (vars bodyVars)
     forM_ unused (tell . warning . UnusedVar)
   return (differenceVars bodyVars params')
- where
-  relevant var = case Text.uncons (idText var) of
-    Just (ch', _) -> ch' /= '_'
-    _ -> errorUNREACHABLE "Found a variable with empty name."
 checkExpr' (GenFun _ typeParams body) = do
   let typeParamList = NonEmpty.toList typeParams
   forM_ (alreadyDefined typeParamList) (tell . error')

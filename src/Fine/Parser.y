@@ -10,6 +10,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
+import Fine.Syntax.Name (irrelevant)
 import Fine.Syntax.Utils (mkDataDefn, mkAppOrFun)
 }
 
@@ -93,7 +94,7 @@ Params_ : Params_ ',' Id  { $3 : $1 }
 Params : Params_  { toNonEmptyPARTIAL (reverse $1) }
 
 OptParams : Params      { $1 }
-          | {- empty -} { Id NoRange "_" :| [] }
+          | {- empty -} { irrelevant :| [] }
 
 OptSemi : ';'         {}
         | {- empty -} {}
