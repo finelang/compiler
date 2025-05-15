@@ -14,11 +14,10 @@ import Fine.Error (
  )
 import Fine.Syntax (
   Block (..),
-  Equation (..),
   Expr (..),
   Id,
   Pattern (..),
-  Phase (Parsed),
+  Phase (Transformed),
   Type (..),
   range,
  )
@@ -41,7 +40,7 @@ check var = do
 
 -- TYPE
 
-type Type' = Type Parsed
+type Type' = Type Transformed
 
 checkType' :: Type' -> RW (Set Id) Errors' (Set Id)
 checkType' (LiteralT _ _) = return Set.empty
@@ -121,11 +120,7 @@ memberVar var (Vars _ vs) = Set.member var vs
 deleteVar :: Id -> Vars -> Vars
 deleteVar var (Vars tvs vs) = Vars tvs (Set.delete var vs)
 
-type Block' = Block Parsed
-
-type Expr' = Expr Parsed
-
-blockBoundVars :: Block' -> [Id]
+blockBoundVars :: Block Transformed -> [Id]
 blockBoundVars (Return _) = []
 blockBoundVars Void = []
 blockBoundVars (Do _ block) = blockBoundVars block
@@ -135,19 +130,7 @@ blockBoundVars (Let _ binder _ block) = binder : blockBoundVars block
 blockBoundVars (Loop _ _ block) = blockBoundVars block
 blockBoundVars (LetPatt _ patt _ block) = patternBoundVars patt ++ blockBoundVars block
 
-checkEquation :: Equation Expr' -> RW Vars Errors' Vars
-checkEquation (Operand expr) = checkExpr' expr
-checkEquation (Operation left _ equation) =
-  union' <$> checkExpr' left <*> checkEquation equation
-
-checkPartialEquation :: Equation (Either a (Expr Parsed)) -> RW Vars Errors' Vars
-checkPartialEquation (Operand xOrExpr) = unions' <$> mapM checkExpr' xOrExpr
-checkPartialEquation (Operation xOrExpr _ equation) = do
-  exprVars <- unions' <$> mapM checkExpr' xOrExpr
-  equationVars <- checkPartialEquation equation
-  return (union' exprVars equationVars)
-
-checkBlock :: Block' -> RW Vars Errors' Vars
+checkBlock :: Block Transformed -> RW Vars Errors' Vars
 checkBlock (Return expr) = checkExpr' expr
 checkBlock Void = return emptyVars
 checkBlock (Do expr block) = union' <$> checkExpr' expr <*> checkBlock block
@@ -188,7 +171,7 @@ checkPattern (ListP _ patts) = Set.unions <$> mapM checkPattern patts
 checkPattern (Capture _) = return Set.empty
 checkPattern (Discard _) = return Set.empty
 
-checkMatch :: (Pattern, Expr') -> RW Vars Errors' Vars
+checkMatch :: (Pattern, Expr Transformed) -> RW Vars Errors' Vars
 checkMatch (patt, cont) = do
   pattVars <- withReader vars (checkPattern patt)
   let pattBound = patternBoundVars patt
@@ -203,13 +186,14 @@ checkMatch (patt, cont) = do
   forM_ (Set.difference pattBound' (vars contVars)) (tell . warning . UnusedVar)
   return (unionVars pattVars (differenceVars contVars pattBound'))
 
-checkExpr' :: Expr' -> RW Vars Errors' Vars
+checkExpr' :: Expr Transformed -> RW Vars Errors' Vars
 checkExpr' (Literal _ _) = return emptyVars
 checkExpr' (Data _ _ exprs) = unions' <$> mapM checkExpr' exprs
 checkExpr' (Record _ props) = unions' <$> mapM (checkExpr' . snd) props
 checkExpr' (Tuple _ fst' snd' rest) = unions' <$> mapM checkExpr' (fst' : snd' : rest)
 checkExpr' (List _ exprs) = unions' <$> mapM checkExpr' exprs
 checkExpr' (Var _ var) = withReader vars (check var) >> return (singleVar var)
+checkExpr' (Bin _ _ _ left right) = union' <$> checkExpr' left <*> checkExpr' right
 checkExpr' (App _ f args) = do
   fVars <- checkExpr' f
   argsVars <- unions' <$> mapM checkExpr' args
@@ -221,7 +205,7 @@ checkExpr' (GenApp _ genF typeArgs) = do
 checkExpr' (Access _ expr _) = checkExpr' expr
 checkExpr' (Index _ expr _) = checkExpr' expr
 checkExpr' (Cond _ cond yes no) = unions' <$> mapM checkExpr' [cond, yes, no]
-checkExpr' (PatternMatching _ expr matches) = do
+checkExpr' (PatternMatching _ _ expr matches) = do
   exprVars <- checkExpr' expr
   matchesVars <- unions' <$> mapM checkMatch matches
   return (union' exprVars matchesVars)
@@ -239,7 +223,7 @@ checkExpr' (Fun _ params body) = do
     let unused = Set.difference (Set.filter isRelevant params') (vars bodyVars)
     forM_ unused (tell . warning . UnusedVar)
   return (differenceVars bodyVars params')
-checkExpr' (GenFun _ typeParams body) = do
+checkExpr' (GenFun _ _ typeParams body) = do
   let typeParamList = NonEmpty.toList typeParams
   forM_ (alreadyDefined typeParamList) (tell . error')
   let typeParams' = Set.fromList typeParamList
@@ -248,10 +232,8 @@ checkExpr' (GenFun _ typeParams body) = do
 checkExpr' (Block _ block) = do
   forM_ (alreadyDefined $ blockBoundVars block) (tell . error')
   checkBlock block
-checkExpr' (Equation _ equation) = checkEquation equation
-checkExpr' (PartialEquation _ equation) = checkPartialEquation equation
 
-checkExpr :: Set Id -> Set Id -> Expr' -> (Set Id, Set Id, [Error], [Warning])
+checkExpr :: Set Id -> Set Id -> Expr Transformed -> (Set Id, Set Id, [Error], [Warning])
 checkExpr vars tVars expr =
   let (Vars tVars' vars', Errors errs wrns) = runRW (checkExpr' expr) (Vars tVars vars)
    in (vars', tVars', errs, wrns)

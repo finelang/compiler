@@ -209,12 +209,12 @@ Atom : '(' Exprs ')'                              { if NonEmpty.length $2 >= 2 t
      | strlit                                     { Literal (range $1) (Str $ extractStr $1) }
      | Id                                         { Var (range $1) $1 }
      | Ct                                         { Var (range $1) $1 }
-     | match Expr '{' Matches '}'                 { PatternMatching (range $1 <> range $5) $2 $4 }
+     | match Expr '{' Matches '}'                 { PatternMatching (range $1 <> range $5) () $2 $4 }
      | fn '(' OptParams ')' '{' Expr '}'          { Fun (range $1 <> range $7) $3 $6 }
      | fn '(' OptParams ')' '{' Block '}'         { Fun (range $1 <> range $7) $3 (Block (range $5 <> range $7) $6) }
-     | fn '(' match Id ')' '{' Matches '}'        { Fun (range $1 <> range $8) ($4 :| []) (PatternMatching (range $3 <> range $8) (Var (range $4) $4) $7) }
-     | fn '(' Params match Id ')' '{' Matches '}' { Fun (range $1 <> range $9) (snoc $3 $5) (PatternMatching (range $4 <> range $9) (Var (range $5) $5) $8) }
-     | fn '(' PartialEquation ')'                 { PartialEquation (range $1 <> range $4) $3 }
+     | fn '(' match Id ')' '{' Matches '}'        { Fun (range $1 <> range $8) ($4 :| []) (PatternMatching (range $3 <> range $8) () (Var (range $4) $4) $7) }
+     | fn '(' Params match Id ')' '{' Matches '}' { Fun (range $1 <> range $9) (snoc $3 $5) (PatternMatching (range $4 <> range $9) () (Var (range $5) $5) $8) }
+     | fn '(' PartialEquation ')'                 { PartialEquation (range $1 <> range $4) () $3 }
 
 Equation : App Op Equation  { Operation $1 $2 $3 }
          | App              { Operand $1 }
@@ -300,7 +300,7 @@ MutRecBinds_ : MutRecBinds_ and ExprBind  { $3 : $1 }
 
 MutRecBinds : MutRecBinds_  { toNonEmptyPARTIAL (reverse $1) }
 
-ExprBind : Id ':' Forall '=' Expr { ExprBind $1 $3 (generic $3 $5) }
+ExprBind : Id ':' Forall '=' Expr { ExprBind $1 $3 $5 }
 
 Ctors_ : Ctors_ ';' Ctor  { $3 : $1 }
        | Ctors_ ';'       { $1 }
@@ -324,10 +324,7 @@ uncons2 (x :| (y : zs)) = (x, y, zs)
 snoc (x :| xs) y = x :| xs ++ [y]
 
 equationToExpr (Operand expr) = expr
-equationToExpr equation = Equation NoRange equation
-
-generic (Forall _ (t :| ts) _) expr = GenFun NoRange (t :| ts) expr
-generic _ expr = expr
+equationToExpr equation = Equation NoRange () equation
 
 parseError tokens = error . show . head $ tokens
 }

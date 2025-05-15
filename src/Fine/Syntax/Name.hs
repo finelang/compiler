@@ -5,13 +5,11 @@ import Data.Text qualified as Text
 import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (Id (Id), Range (NoRange))
 
-matchedVar :: Maybe Range -> Id
-matchedVar Nothing = Id NoRange "$"
-matchedVar (Just r) = Id r "$"
+matchedVar :: Range -> Id
+matchedVar r = Id r "$"
 
-param :: Maybe Range -> Int -> Id
-param Nothing x = Id NoRange [i|x#{x}|]
-param (Just r) x = Id r [i|x#{x}|]
+param :: Range -> Int -> Id
+param r x = Id r [i|x#{x}|]
 
 tagProp :: Id
 tagProp = Id NoRange "$tag"

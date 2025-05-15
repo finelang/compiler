@@ -28,13 +28,13 @@ patternBoundVars (Discard _) = []
 
 isFunction :: Expr p -> Bool
 isFunction (Fun _ _ _) = True
-isFunction (GenFun _ _ body) = isFunction body
+isFunction (GenFun _ _ _ body) = isFunction body
 isFunction _ = False
 
 isCtor :: Expr p -> Bool
 isCtor (Data _ _ _) = True
 isCtor (Fun _ _ body) = isCtor body
-isCtor (GenFun _ _ body) = isCtor body
+isCtor (GenFun _ _ _ body) = isCtor body
 isCtor _ = False
 
 mkDataDefn ::
@@ -63,13 +63,13 @@ mkDataDefn ctTag optTParams ctors =
              in (,)
                   (FunT NoRange argTypes retType)
                   (Fun NoRange params $ Data NoRange tag $ map (Var NoRange) $ NonEmpty.toList params)
-        (type'', expr') = case optTParams' of
-          Just tparams -> (Forall NoRange tparams type', GenFun NoRange tparams expr)
-          _ -> (type', expr)
-     in ExprBind tag type'' expr'
-  paramsFromTypes (_ :| []) = param Nothing 0 :| []
+        type'' = case optTParams' of
+          Just tparams -> Forall NoRange tparams type'
+          _ -> type'
+     in ExprBind tag type'' expr
+  paramsFromTypes (_ :| []) = param NoRange 0 :| []
   paramsFromTypes (_ :| ts) =
-    param Nothing 0 :| map (\n -> param Nothing n) [1 .. length ts]
+    param NoRange 0 :| map (\n -> param NoRange n) [1 .. length ts]
 
 mkAppOrFun :: Range -> Expr Parsed -> NonEmpty (Either Range (Expr Parsed)) -> Expr Parsed
 mkAppOrFun r f args =
@@ -85,7 +85,7 @@ mkAppOrFun r f args =
   go :: [Either Range (Expr Parsed)] -> Int -> [Id] -> [Expr Parsed] -> (NonEmpty Id, NonEmpty (Expr Parsed))
   go [] _ params' args' = (NonEmpty.fromList $ reverse params', NonEmpty.fromList $ reverse args')
   go (Left r' : rest) count params' args' =
-    let p = param (Just r) count
+    let p = param r count
      in go rest (count + 1) (p : params') (Var r' p : args')
   go (Right arg : rest) count params' args' = go rest count params' (arg : args')
 

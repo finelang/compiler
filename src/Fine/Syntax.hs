@@ -7,9 +7,9 @@ module Fine.Syntax (
   idText,
   Phase (..),
   Kind (..),
+  typeof,
   LitT (..),
   Type (..),
-  typeExt,
   Op (..),
   Equation (..),
   Lit (..),
@@ -28,7 +28,6 @@ where
 import Data.Function (on)
 import Data.Kind qualified as HsKind
 import Data.List.NonEmpty (NonEmpty)
-import Data.List.NonEmpty qualified as NonEmpty
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -89,31 +88,47 @@ data Phase
   = Parsed -- after parsing
   | Transformed
   | Typed -- after type checking/inference
-  | Ready -- ready for codegen
+  | Ready
   deriving (Show)
+
+type family ReadyOnly (p :: Phase) where
+  ReadyOnly Ready = ()
+  ReadyOnly _ = Void
+
+type family NotReady (p :: Phase) where
+  NotReady Ready = Void
+  NotReady _ = ()
+
+type family ParsedOnly (p :: Phase) where
+  ParsedOnly Parsed = ()
+  ParsedOnly _ = Void
+
+type family NotParsed (p :: Phase) where
+  NotParsed Parsed = Void
+  NotParsed _ = ()
 
 -- KIND
 
 data Kind
-  = KLit Range
+  = KLit
   | FunK (NonEmpty Kind) Kind -- type of type functions
   deriving (Show)
 
-instance HasRange Kind where
-  range :: Kind -> Range
-  range (KLit r) = r
-  range (FunK left right) = range (NonEmpty.head left) <> range right
-
 -- TYPE
+
+class HasType v t where
+  typeof :: v -> t
 
 data LitT = IntT | FloatT | BoolT | StrT | UnitT
   deriving (Show)
 
 type family TypeX (p :: Phase) where
+  TypeX Ready = ()
   TypeX Typed = (Range, Kind)
   TypeX _ = Range
 
 type family UniVar (p :: Phase) where
+  UniVar Ready = Id
   UniVar Typed = (Id, Kind)
   UniVar _ = Id
 
@@ -149,6 +164,18 @@ instance HasRange (Type Parsed) where
   range :: Type Parsed -> Range
   range = typeExt
 
+instance HasRange (Type Transformed) where
+  range :: Type Transformed -> Range
+  range = typeExt
+
+instance HasRange (Type Typed) where
+  range :: Type Typed -> Range
+  range = fst . typeExt
+
+instance HasType (Type Typed) Kind where
+  typeof :: Type Typed -> Kind
+  typeof = snd . typeExt
+
 -- EXPR
 
 data Op
@@ -183,14 +210,6 @@ data Lit
   | Unit
   deriving (Show)
 
-type family ReadyBlock (p :: Phase) where
-  ReadyBlock Ready = ()
-  ReadyBlock _ = Void
-
-type family NonReadyBlock (p :: Phase) where
-  NonReadyBlock Ready = Void
-  NonReadyBlock _ = ()
-
 data Block (p :: Phase)
   = Return (Expr p)
   | Void
@@ -199,30 +218,15 @@ data Block (p :: Phase)
   | Debug (Expr p) (Block p)
   | Let Bool Id (Expr p) (Block p)
   | Loop (Expr p) (Block p) (Block p)
-  | If (ReadyBlock p) (Expr p) (Block p) (Block p)
-  | LetPatt (NonReadyBlock p) Pattern (Expr p) (Block p)
+  | LetPatt (NotReady p) Pattern (Expr p) (Block p)
+  | If (ReadyOnly p) (Expr p) (Block p) (Block p)
 
-deriving instance (Show (ReadyBlock p), Show (NonReadyBlock p), Show (Expr p)) => Show (Block p)
+deriving instance (Show (Expr p), Show (ReadyOnly p), Show (NotReady p)) => Show (Block p)
 
 type family ExprX (p :: Phase) where
-  ExprX Ready = ()
+  ExprX Ready = Type Ready
   ExprX Typed = (Range, Type Typed)
   ExprX _ = Range
-
-type family NonReadyExprX (p :: Phase) where
-  NonReadyExprX Ready = Void
-  NonReadyExprX Typed = (Range, Type Typed)
-  NonReadyExprX _ = Range
-
-type family AbstractExprX (p :: Phase) where
-  AbstractExprX Ready = ()
-  AbstractExprX Typed = (Range, Type Typed)
-  AbstractExprX Transformed = Range
-  AbstractExprX Parsed = Void
-
-type family ConcreteExprX (p :: Phase) where
-  ConcreteExprX Parsed = Range
-  ConcreteExprX _ = Void
 
 data Expr (p :: Phase)
   = Literal (ExprX p) Lit
@@ -231,68 +235,68 @@ data Expr (p :: Phase)
   | Tuple (ExprX p) (Expr p) (Expr p) [Expr p]
   | List (ExprX p) [Expr p]
   | Var (ExprX p) Id
-  | Bin (AbstractExprX p) Op (Expr p) (Expr p)
+  | Bin (ExprX p) (NotParsed p) Op (Expr p) (Expr p)
   | App (ExprX p) (Expr p) (NonEmpty (Expr p))
-  | GenApp (NonReadyExprX p) (Expr p) (NonEmpty (Type p))
+  | GenApp (ExprX p) (Expr p) (NonEmpty (Type p))
   | Access (ExprX p) (Expr p) Id
   | Index (ExprX p) (Expr p) Int
   | Cond (ExprX p) (Expr p) (Expr p) (Expr p)
   | Fun (ExprX p) (NonEmpty Id) (Expr p)
-  | GenFun (NonReadyExprX p) (NonEmpty Id) (Expr p)
+  | GenFun (ExprX p) (NotParsed p) (NonEmpty Id) (Expr p)
   | Block (ExprX p) (Block p)
-  | PatternMatching (NonReadyExprX p) (Expr p) (NonEmpty (Pattern, Expr p))
-  | Equation (ConcreteExprX p) (Equation (Expr p))
-  | PartialEquation (ConcreteExprX p) (Equation (Either Range (Expr p)))
+  | PatternMatching (ExprX p) (NotReady p) (Expr p) (NonEmpty (Pattern, Expr p))
+  | Equation (ExprX p) (ParsedOnly p) (Equation (Expr p))
+  | PartialEquation (ExprX p) (ParsedOnly p) (Equation (Either Range (Expr p)))
 
 deriving instance
   ( Show (ExprX p),
-    Show (NonReadyExprX p),
-    Show (ReadyBlock p),
-    Show (NonReadyBlock p),
-    Show (ConcreteExprX p),
-    Show (AbstractExprX p),
-    Show (Type p)
+    Show (Type p),
+    Show (NotParsed p),
+    Show (ParsedOnly p),
+    Show (NotReady p),
+    Show (Block p)
   ) =>
   Show (Expr p)
 
+exprExt :: Expr p -> ExprX p
+exprExt (Literal ext _) = ext
+exprExt (Data ext _ _) = ext
+exprExt (Record ext _) = ext
+exprExt (Tuple ext _ _ _) = ext
+exprExt (List ext _) = ext
+exprExt (Var ext _) = ext
+exprExt (Bin ext _ _ _ _) = ext
+exprExt (App ext _ _) = ext
+exprExt (GenApp ext _ _) = ext
+exprExt (Access ext _ _) = ext
+exprExt (Index ext _ _) = ext
+exprExt (Cond ext _ _ _) = ext
+exprExt (Fun ext _ _) = ext
+exprExt (GenFun ext _ _ _) = ext
+exprExt (Block ext _) = ext
+exprExt (PatternMatching ext _ _ _) = ext
+exprExt (Equation ext _ _) = ext
+exprExt (PartialEquation ext _ _) = ext
+
 instance HasRange (Expr Parsed) where
   range :: Expr Parsed -> Range
-  range (Literal r _) = r
-  range (Data r _ _) = r
-  range (Record r _) = r
-  range (Tuple r _ _ _) = r
-  range (List r _) = r
-  range (Var r _) = r
-  range (App r _ _) = r
-  range (GenApp r _ _) = r
-  range (Access r _ _) = r
-  range (Index r _ _) = r
-  range (Cond r _ _ _) = r
-  range (Fun r _ _) = r
-  range (GenFun r _ _) = r
-  range (Block r _) = r
-  range (PatternMatching r _ _) = r
-  range (Equation r _) = r
-  range (PartialEquation r _) = r
+  range = exprExt
 
 instance HasRange (Expr Transformed) where
   range :: Expr Transformed -> Range
-  range (Literal r _) = r
-  range (Data r _ _) = r
-  range (Record r _) = r
-  range (Tuple r _ _ _) = r
-  range (List r _) = r
-  range (Var r _) = r
-  range (Bin r _ _ _) = r
-  range (App r _ _) = r
-  range (GenApp r _ _) = r
-  range (Access r _ _) = r
-  range (Index r _ _) = r
-  range (Cond r _ _ _) = r
-  range (Fun r _ _) = r
-  range (GenFun r _ _) = r
-  range (Block r _) = r
-  range (PatternMatching r _ _) = r
+  range = exprExt
+
+instance HasRange (Expr Typed) where
+  range :: Expr Typed -> Range
+  range = fst . exprExt
+
+instance HasType (Expr Typed) (Type Typed) where
+  typeof :: Expr Typed -> Type Typed
+  typeof = snd . exprExt
+
+instance HasType (Expr Ready) (Type Ready) where
+  typeof :: Expr Ready -> Type Ready
+  typeof = exprExt
 
 -- PATTERN
 
@@ -321,17 +325,13 @@ instance HasRange Pattern where
 data BindType = OfExpr | OfType
   deriving (Show)
 
-type family BoundType (p :: Phase) where
-  BoundType Ready = ()
-  BoundType p = Type p
-
 data Bind :: BindType -> Phase -> HsKind.Type where
-  ExprBind :: Id -> BoundType p -> Expr p -> Bind OfExpr p
-  TypeBind :: Id -> BoundType p -> Bind OfType p
+  ExprBind :: Id -> Type p -> Expr p -> Bind OfExpr p
+  TypeBind :: Id -> Type p -> Bind OfType p
   -- binding for external code
-  ForeignBind :: Id -> BoundType p -> Text -> Bind OfExpr p
+  ForeignBind :: Id -> Type p -> Text -> Bind OfExpr p
 
-deriving instance (Show (BoundType p), Show (Expr p)) => Show (Bind t p)
+deriving instance (Show (Expr p), Show (Type p)) => Show (Bind t p)
 
 binder :: Bind t p -> Id
 binder (ExprBind idn _ _) = idn
@@ -358,9 +358,4 @@ data Module (p :: Phase)
     moduleEntry :: Maybe (Expr p)
   }
 
-deriving instance
-  ( Show (ModuleTypes p),
-    Show (BoundType p),
-    Show (Expr p)
-  ) =>
-  Show (Module p)
+deriving instance (Show (Expr p), Show (Type p), Show (ModuleTypes p)) => Show (Module p)

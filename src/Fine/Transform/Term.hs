@@ -63,7 +63,7 @@ transformPartialEquation r' equation' = do
     Operation (Var r var) op <$> go equation
   newParam r = do
     n <- gets fst
-    let p = param (Just r) n
+    let p = param r n
     modify $ \(_, ps) -> (n + 1, p : ps)
     return p
 
@@ -80,8 +80,8 @@ transformBlock (Let isMut binder value block) =
   Let isMut binder <$> transformExpr value <*> transformBlock block
 transformBlock (Loop cond actions block) =
   Loop <$> transformExpr cond <*> transformBlock actions <*> transformBlock block
-transformBlock (LetPatt x pattern value block) =
-  LetPatt x pattern <$> transformExpr value <*> transformBlock block
+transformBlock (LetPatt _ pattern value block) =
+  LetPatt () pattern <$> transformExpr value <*> transformBlock block
 
 transformExpr :: Expr Parsed -> Writer [Error] (Expr Transformed)
 transformExpr (Literal r lit) = return (Literal r lit)
@@ -99,12 +99,11 @@ transformExpr (Index r expr' ix) = Index r <$> transformExpr expr' <*> return ix
 transformExpr (Cond r cond yes no) =
   Cond r <$> transformExpr cond <*> transformExpr yes <*> transformExpr no
 transformExpr (Fun r params body) = Fun r params <$> transformExpr body
-transformExpr (GenFun r tparams body) = GenFun r tparams <$> transformExpr body
 transformExpr (Block r block) = Block r <$> transformBlock block
-transformExpr (PatternMatching r matched matches) =
-  PatternMatching r <$> transformExpr matched <*> (mapM . mapM) transformExpr matches
-transformExpr (Equation _ equation) = transformEquation equation
-transformExpr (PartialEquation r equation) = transformPartialEquation r equation
+transformExpr (PatternMatching r _ matched matches) =
+  PatternMatching r () <$> transformExpr matched <*> (mapM . mapM) transformExpr matches
+transformExpr (Equation _ _ equation) = transformEquation equation
+transformExpr (PartialEquation r _ equation) = transformPartialEquation r equation
 
 runExprTransformer :: Expr Parsed -> (Expr Transformed, [Error])
 runExprTransformer expr = runWriter (transformExpr expr)

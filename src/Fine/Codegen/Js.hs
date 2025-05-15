@@ -6,7 +6,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Fine.Codegen.Ready (getModuleReady)
+import Fine.Codegen.Ready (readyModule)
 import Fine.Codegen.Rename (runRenamer)
 import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (
@@ -18,12 +18,10 @@ import Fine.Syntax (
   Lit (..),
   Module (Module),
   Op (..),
-  Phase (Ready, Transformed),
+  Phase (Ready, Typed),
   Range (NoRange),
   idText,
  )
-
-type Typed = Transformed -- TODO: remove this line (and import 'Typed' phase) after typer impl
 
 type Indentation = Text
 
@@ -125,7 +123,7 @@ genStmtsCode block = do
 
 genFunCode :: NonEmpty Id -> Expr' -> Reader Indentation Text
 genFunCode params body =
-  let params' = Text.intercalate "," $ map idText $ NonEmpty.toList params
+  let params' = Text.intercalate ", " $ map idText $ NonEmpty.toList params
    in case body of
         Block _ block -> do
           body' <- genStmtsCode block
@@ -154,9 +152,9 @@ genExprCode (List _ exprs) = do
   exprs' <- Text.intercalate ", " <$> mapM genExprCode exprs
   return [i|[#{exprs'}]|]
 genExprCode (Var _ var) = return (idText var)
-genExprCode (Bin _ Pipe arg f) = genExprCode (App () f (arg :| []))
-genExprCode (Bin _ RPipe f arg) = genExprCode (App () f (arg :| []))
-genExprCode (Bin _ op left right) = do
+genExprCode (Bin t _ Pipe arg f) = genExprCode (App t f (arg :| []))
+genExprCode (Bin t _ RPipe f arg) = genExprCode (App t f (arg :| []))
+genExprCode (Bin _ _ op left right) = do
   let op' = genOpCode op
   left' <- genExprCode left
   right' <- genExprCode right
@@ -165,6 +163,7 @@ genExprCode (App _ f args) = do
   f' <- genExprCode f
   args' <- Text.intercalate ", " <$> mapM genExprCode (NonEmpty.toList args)
   return [i|#{f'}(#{args'})|]
+genExprCode (GenApp _ f _) = genExprCode f
 genExprCode (Access _ expr prop) = do
   expr' <- genExprCode expr
   return [i|#{expr'}.#{prop}|]
@@ -177,6 +176,7 @@ genExprCode (Cond _ cond yes no) = do
   no' <- genExprCode no
   return [i|#{cond'} ? #{yes'} : #{no'}|]
 genExprCode (Fun _ params body) = genFunCode params body
+genExprCode (GenFun _ _ _ body) = genExprCode body
 genExprCode (Block _ block) = do
   content <- genStmtsCode block
   indent <- ask
@@ -205,7 +205,7 @@ genModuleCode (Module values _ entry) = do
 runCodegen :: Module Typed -> Text
 runCodegen mdule =
   let renamed = runRenamer reservedJsWords mdule
-      ready = getModuleReady renamed
+      ready = readyModule renamed
    in runReader (genModuleCode ready) ""
 
 reservedJsWords :: [Text]

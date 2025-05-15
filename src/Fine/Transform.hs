@@ -21,6 +21,7 @@ import Fine.Syntax (
   Module (Module),
   ParsedModule (ParsedModule),
   Phase (Parsed, Transformed),
+  Range (NoRange),
   Type (..),
   binder,
  )
@@ -50,7 +51,7 @@ initEnv (defn : defns) = do
 
 -- TYPE
 
-checkType :: Maybe Id -> Type Parsed -> SEC Env Error Warning ()
+checkType :: Maybe Id -> Type Transformed -> SEC Env Error Warning ()
 checkType optBinder type' = do
   let isTFun = case type' of
         TFun _ _ _ -> True
@@ -65,13 +66,14 @@ checkType optBinder type' = do
 
 transformTypeBind :: Bind OfType Parsed -> SEC Env Error Warning (Bind OfType Transformed)
 transformTypeBind (TypeBind binder' type') = do
+  let type'' = transformType type'
   modify (\st -> st{currentTypeBinders = Set.insert binder' (currentTypeBinders st)})
-  checkType (Just binder') type'
-  return (TypeBind binder' (transformType type'))
+  checkType (Just binder') type''
+  return (TypeBind binder' type'')
 
 -- EXPR
 
-checkExpr :: Maybe Id -> Expr Parsed -> SEC Env Error Warning ()
+checkExpr :: Maybe Id -> Expr Transformed -> SEC Env Error Warning ()
 checkExpr optBinder expr = do
   vars <- gets currentExprBinders
   tVars <- gets allTypeBinders
@@ -95,14 +97,19 @@ transformExprBind bind = do
     modify (\st -> st{currentExprBinders = Set.insert binder' (currentExprBinders st)})
   case bind of
     ExprBind binder' type' expr -> do
-      checkType Nothing type'
-      checkExpr (Just binder') expr
+      let type'' = transformType type'
+      checkType Nothing type''
       let (expr', errs) = runExprTransformer expr
       forM_ errs fail'
-      return (ExprBind binder' (transformType type') expr')
+      let expr'' = case type'' of
+            Forall _ tparams _ -> GenFun NoRange () tparams expr'
+            _ -> expr'
+      checkExpr (Just binder') expr''
+      return (ExprBind binder' type'' expr'')
     ForeignBind binder' type' code -> do
-      checkType Nothing type'
-      return (ForeignBind binder' (transformType type') code)
+      let type'' = transformType type'
+      checkType Nothing type''
+      return (ForeignBind binder' type'' code)
 
 -- MODULE
 
@@ -164,9 +171,9 @@ transformModule (ParsedModule defns entry) = do
   initEnv defns
   (exprBinds, typeBinds) <- partitionEithers . concat <$> mapM transformDefn defns
   entry' <- forM entry $ \expr -> do
-    checkExpr Nothing expr
     let (expr', errs) = runExprTransformer expr
     forM_ errs fail'
+    checkExpr Nothing expr'
     return expr'
   warnUnusedBinders
   return (Module exprBinds typeBinds entry')

@@ -50,7 +50,7 @@ modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
 mkBinOp :: [Expr'] -> Op -> [Expr']
 mkBinOp (right : left : rest) op =
-  Bin (range left <> range right) op left right : rest
+  Bin (range left <> range right) () op left right : rest
 mkBinOp _ _ = errorUNREACHABLE "Operand stack does not contains two operands."
 
 consume :: [Expr'] -> [Op] -> [Expr']
