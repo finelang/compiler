@@ -10,7 +10,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
-import Fine.Error (Error (CannotUnify), errorUNREACHABLE)
+import Fine.Error (Error (BadKindSubstt, CannotUnifyKinds), errorUNREACHABLE)
 import Fine.Syntax (
   Id,
   Kind (..),
@@ -46,22 +46,22 @@ unify kind kind' = do
 
 unify' :: Kind PartiallyTyped -> Kind PartiallyTyped -> RWS r [Error] SubsttState' ()
 unify' (KLit _) (KLit _) = return ()
-unify' (TFunK r kinds kind) (TFunK r' kinds' kind') =
+unify' k1@(TFunK _ kinds kind) k2@(TFunK _ kinds' kind') =
   if length kinds == length kinds'
     then do
       forM_ (NonEmpty.zip kinds kinds') (uncurry unify)
       unify kind kind'
-    else tell [CannotUnify r r']
-unify' (SubsttKVar r var) kind = unifyVar r var kind
-unify' kind (SubsttKVar r var) = unifyVar r var kind
-unify' kind kind' = tell [CannotUnify (range kind) (range kind')]
+    else tell [CannotUnifyKinds k1 k2]
+unify' (SubsttKVar _ var) kind = unifyVar var kind
+unify' kind (SubsttKVar _ var) = unifyVar var kind
+unify' kind kind' = tell [CannotUnifyKinds kind kind']
 
-unifyVar :: Range -> Id -> Kind PartiallyTyped -> RWS r [Error] SubsttState' ()
-unifyVar _ var (SubsttKVar _ var') | var == var' = return ()
-unifyVar r var kind
+unifyVar :: Id -> Kind PartiallyTyped -> RWS r [Error] SubsttState' ()
+unifyVar var (SubsttKVar _ var') | var == var' = return ()
+unifyVar var kind
   | Set.member var (substtVars kind) =
-      tell [CannotUnify r (range kind)]
-unifyVar _ var kind = do
+      tell [BadKindSubstt var kind]
+unifyVar var kind = do
   s <- gets substts
   modify $ \env -> env{substts = (Map.singleton var kind) #. s}
 

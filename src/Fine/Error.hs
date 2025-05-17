@@ -10,7 +10,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax (Id, Op, Range)
+import Fine.Syntax (Id, Kind, Op, Phase (PartiallyTyped), Range)
 import GHC.Stack (HasCallStack)
 import String.ANSI (red, yellow)
 
@@ -30,7 +30,8 @@ data Error
   | UsageBeforeInit Id
   | MutRecBindNotFun Id
   | SameInfixPrecedence Op Op
-  | CannotUnify Range Range
+  | CannotUnifyKinds (Kind PartiallyTyped) (Kind PartiallyTyped)
+  | BadKindSubstt Id (Kind PartiallyTyped)
 
 instance Show Error where
   show :: Error -> String
@@ -45,7 +46,9 @@ instance Show Error where
   show (MutRecBindNotFun var) =
     [i|The expression bound to #{hl var} must be a function expression.|]
   show (SameInfixPrecedence _ _) = errorTODO
-  show (CannotUnify r r') = [i|Cannot unify kinds at #{r} and #{r'}.|]
+  show (CannotUnifyKinds kind kind') =
+    [i|Cannot unify kinds #{hl kind} and #{hl kind'}.|]
+  show (BadKindSubstt _ _) = errorTODO
 
 errorPrefix :: String
 errorPrefix = red "Error: "
