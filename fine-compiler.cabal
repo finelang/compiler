@@ -28,8 +28,6 @@ library
     options
   exposed-modules:
     Control.Monad.ErrorCollector
-    Control.Monad.Trans.REC
-    Control.Monad.Trans.RS
     Control.Monad.Trans.RW
     Control.Monad.Trans.SEC
     Control.Monad.Trans.SW

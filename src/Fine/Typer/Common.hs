@@ -10,7 +10,7 @@ module Fine.Typer.Common (
   (#.),
 ) where
 
-import Control.Monad.State.Class (MonadState, gets, modify')
+import Control.Monad.State.Class (MonadState, gets, modify)
 import Data.List.NonEmpty ((<|))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map)
@@ -42,7 +42,7 @@ initSubsttState = SubsttState 1 Map.empty
 newSubsttVar :: (MonadState (SubsttState a) m) => Text -> Range -> m Id
 newSubsttVar prefix r = do
   n <- gets count
-  modify' $ \st -> st{count = n + 1}
+  modify $ \st -> st{count = n + 1}
   return $ Id r [i|#{prefix}#{n}|]
 
 class Typeable t where

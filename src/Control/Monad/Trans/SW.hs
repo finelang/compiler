@@ -1,26 +1,11 @@
 module Control.Monad.Trans.SW (module Control.Monad.Trans.SW) where
 
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State.Strict (StateT)
-import Control.Monad.Trans.State.Strict qualified as State
-import Control.Monad.Trans.Writer.Strict (Writer)
-import Control.Monad.Trans.Writer.Strict qualified as Writer
+import Control.Monad.Trans.State.Strict (StateT, runStateT)
+import Control.Monad.Trans.Writer.Strict (Writer, runWriter)
 
 type SW s w a = StateT s (Writer w) a
 
-get :: (Monoid w) => SW s w s
-get = State.get
-
-gets :: (Monoid w) => (s -> a) -> SW s w a
-gets = State.gets
-
-modify :: (Monoid w) => (s -> s) -> SW s w ()
-modify = State.modify'
-
-tell :: (Monoid w) => w -> SW s w ()
-tell = lift . Writer.tell
-
 runSW :: (SW s w a) -> s -> (a, s, w)
 runSW sw s =
-  let ((x, s'), w) = Writer.runWriter (State.runStateT sw s)
+  let ((x, s'), w) = runWriter (runStateT sw s)
    in (x, s', w)
