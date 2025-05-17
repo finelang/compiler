@@ -53,6 +53,8 @@ library
     Fine.Transform.ShuntingYard
     Fine.Transform.Term
     Fine.Typer
+    Fine.Typer.Common
+    Fine.Typer.Kinder
     Fine.Typer.W
   hs-source-dirs:
     src
@@ -74,7 +76,8 @@ library
     string-interpolate,
     text,
     text-ansi,
-    transformers
+    transformers,
+    mtl
 
 executable fine-compiler
   import:
@@ -101,6 +104,7 @@ executable fine-compiler
     text,
     text-ansi,
     transformers,
+    mtl,
     fine-compiler
 
 test-suite fine-compiler-test

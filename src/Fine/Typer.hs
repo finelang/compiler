@@ -1,13 +1,19 @@
 module Fine.Typer (runTyper) where
 
-import Data.List.NonEmpty (NonEmpty)
+import Control.Monad.Reader.Class (ask)
+import Control.Monad.Trans.RW (RW, runRW, withReader)
+import Control.Monad.Writer.Class (tell)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.Strict (Map, (!))
+import Data.Map.Strict qualified as Map
 import Fine.Error (Error, Warning)
 import Fine.Syntax (
   Bind (..),
   BindType (..),
   Block (..),
   Expr (..),
+  Id,
   Kind (KLit),
   LitT (UnitT),
   Module (Module),
@@ -15,9 +21,10 @@ import Fine.Syntax (
   Range (NoRange),
   Type (..),
  )
+import Fine.Typer.Kinder (runKindChecker, runKindInferrer)
 
-tempKind :: Kind
-tempKind = KLit
+tempKind :: Kind Typed
+tempKind = KLit NoRange
 
 kinded :: Type Transformed -> Type Typed
 kinded (LiteralT r litT) = LiteralT (r, tempKind) litT
@@ -29,7 +36,7 @@ kinded (RecordT r propTypes) = RecordT (r, tempKind) $ (map . fmap) kinded propT
 kinded (FunT r argTypes retType) =
   FunT (r, tempKind) (NonEmpty.map kinded argTypes) (kinded retType)
 kinded (Forall r univars type') =
-  Forall (r, tempKind) (NonEmpty.map (\v -> (v, tempKind)) univars) (kinded type')
+  Forall (r, tempKind) univars (kinded type')
 kinded (TData r tag types) = TData (r, tempKind) tag (map kinded types)
 kinded (TVar r var) = TVar (r, tempKind) var
 kinded (TApp r tfun targs) = TApp (r, tempKind) (kinded tfun) (NonEmpty.map kinded targs)
@@ -73,14 +80,35 @@ typedExpr (Fun r params body) = Fun (r, tempType) params (typedExpr body)
 typedExpr (GenFun r _ tparams body) = GenFun (r, tempType) () tparams (typedExpr body)
 typedExpr (Block r block) = Block (r, tempType) (typedBlock block)
 
-kindedTypeBind :: Bind OfType Transformed -> Bind OfType Typed
-kindedTypeBind (TypeBind binder type') = TypeBind binder (kinded type')
+typedExprBind :: Bind OfExpr Transformed -> RW (Map Id (Type Typed)) [Error] (Bind OfExpr Typed)
+typedExprBind (ExprBind binder type' expr) = do
+  typeEnv <- ask
+  let (type'', errs) = runKindChecker typeEnv type'
+  tell errs
+  return $ ExprBind binder type'' (typedExpr expr)
+typedExprBind (ForeignBind binder type' code) = do
+  typeEnv <- ask
+  let (type'', errs) = runKindChecker typeEnv type'
+  tell errs
+  return $ ForeignBind binder type'' code
 
-typedExprBind :: Bind OfExpr Transformed -> Bind OfExpr Typed
-typedExprBind (ExprBind binder type' expr) = ExprBind binder (kinded type') (typedExpr expr)
-typedExprBind (ForeignBind binder type' code) = ForeignBind binder (kinded type') code
+collectTypeEnv :: [Bind OfType Transformed] -> Map Id (Type Transformed)
+collectTypeEnv binds = Map.fromList $ map (\(TypeBind binder type') -> (binder, type')) binds
+
+typedModule :: Module Transformed -> RW () [Error] (Module Typed)
+typedModule (Module exprBinds typeBinds entry) = do
+  let typeEnv = collectTypeEnv typeBinds
+  let (kindedTypes, errs) = runKindInferrer typeEnv
+  tell errs
+  let typeBinds' = (flip map) typeBinds $
+        \(TypeBind binder _) -> TypeBind binder (kindedTypes ! binder)
+  exprBinds' <- withReader (const kindedTypes) (mapM typedExprBind exprBinds)
+  return $ Module exprBinds' typeBinds' (fmap typedExpr entry)
 
 runTyper :: Module Transformed -> (Either (NonEmpty Error) (Module Typed), [Warning])
-runTyper (Module values types entry) =
-  let mdule = Module (map typedExprBind values) (map kindedTypeBind types) (fmap typedExpr entry)
-   in (Right mdule, [])
+runTyper mdule =
+  let (mdule', errs) = runRW (typedModule mdule) ()
+      result = case errs of
+        err : errs' -> Left (err :| errs')
+        [] -> Right mdule'
+   in (result, [])

@@ -30,6 +30,7 @@ data Error
   | UsageBeforeInit Id
   | MutRecBindNotFun Id
   | SameInfixPrecedence Op Op
+  | CannotUnify Range Range
 
 instance Show Error where
   show :: Error -> String
@@ -44,6 +45,7 @@ instance Show Error where
   show (MutRecBindNotFun var) =
     [i|The expression bound to #{hl var} must be a function expression.|]
   show (SameInfixPrecedence _ _) = errorTODO
+  show (CannotUnify r r') = [i|Cannot unify kinds at #{r} and #{r'}.|]
 
 errorPrefix :: String
 errorPrefix = red "Error: "
