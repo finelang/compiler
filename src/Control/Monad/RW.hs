@@ -1,7 +1,7 @@
-module Control.Monad.Trans.RW where
+module Control.Monad.RW where
 
-import Control.Monad.Trans.Reader (ReaderT, runReaderT, withReaderT)
-import Control.Monad.Trans.Writer.Strict (Writer, runWriter)
+import Control.Monad.Reader (ReaderT, runReaderT, withReaderT)
+import Control.Monad.Writer.Strict (Writer, runWriter)
 
 type RW r w a = ReaderT r (Writer w) a
 

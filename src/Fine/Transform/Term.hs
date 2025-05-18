@@ -1,7 +1,7 @@
 module Fine.Transform.Term (transformType, runExprTransformer) where
 
-import Control.Monad.Trans.State.Strict (gets, modify, runState)
-import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
+import Control.Monad.State.Strict (gets, modify, runState)
+import Control.Monad.Writer.Strict (Writer, runWriter, tell)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
 import Fine.Error (Error)

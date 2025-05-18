@@ -1,6 +1,6 @@
 module Fine.Codegen.Js (runCodegen) where
 
-import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
+import Control.Monad.Reader (Reader, ask, local, runReader)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.String.Interpolate (i)

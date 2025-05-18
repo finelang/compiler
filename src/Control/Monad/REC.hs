@@ -1,9 +1,9 @@
-module Control.Monad.Trans.REC where
+module Control.Monad.REC where
 
 import Control.Monad.ErrorCollector (ErrorCollector)
 import Control.Monad.ErrorCollector qualified as ErrorCollector
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (ReaderT, runReaderT, withReaderT)
+import Control.Monad.Reader (ReaderT, runReaderT, withReaderT)
+import Control.Monad.Trans (lift)
 import Data.List.NonEmpty (NonEmpty)
 
 type REC r e w a = ReaderT r (ErrorCollector e w) a

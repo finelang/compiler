@@ -1,8 +1,8 @@
 module Main (main) where
 
-import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
-import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
+import Control.Monad.Except (ExceptT, runExceptT, throwError)
+import Control.Monad.Trans (MonadTrans (lift))
+import Control.Monad.Writer.Strict (Writer, runWriter, tell)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Data.Text.IO qualified as TIO (readFile, writeFile)
@@ -22,7 +22,7 @@ try op x = do
   let (result, wrns) = op x
   lift (tell wrns)
   case result of
-    Left errs -> throwE errs
+    Left errs -> throwError errs
     Right y -> return y
 
 pipeline :: ParsedModule -> EW (NonEmpty Error) [Warning] Text

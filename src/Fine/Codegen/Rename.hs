@@ -1,6 +1,6 @@
 module Fine.Codegen.Rename (runRenamer) where
 
-import Control.Monad.Trans.Reader (Reader, asks, runReader)
+import Control.Monad.Reader (Reader, asks, runReader)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 

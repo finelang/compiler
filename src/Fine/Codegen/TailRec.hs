@@ -1,7 +1,7 @@
 module Fine.Codegen.TailRec () where
 
--- import Control.Monad.Trans.Class (lift)
--- import Control.Monad.Trans.Reader (Reader, ReaderT (runReaderT), ask, asks, runReader)
+-- import Control.Monad.Trans (lift)
+-- import Control.Monad.Reader (Reader, ReaderT (runReaderT), ask, asks, runReader)
 -- import Data.Functor qualified as Functor
 -- import Data.List.NonEmpty (NonEmpty)
 -- import Data.List.NonEmpty qualified as NonEmpty

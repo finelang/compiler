@@ -1,11 +1,11 @@
 module Fine.Typer.Kinder (runKindChecker, runKindInferrer) where
 
 import Control.Monad (forM, forM_)
-import Control.Monad.Trans.RWS.Strict (RWS, asks, gets, local, modify, runRWS, tell)
-import Control.Monad.Trans.Reader (Reader)
-import Control.Monad.Trans.Reader qualified as Reader
-import Control.Monad.Trans.Writer.Strict (Writer)
-import Control.Monad.Trans.Writer.Strict qualified as Writer
+import Control.Monad.RWS.Strict (RWS, asks, gets, local, modify, runRWS, tell)
+import Control.Monad.Reader (Reader)
+import Control.Monad.Reader qualified as Reader
+import Control.Monad.Writer.Strict (Writer)
+import Control.Monad.Writer.Strict qualified as Writer
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map

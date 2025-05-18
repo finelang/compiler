@@ -1,8 +1,8 @@
 module Fine.Transform (runTransformer) where
 
 import Control.Monad (forM, forM_, unless, when)
+import Control.Monad.SEC (SEC, fail', runSEC, warn)
 import Control.Monad.State.Class (gets, modify)
-import Control.Monad.Trans.SEC (SEC, fail', runSEC, warn)
 import Data.Either (partitionEithers)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty

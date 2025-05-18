@@ -28,10 +28,10 @@ library
     options
   exposed-modules:
     Control.Monad.ErrorCollector
-    Control.Monad.Trans.REC
-    Control.Monad.Trans.RW
-    Control.Monad.Trans.SEC
-    Control.Monad.Trans.SW
+    Control.Monad.REC
+    Control.Monad.RW
+    Control.Monad.SEC
+    Control.Monad.SW
     Data.Errors
     Data.List.Extra
     Data.List.NonEmpty.Extra
@@ -75,7 +75,6 @@ library
     string-interpolate,
     text,
     text-ansi,
-    transformers,
     mtl
 
 executable fine-compiler
@@ -102,7 +101,6 @@ executable fine-compiler
     string-interpolate,
     text,
     text-ansi,
-    transformers,
     mtl,
     fine-compiler
 

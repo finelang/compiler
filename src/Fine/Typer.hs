@@ -1,8 +1,8 @@
 module Fine.Typer (runTyper) where
 
 import Control.Monad (forM_)
+import Control.Monad.REC (REC, fail', runREC, withReader)
 import Control.Monad.Reader.Class (ask)
-import Control.Monad.Trans.REC (REC, fail', runREC, withReader)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map, (!))
