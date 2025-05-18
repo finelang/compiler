@@ -1,9 +1,9 @@
 module Fine.Typer (runTyper) where
 
+import Control.Monad (forM_)
 import Control.Monad.Reader.Class (ask)
-import Control.Monad.Trans.RW (RW, runRW, withReader)
-import Control.Monad.Writer.Class (tell)
-import Data.List.NonEmpty (NonEmpty ((:|)))
+import Control.Monad.Trans.REC (REC, fail', runREC, withReader)
+import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map, (!))
 import Data.Map.Strict qualified as Map
@@ -80,35 +80,30 @@ typedExpr (Fun r params body) = Fun (r, tempType) params (typedExpr body)
 typedExpr (GenFun r _ tparams body) = GenFun (r, tempType) () tparams (typedExpr body)
 typedExpr (Block r block) = Block (r, tempType) (typedBlock block)
 
-typedExprBind :: Bind OfExpr Transformed -> RW (Map Id (Type Typed)) [Error] (Bind OfExpr Typed)
+typedExprBind :: Bind OfExpr Transformed -> REC (Map Id (Type Typed)) Error () (Bind OfExpr Typed)
 typedExprBind (ExprBind binder type' expr) = do
   typeEnv <- ask
   let (type'', errs) = runKindChecker typeEnv type'
-  tell errs
+  forM_ errs fail'
   return $ ExprBind binder type'' (typedExpr expr)
 typedExprBind (ForeignBind binder type' code) = do
   typeEnv <- ask
   let (type'', errs) = runKindChecker typeEnv type'
-  tell errs
+  forM_ errs fail'
   return $ ForeignBind binder type'' code
 
 collectTypeEnv :: [Bind OfType Transformed] -> Map Id (Type Transformed)
 collectTypeEnv binds = Map.fromList $ map (\(TypeBind binder type') -> (binder, type')) binds
 
-typedModule :: Module Transformed -> RW () [Error] (Module Typed)
+typedModule :: Module Transformed -> REC () Error () (Module Typed)
 typedModule (Module exprBinds typeBinds entry) = do
   let typeEnv = collectTypeEnv typeBinds
   let (kindedTypes, errs) = runKindInferrer typeEnv
-  tell errs
+  forM_ errs fail'
   let typeBinds' = (flip map) typeBinds $
         \(TypeBind binder _) -> TypeBind binder (kindedTypes ! binder)
   exprBinds' <- withReader (const kindedTypes) (mapM typedExprBind exprBinds)
   return $ Module exprBinds' typeBinds' (fmap typedExpr entry)
 
 runTyper :: Module Transformed -> (Either (NonEmpty Error) (Module Typed), [Warning])
-runTyper mdule =
-  let (mdule', errs) = runRW (typedModule mdule) ()
-      result = case errs of
-        err : errs' -> Left (err :| errs')
-        [] -> Right mdule'
-   in (result, [])
+runTyper mdule = let (result, _) = runREC (typedModule mdule) () in (result, [])
