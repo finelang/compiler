@@ -21,6 +21,7 @@ import Fine.Syntax (
   Range (NoRange),
   Type (..),
  )
+import Fine.Typer.Eval (runEval)
 import Fine.Typer.Kinder (runKindChecker, runKindInferrer)
 
 tempKind :: Kind Typed
@@ -85,12 +86,12 @@ typedExprBind (ExprBind binder type' expr) = do
   typeEnv <- ask
   let (type'', errs) = runKindChecker typeEnv type'
   forM_ errs fail'
-  return $ ExprBind binder type'' (typedExpr expr)
+  return $ ExprBind binder (runEval typeEnv type'') (typedExpr expr)
 typedExprBind (ForeignBind binder type' code) = do
   typeEnv <- ask
   let (type'', errs) = runKindChecker typeEnv type'
   forM_ errs fail'
-  return $ ForeignBind binder type'' code
+  return $ ForeignBind binder (runEval typeEnv type'') code
 
 collectTypeEnv :: [Bind OfType Transformed] -> Map Id (Type Transformed)
 collectTypeEnv binds = Map.fromList $ map (\(TypeBind binder type') -> (binder, type')) binds
@@ -101,7 +102,7 @@ typedModule (Module exprBinds typeBinds entry) = do
   let (kindedTypes, errs) = runKindInferrer typeEnv
   forM_ errs fail'
   let typeBinds' = (flip map) typeBinds $
-        \(TypeBind binder _) -> TypeBind binder (kindedTypes ! binder)
+        \(TypeBind binder _) -> TypeBind binder $ runEval kindedTypes (kindedTypes ! binder)
   exprBinds' <- withReader (const kindedTypes) (mapM typedExprBind exprBinds)
   return $ Module exprBinds' typeBinds' (fmap typedExpr entry)
 

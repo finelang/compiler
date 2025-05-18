@@ -53,6 +53,7 @@ library
     Fine.Transform.Term
     Fine.Typer
     Fine.Typer.Common
+    Fine.Typer.Eval
     Fine.Typer.Kinder
     Fine.Typer.W
   hs-source-dirs:
