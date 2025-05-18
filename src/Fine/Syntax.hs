@@ -232,6 +232,11 @@ data Equation t
   | Operation t Op (Equation t)
   deriving (Show)
 
+instance (HasRange t) => HasRange (Equation t) where
+  range :: (HasRange t) => Equation t -> Range
+  range (Operand x) = range x
+  range (Operation x _ equation) = range x <> range equation
+
 data Lit
   = Int Int
   | Float Float

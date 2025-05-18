@@ -11,7 +11,7 @@ import Fine.Syntax (
   Id,
   Pattern (..),
   Phase (Parsed),
-  Range (NoRange),
+  Range,
   Type (Forall, FunT, TApp, TData, TFun, TVar),
   range,
  )
@@ -37,39 +37,38 @@ isCtor (Fun _ _ body) = isCtor body
 isCtor (GenFun _ _ _ body) = isCtor body
 isCtor _ = False
 
-mkDataDefn ::
-  Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, [Type Parsed]) -> Defn
-mkDataDefn ctTag optTParams ctors =
+mkDataDefn :: Range -> Id -> Maybe (NonEmpty Id) -> NonEmpty (Id, [Type Parsed], Range) -> Defn
+mkDataDefn r ctTag optTParams ctors =
   let tc :: Type Parsed
       tc = TVar (range ctTag) ctTag
       retType = case optTParams of
         Just tparams ->
-          TApp NoRange tc $ NonEmpty.map (\p -> TVar (range p) p) tparams
+          TApp r tc $ NonEmpty.map (\p -> TVar (range p) p) tparams
         _ -> tc
       ctBinds = NonEmpty.map (mkCtor optTParams retType) ctors
       tBind = TypeBind ctTag $ case optTParams of
         Just tparams ->
-          (TFun NoRange tparams)
-            (TData NoRange ctTag $ map (\p -> TVar (range p) p) $ NonEmpty.toList tparams)
-        _ -> TData NoRange ctTag []
+          (TFun r tparams)
+            (TData r ctTag $ map (\p -> TVar (range p) p) $ NonEmpty.toList tparams)
+        _ -> TData r ctTag []
    in DataDefn tBind ctBinds
  where
-  mkCtor optTParams' retType (tag, typeArgs) =
+  mkCtor optTParams' retType (tag, typeArgs, r') =
     let (type', expr) = case typeArgs of
-          [] -> (retType, Data NoRange tag [])
+          [] -> (retType, Data r' tag [])
           (t : ts) ->
             let argTypes = t :| ts
                 params = paramsFromTypes argTypes
              in (,)
-                  (FunT NoRange argTypes retType)
-                  (Fun NoRange params $ Data NoRange tag $ map (Var NoRange) $ NonEmpty.toList params)
+                  (FunT r' argTypes retType)
+                  (Fun r' params $ Data r' tag $ map (\p -> Var (range p) p) $ NonEmpty.toList params)
         type'' = case optTParams' of
-          Just tparams -> Forall NoRange tparams type'
+          Just tparams -> Forall r' tparams type'
           _ -> type'
      in ExprBind tag type'' expr
-  paramsFromTypes (_ :| []) = param NoRange 0 :| []
-  paramsFromTypes (_ :| ts) =
-    param NoRange 0 :| map (\n -> param NoRange n) [1 .. length ts]
+  paramsFromTypes (t :| []) = param (range t) 0 :| []
+  paramsFromTypes (t :| ts) =
+    param (range t) 0 :| map (\(n, t') -> param (range t') n) (zip [1 .. length ts] ts)
 
 mkAppOrFun :: Range -> Expr Parsed -> NonEmpty (Either Range (Expr Parsed)) -> Expr Parsed
 mkAppOrFun r f args =

@@ -22,9 +22,9 @@ import Fine.Syntax (
   Module (Module),
   ParsedModule (ParsedModule),
   Phase (Parsed, Transformed),
-  Range (NoRange),
   Type (..),
   binder,
+  range,
  )
 import Fine.Syntax.Utils (isFunction)
 import Fine.Transform.Check qualified as Check
@@ -103,7 +103,7 @@ transformExprBind bind = do
       let (expr', errs) = runExprTransformer expr
       forM_ errs fail'
       let expr'' = case type'' of
-            Forall _ tparams _ -> GenFun NoRange () tparams expr'
+            Forall _ tparams _ -> GenFun (range expr') () tparams expr'
             _ -> expr'
       checkExpr (Just binder') expr''
       return (ExprBind binder' type'' expr'')

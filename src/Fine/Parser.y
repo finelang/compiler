@@ -290,8 +290,8 @@ Defns : Defns Defn OptSemi  { $2 : $1 }
 
 Defn : type Id '[' Params ']' '=' Type      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
      | type Id '=' Type                     { TypeDefn (TypeBind $2 $4) }
-     | type Ct '[' Params ']' '{' Ctors '}' { mkDataDefn $2 (Just $4) $7 }
-     | type Ct '{' Ctors '}'                { mkDataDefn $2 Nothing $4 }
+     | type Ct '[' Params ']' '{' Ctors '}' { mkDataDefn (range $2 <> range $4) $2 (Just $4) $7 }
+     | type Ct '{' Ctors '}'                { mkDataDefn (range $2) $2 Nothing $4 }
      | let foreign Id ':' Forall '=' strlit { Defn (ForeignBind $3 $5 (extractStr $7)) }
      | let MutRecBinds                      { if NonEmpty.length $2 > 1 then MutRecDefns $2 else Defn (NonEmpty.head $2) }
 
@@ -308,8 +308,8 @@ Ctors_ : Ctors_ ';' Ctor  { $3 : $1 }
 
 Ctors : Ctors_  { toNonEmptyPARTIAL (reverse $1) }
 
-Ctor : Ct               { ($1, []) }
-     | Ct '(' Types ')' { ($1, NonEmpty.toList $3) }
+Ctor : Ct               { ($1, [], range $1) }
+     | Ct '(' Types ')' { ($1, NonEmpty.toList $3, range $1 <> range $4) }
 
 {
 extractStr = Text.tail . Text.init . tokenLexeme
@@ -324,7 +324,7 @@ uncons2 (x :| (y : zs)) = (x, y, zs)
 snoc (x :| xs) y = x :| xs ++ [y]
 
 equationToExpr (Operand expr) = expr
-equationToExpr equation = Equation NoRange () equation
+equationToExpr equation = Equation (range equation) () equation
 
 parseError tokens = error . show . head $ tokens
 }
