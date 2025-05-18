@@ -290,7 +290,7 @@ Defns : Defns Defn OptSemi  { $2 : $1 }
 
 Defn : type Id '[' Params ']' '=' Type      { TypeDefn (TypeBind $2 (TFun (range $2 <> range $7) $4 $7)) }
      | type Id '=' Type                     { TypeDefn (TypeBind $2 $4) }
-     | type Ct '[' Params ']' '{' Ctors '}' { mkDataDefn (range $2 <> range $4) $2 (Just $4) $7 }
+     | type Ct '[' Params ']' '{' Ctors '}' { mkDataDefn (range $2 <> range $5) $2 (Just $4) $7 }
      | type Ct '{' Ctors '}'                { mkDataDefn (range $2) $2 Nothing $4 }
      | let foreign Id ':' Forall '=' strlit { Defn (ForeignBind $3 $5 (extractStr $7)) }
      | let MutRecBinds                      { if NonEmpty.length $2 > 1 then MutRecDefns $2 else Defn (NonEmpty.head $2) }
