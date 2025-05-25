@@ -23,7 +23,7 @@ import Fine.Syntax (
  )
 import Fine.Syntax.Name (lengthProp, matchedVar, tagProp)
 import Fine.Syntax.Utils (patternBoundVars)
-import Fine.Typer.W (boolType, litType)
+import Fine.Typer.J (boolType, litType)
 
 readyType :: Type Typed -> Type Ready
 readyType (LiteralT _ litT) = LiteralT () litT

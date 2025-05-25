@@ -54,8 +54,9 @@ library
     Fine.Typer
     Fine.Typer.Common
     Fine.Typer.Eval
+    Fine.Typer.J
     Fine.Typer.Kinder
-    Fine.Typer.W
+    Fine.Typer.Pattern
   hs-source-dirs:
     src
   default-extensions:

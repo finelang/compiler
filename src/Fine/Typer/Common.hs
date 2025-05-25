@@ -19,8 +19,14 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Error (errorUNREACHABLE)
-import Fine.Syntax (Id (Id), Kind (..), Phase (PartiallyTyped), Range)
+import Fine.Error (errorTODO, errorUNREACHABLE)
+import Fine.Syntax (
+  Id (Id),
+  Kind (..),
+  Phase (PartiallyTyped),
+  Range,
+  Type,
+ )
 
 type Env a = Map Id a
 
@@ -64,3 +70,10 @@ instance Typeable (Kind PartiallyTyped) where
   substtVars (KLit _) = Set.empty
   substtVars (TFunK _ kinds kind) = Set.unions $ NonEmpty.map substtVars (kind <| kinds)
   substtVars (SubsttKVar _ var) = Set.singleton var
+
+instance Typeable (Type PartiallyTyped) where
+  (#) :: Substts (Type PartiallyTyped) -> Type PartiallyTyped -> Type PartiallyTyped
+  (#) = errorTODO
+
+  substtVars :: Type PartiallyTyped -> Set Id
+  substtVars = errorTODO
