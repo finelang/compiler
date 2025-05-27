@@ -120,3 +120,7 @@ test-suite fine-compiler-test
     DataKinds
     KindSignatures
     TypeFamilies
+  build-depends:
+    base >=4.7 && <5,
+    fine-compiler,
+    hspec ^>=2.7
