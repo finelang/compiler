@@ -76,7 +76,7 @@ testCases matchedType = do
         -- or capturing it in a var, no case is useful
         return [arbitraryTestCase]
       Forall _ _ type' -> testCases type'
-      TData _ _ _ -> errorTODO
+      DataT _ _ _ -> errorTODO
       _ ->
         errorUNREACHABLE
           [i|The matched type '#{matchedType}' should be a fully evaluated type of an expression.|]

@@ -13,6 +13,7 @@ import Fine.Parser (parseTokens)
 import Fine.Syntax (ParsedModule)
 import Fine.Transform (runTransformer)
 import Fine.Typer (runTyper)
+import Fine.Typer.Kinder (runKinder)
 import System.Environment (getArgs)
 
 type EW e w a = ExceptT e (Writer w) a
@@ -28,7 +29,8 @@ try op x = do
 pipeline :: ParsedModule -> EW (NonEmpty Error) [Warning] Text
 pipeline parsed = do
   transformed <- try runTransformer parsed
-  typed <- try runTyper transformed
+  kinded <- try runKinder transformed
+  typed <- try runTyper kinded
   let code = runCodegen typed
   return code
 

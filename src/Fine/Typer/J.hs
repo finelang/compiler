@@ -6,6 +6,8 @@ module Fine.Typer.J (
 
 import Control.Monad.RWS.Strict (RWS)
 import Control.Monad.Reader (Reader)
+import Data.Map.Strict qualified as Map
+import Data.Set (Set)
 import Fine.Error (Error, errorTODO)
 import Fine.Syntax (
   Expr (..),
@@ -35,6 +37,16 @@ type SubsttState' = SubsttState (Type PartiallyTyped)
 
 type TypeEnv = Env (Type PartiallyTyped)
 
+(#) :: Substts' -> Type PartiallyTyped -> Type PartiallyTyped
+(#) = errorTODO
+
+substtVars :: Type PartiallyTyped -> Set Id
+substtVars = errorTODO
+
+infixr 5 #.
+(#.) :: Substts' -> Substts' -> Substts'
+s #. s' = Map.union s ((s #) <$> s')
+
 unify :: Type PartiallyTyped -> Type PartiallyTyped -> RWS r [Error] SubsttState' ()
 unify = errorTODO
 
@@ -42,7 +54,7 @@ unifyVar :: Id -> Type PartiallyTyped -> RWS r [Error] SubsttState' ()
 unifyVar = errorTODO
 
 newSubsttTVar :: (Monoid w) => Range -> RWS r w SubsttState' (Type PartiallyTyped)
-newSubsttTVar r = SubsttTVar (r, KLit NoRange) () <$> newSubsttVar "t" r
+newSubsttTVar r = SubsttTVar <$> newSubsttVar "t" r
 
 infer :: Expr Transformed -> RWS TypeEnv [Error] SubsttState' (Expr PartiallyTyped)
 infer = errorTODO

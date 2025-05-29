@@ -89,6 +89,8 @@ instance Show Id where
 data Phase
   = Parsed -- after parsing
   | Transformed
+  | PartiallyKinded
+  | Kinded
   | PartiallyTyped
   | Typed -- after type checking/inference
   | Ready
@@ -102,10 +104,6 @@ type family NotReady (p :: Phase) where
   NotReady Ready = Void
   NotReady _ = ()
 
-type family PartiallyTypedOnly (p :: Phase) where
-  PartiallyTypedOnly PartiallyTyped = ()
-  PartiallyTypedOnly _ = Void
-
 type family ParsedOnly (p :: Phase) where
   ParsedOnly Parsed = ()
   ParsedOnly _ = Void
@@ -116,16 +114,11 @@ type family NotParsed (p :: Phase) where
 
 -- KIND
 
--- data Kind
---   = KLit
---   | FunK (NonEmpty Kind) Kind -- type of type functions
---   deriving (Show)
-
 data Kind :: Phase -> HsKind.Type where
   KLit :: Range -> Kind p
   TFunK :: Range -> NonEmpty (Kind p) -> Kind p -> Kind p
   --
-  SubsttKVar :: Range -> Id -> Kind PartiallyTyped
+  SubsttKVar :: Id -> Kind PartiallyKinded
 
 instance Show (Kind p) where
   show :: Kind p -> String
@@ -133,13 +126,13 @@ instance Show (Kind p) where
   show (TFunK _ kinds kind) =
     let argsText = intercalate ", " $ map show $ NonEmpty.toList kinds
      in [i|(#{argsText}) -> #{show kind}|]
-  show (SubsttKVar _ var) = Text.unpack (idText var)
+  show (SubsttKVar var) = Text.unpack (idText var)
 
 instance HasRange (Kind p) where
   range :: Kind p -> Range
   range (KLit r) = r
   range (TFunK r _ _) = r
-  range (SubsttKVar r _) = r
+  range (SubsttKVar var) = range var
 
 -- TYPE
 
@@ -151,26 +144,32 @@ data LitT = IntT | FloatT | BoolT | StrT | UnitT
 
 type family TypeX (p :: Phase) where
   TypeX Ready = ()
-  TypeX Typed = (Range, Kind Typed)
-  TypeX PartiallyTyped = (Range, Kind PartiallyTyped)
-  TypeX _ = Range
+  TypeX Transformed = Range
+  TypeX Parsed = Range
+  TypeX p = (Range, Kind p)
 
-data Type (p :: Phase)
-  = LiteralT (TypeX p) LitT
-  | VoidT (TypeX p)
-  | TupleT (TypeX p) (Type p) (Type p) [Type p]
-  | ListT (TypeX p) (Type p)
-  | RecordT (TypeX p) [(Id, Type p)]
-  | FunT (TypeX p) (NonEmpty (Type p)) (Type p) -- type of a normal function
-  | Forall (TypeX p) (NonEmpty Id) (Type p)
-  | TData (TypeX p) Id [Type p]
-  | TVar (TypeX p) Id
-  | TApp (TypeX p) (Type p) (NonEmpty (Type p))
-  | TFun (TypeX p) (NonEmpty Id) (Type p) -- type function (for type constructors and type aliases)
+type family UniVar (p :: Phase) where
+  UniVar Ready = Id
+  UniVar Transformed = Id
+  UniVar Parsed = Id
+  UniVar p = (Id, Kind p)
+
+data Type :: Phase -> HsKind.Type where
+  LiteralT :: TypeX p -> LitT -> Type p
+  VoidT :: TypeX p -> Type p
+  TupleT :: TypeX p -> Type p -> Type p -> [Type p] -> Type p
+  ListT :: TypeX p -> Type p -> Type p
+  RecordT :: TypeX p -> [(Id, Type p)] -> Type p
+  FunT :: TypeX p -> NonEmpty (Type p) -> Type p -> Type p
+  Forall :: TypeX p -> NonEmpty (UniVar p) -> Type p -> Type p
+  DataT :: TypeX p -> Id -> [Type p] -> Type p
+  TVar :: TypeX p -> Id -> Type p
+  TApp :: TypeX p -> Type p -> NonEmpty (Type p) -> Type p
+  TFun :: TypeX p -> NonEmpty Id -> Type p -> Type p
   --
-  | SubsttTVar (TypeX p) (PartiallyTypedOnly p) Id
+  SubsttTVar :: Id -> Type PartiallyTyped
 
-deriving instance (Show (TypeX p), Show (PartiallyTypedOnly p)) => Show (Type p)
+deriving instance (Show (TypeX p), Show (UniVar p)) => Show (Type p)
 
 typeExt :: Type p -> TypeX p
 typeExt (LiteralT ext _) = ext
@@ -180,11 +179,11 @@ typeExt (ListT ext _) = ext
 typeExt (RecordT ext _) = ext
 typeExt (FunT ext _ _) = ext
 typeExt (Forall ext _ _) = ext
-typeExt (TData ext _ _) = ext
+typeExt (DataT ext _ _) = ext
 typeExt (TVar ext _) = ext
 typeExt (TApp ext _ _) = ext
 typeExt (TFun ext _ _) = ext
-typeExt (SubsttTVar ext _ _) = ext
+typeExt (SubsttTVar var) = (range var, KLit NoRange)
 
 instance HasRange (Type Parsed) where
   range :: Type Parsed -> Range
@@ -198,12 +197,12 @@ instance HasRange (Type Typed) where
   range :: Type Typed -> Range
   range = fst . typeExt
 
-instance HasType (Type Typed) (Kind Typed) where
-  typeof :: Type Typed -> Kind Typed
+instance HasType (Type PartiallyKinded) (Kind PartiallyKinded) where
+  typeof :: Type PartiallyKinded -> Kind PartiallyKinded
   typeof = snd . typeExt
 
-instance HasType (Type PartiallyTyped) (Kind PartiallyTyped) where
-  typeof :: Type PartiallyTyped -> Kind PartiallyTyped
+instance HasType (Type Kinded) (Kind Kinded) where
+  typeof :: Type Kinded -> Kind Kinded
   typeof = snd . typeExt
 
 -- EXPR

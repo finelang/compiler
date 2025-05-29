@@ -15,7 +15,7 @@ eval (ListT ext type') = ListT ext <$> eval type'
 eval (RecordT ext propTypes) = RecordT ext <$> (mapM . mapM) eval propTypes
 eval (FunT ext argTypes retType) = FunT ext <$> mapM eval argTypes <*> eval retType
 eval (Forall ext univars type') = Forall ext univars <$> eval type'
-eval (TData ext tag types) = TData ext tag <$> mapM eval types
+eval (DataT ext tag types) = DataT ext tag <$> mapM eval types
 eval type'@(TVar _ var) = asks (Map.findWithDefault type' var)
 eval (TApp ext tfun targs) = do
   tfun' <- eval tfun

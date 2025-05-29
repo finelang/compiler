@@ -5,28 +5,15 @@ module Fine.Typer.Common (
   SubsttState (substts),
   initSubsttState,
   newSubsttVar,
-  (#),
-  substtVars,
-  (#.),
 ) where
 
 import Control.Monad.State.Class (MonadState, gets, modify)
-import Data.List.NonEmpty ((<|))
-import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Set (Set)
-import Data.Set qualified as Set
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Error (errorTODO, errorUNREACHABLE)
-import Fine.Syntax (
-  Id (Id),
-  Kind (..),
-  Phase (PartiallyTyped),
-  Range,
-  Type,
- )
+import Fine.Error (errorUNREACHABLE)
+import Fine.Syntax (Id (Id), Range)
 
 type Env a = Map Id a
 
@@ -50,30 +37,3 @@ newSubsttVar prefix r = do
   n <- gets count
   modify $ \st -> st{count = n + 1}
   return $ Id r [i|#{prefix}#{n}|]
-
-class Typeable t where
-  infix 5 #
-  (#) :: Substts t -> t -> t
-  substtVars :: t -> Set Id
-
-infixr 5 #.
-(#.) :: (Typeable t) => Substts t -> Substts t -> Substts t
-s #. s' = Map.union s ((s #) <$> s')
-
-instance Typeable (Kind PartiallyTyped) where
-  (#) :: Substts (Kind PartiallyTyped) -> Kind PartiallyTyped -> Kind PartiallyTyped
-  _ # k@(KLit _) = k
-  s # (TFunK r kinds kind) = TFunK r (NonEmpty.map (s #) kinds) (s # kind)
-  s # k@(SubsttKVar _ var) = Map.findWithDefault k var s
-
-  substtVars :: Kind PartiallyTyped -> Set Id
-  substtVars (KLit _) = Set.empty
-  substtVars (TFunK _ kinds kind) = Set.unions $ NonEmpty.map substtVars (kind <| kinds)
-  substtVars (SubsttKVar _ var) = Set.singleton var
-
-instance Typeable (Type PartiallyTyped) where
-  (#) :: Substts (Type PartiallyTyped) -> Type PartiallyTyped -> Type PartiallyTyped
-  (#) = errorTODO
-
-  substtVars :: Type PartiallyTyped -> Set Id
-  substtVars = errorTODO

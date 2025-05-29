@@ -61,7 +61,7 @@ checkType' (Forall _ univars type') = do
   typeVars <- withReader (Set.union univars') (checkType' type')
   forM_ (Set.difference univars' typeVars) (tell . error' . UnusedUniVar)
   return (Set.difference typeVars univars')
-checkType' (TData _ _ types) = Set.unions <$> mapM checkType' types
+checkType' (DataT _ _ types) = Set.unions <$> mapM checkType' types
 checkType' (TVar _ var) = check var >> return (Set.singleton var)
 checkType' (TApp _ typeFun typeArgs) = do
   funVars <- checkType' typeFun

@@ -27,7 +27,7 @@ transformType (RecordT r propTypes) =
 transformType (FunT r argTypes bodyType) =
   FunT r (NonEmpty.map transformType argTypes) (transformType bodyType)
 transformType (Forall r univars type') = Forall r univars (transformType type')
-transformType (TData r tag types) = TData r tag (map transformType types)
+transformType (DataT r tag types) = DataT r tag (map transformType types)
 transformType (TVar r var) = TVar r var
 transformType (TApp r typeFun typeArgs) =
   TApp r (transformType typeFun) (NonEmpty.map transformType typeArgs)

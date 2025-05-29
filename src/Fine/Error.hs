@@ -10,7 +10,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax (Id, Kind, Op, Phase (PartiallyTyped), Range)
+import Fine.Syntax (Id, Kind, Op, Phase (PartiallyKinded), Range)
 import GHC.Stack (HasCallStack)
 import String.ANSI (red, yellow)
 
@@ -30,8 +30,8 @@ data Error
   | UsageBeforeInit Id
   | MutRecBindNotFun Id
   | SameInfixPrecedence Op Op
-  | CannotUnifyKinds (Kind PartiallyTyped) (Kind PartiallyTyped)
-  | BadKindSubstt Id (Kind PartiallyTyped)
+  | CannotUnifyKinds (Kind PartiallyKinded) (Kind PartiallyKinded)
+  | BadKindSubstt Id (Kind PartiallyKinded)
 
 instance Show Error where
   show :: Error -> String

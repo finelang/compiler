@@ -56,6 +56,7 @@ library
     Fine.Typer.Eval
     Fine.Typer.J
     Fine.Typer.Kinder
+    Fine.Typer.Kinder.J
     Fine.Typer.Pattern
   hs-source-dirs:
     src

@@ -12,7 +12,7 @@ import Fine.Syntax (
   Pattern (..),
   Phase (Parsed),
   Range,
-  Type (Forall, FunT, TApp, TData, TFun, TVar),
+  Type (DataT, Forall, FunT, TApp, TFun, TVar),
   range,
  )
 import Fine.Syntax.Name (param)
@@ -49,8 +49,8 @@ mkDataDefn r ctTag optTParams ctors =
       tBind = TypeBind ctTag $ case optTParams of
         Just tparams ->
           (TFun r tparams)
-            (TData r ctTag $ map (\p -> TVar (range p) p) $ NonEmpty.toList tparams)
-        _ -> TData r ctTag []
+            (DataT r ctTag $ map (\p -> TVar (range p) p) $ NonEmpty.toList tparams)
+        _ -> DataT r ctTag []
    in DataDefn tBind ctBinds
  where
   mkCtor optTParams' retType (tag, typeArgs, r') =
