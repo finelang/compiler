@@ -29,11 +29,11 @@ library
   exposed-modules:
     Control.Applicative.Lift.Extra
     Control.Monad.ErrorCollector
-    Control.Monad.REC
-    Control.Monad.RS
-    Control.Monad.RW
-    Control.Monad.SEC
-    Control.Monad.SW
+    Control.Monad.Trans.REC
+    Control.Monad.Trans.RS
+    Control.Monad.Trans.RW
+    Control.Monad.Trans.SEC
+    Control.Monad.Trans.SW
     Data.Errors
     Data.List.Extra
     Data.List.NonEmpty.Extra

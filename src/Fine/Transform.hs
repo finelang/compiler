@@ -1,7 +1,7 @@
 module Fine.Transform (runTransformer) where
 
 import Control.Monad (forM, forM_, unless, when)
-import Control.Monad.SEC (SEC, fail', runSEC, warn)
+import Control.Monad.Trans.SEC (SEC, fail', runSEC, warn)
 import Control.Monad.Trans.State.Strict (gets, modify)
 import Data.Either (partitionEithers)
 import Data.List.NonEmpty (NonEmpty)

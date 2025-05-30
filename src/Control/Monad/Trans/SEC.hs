@@ -1,4 +1,4 @@
-module Control.Monad.SEC where
+module Control.Monad.Trans.SEC where
 
 import Control.Monad.ErrorCollector (ErrorCollector)
 import Control.Monad.ErrorCollector qualified as ErrorCollector

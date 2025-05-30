@@ -1,4 +1,4 @@
-module Control.Monad.RS where
+module Control.Monad.Trans.RS where
 
 import Control.Monad.Trans.Reader (ReaderT, runReaderT, withReaderT)
 import Control.Monad.Trans.State.Strict (State, evalState)

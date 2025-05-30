@@ -1,4 +1,4 @@
-module Control.Monad.SW (module Control.Monad.SW) where
+module Control.Monad.Trans.SW (module Control.Monad.Trans.SW) where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State.Strict (StateT, evalStateT)

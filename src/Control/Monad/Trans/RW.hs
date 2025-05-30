@@ -1,4 +1,4 @@
-module Control.Monad.RW where
+module Control.Monad.Trans.RW where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)

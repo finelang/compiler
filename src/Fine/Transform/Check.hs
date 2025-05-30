@@ -1,7 +1,7 @@
 module Fine.Transform.Check (checkType, checkExpr, alreadyDefined) where
 
 import Control.Monad (forM_, unless, when)
-import Control.Monad.RW (RW, runRW, tell)
+import Control.Monad.Trans.RW (RW, runRW, tell)
 import Control.Monad.Trans.Reader (asks, withReaderT)
 import Data.Errors (Errors (Errors), error', warning)
 import Data.List (group, sort)

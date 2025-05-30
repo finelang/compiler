@@ -1,7 +1,7 @@
 module Fine.Typer.Kinder (runKinder) where
 
 import Control.Monad (forM, forM_)
-import Control.Monad.REC (REC, fail', runREC, withReader)
+import Control.Monad.Trans.REC (REC, fail', runREC, withReader)
 import Control.Monad.Trans.Reader (ask, local)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty

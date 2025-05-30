@@ -2,7 +2,7 @@
 
 module Fine.Transform.ShuntingYard (runShuntingYard) where
 
-import Control.Monad.SW (SW, runSW, tell)
+import Control.Monad.Trans.SW (SW, runSW, tell)
 import Control.Monad.Trans.State.Strict (get, gets, modify)
 import Fine.Error (Error (SameInfixPrecedence), errorUNREACHABLE)
 import Fine.Syntax (
