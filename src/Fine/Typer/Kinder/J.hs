@@ -1,19 +1,20 @@
 module Fine.Typer.Kinder.J (runKindChecker, runKindInferrer) where
 
 import Control.Monad (forM, forM_)
-import Control.Monad.RWS.Strict (RWS, asks, gets, local, modify, runRWS, tell)
-import Control.Monad.Reader (Reader)
-import Control.Monad.Reader qualified as Reader
-import Control.Monad.Writer.Strict (Writer)
-import Control.Monad.Writer.Strict qualified as Writer
+import Control.Monad.Trans.RWS.Strict (RWS, asks, gets, local, modify, runRWS, tell)
+import Control.Monad.Trans.Reader (Reader)
+import Control.Monad.Trans.Reader qualified as Reader
+import Control.Monad.Trans.Writer.Strict (Writer)
+import Control.Monad.Trans.Writer.Strict qualified as Writer
 import Data.List.NonEmpty ((<|))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.String.Interpolate (i)
 import Fine.Error (Error (BadKindSubstt, CannotUnifyKinds))
 import Fine.Syntax (
-  Id,
+  Id (Id),
   Kind (..),
   Phase (Kinded, PartiallyKinded, Transformed),
   Range (NoRange),
@@ -27,7 +28,6 @@ import Fine.Typer.Common (
   Substts,
   fromEnv,
   initSubsttState,
-  newSubsttVar,
  )
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -81,8 +81,11 @@ unifyVar var kind = do
 klit :: Kind PartiallyKinded
 klit = KLit NoRange
 
-newSubsttKVar :: (Monoid w) => Range -> RWS r w SubsttState' (Kind PartiallyKinded)
-newSubsttKVar r = SubsttKVar <$> newSubsttVar "k" r
+newSubsttVar :: (Monoid w) => Range -> RWS r w SubsttState' (Kind PartiallyKinded)
+newSubsttVar r = do
+  n <- gets count
+  modify $ \st -> st{count = n + 1}
+  return $ SubsttKVar $ Id r [i|k#{n}|]
 
 infer :: Type Transformed -> RWS KindEnv [Error] SubsttState' (Type PartiallyKinded)
 infer (LiteralT r litT) = return $ LiteralT (r, KLit r) litT
@@ -114,7 +117,7 @@ infer (FunT r argTypes retType) = do
   unify (typeof retType') klit
   return $ FunT (r, KLit r) argTypes' retType'
 infer (Forall r vars type') = do
-  varKinds <- mapM (newSubsttKVar . range) vars
+  varKinds <- mapM (newSubsttVar . range) vars
   let extraCtx = Map.fromList $ NonEmpty.toList $ NonEmpty.zip vars varKinds
   type'' <- local (Map.union extraCtx) (infer type')
   unify (typeof type'') klit
@@ -131,11 +134,11 @@ infer (TVar r var) = do
 infer (TApp r tfun targs) = do
   tfun' <- infer tfun
   targs' <- mapM infer targs
-  kind <- newSubsttKVar r
+  kind <- newSubsttVar r
   unify (typeof tfun') (TFunK NoRange (NonEmpty.map typeof targs') kind)
   return $ TApp (r, kind) tfun' targs'
 infer (TFun r tparams tbody) = do
-  tparamKinds <- mapM (newSubsttKVar . range) tparams
+  tparamKinds <- mapM (newSubsttVar . range) tparams
   let extraCtx = Map.fromList $ NonEmpty.toList $ NonEmpty.zip tparams tparamKinds
   tbody' <- local (Map.union extraCtx) (infer tbody)
   let kind = TFunK r tparamKinds (typeof tbody')
@@ -202,7 +205,7 @@ runKindChecker kindEnv type' =
 inferMany :: Env (Type Transformed) -> RWS KindEnv [Error] SubsttState' (Env (Type Kinded))
 inferMany types = do
   kindEnv <- fmap Map.fromList $ forM (Map.keys types) $ \binder -> do
-    kind <- newSubsttKVar (range binder)
+    kind <- newSubsttVar (range binder)
     return (binder, kind)
   types' <- local (const kindEnv) $ forM (Map.toList types) $ \(binder, type') -> do
     type'' <- infer type'

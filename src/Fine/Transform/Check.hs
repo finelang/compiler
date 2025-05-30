@@ -1,9 +1,8 @@
 module Fine.Transform.Check (checkType, checkExpr, alreadyDefined) where
 
 import Control.Monad (forM_, unless, when)
-import Control.Monad.RW (RW, runRW, withReader)
-import Control.Monad.Reader.Class (asks)
-import Control.Monad.Writer.Class (tell)
+import Control.Monad.RW (RW, runRW, tell)
+import Control.Monad.Trans.Reader (asks, withReaderT)
 import Data.Errors (Errors (Errors), error', warning)
 import Data.List (group, sort)
 import Data.List.NonEmpty (NonEmpty)
@@ -58,7 +57,7 @@ checkType' (Forall _ univars type') = do
   let univarList = NonEmpty.toList univars
   forM_ (alreadyDefined univarList) (tell . error')
   let univars' = Set.fromList univarList
-  typeVars <- withReader (Set.union univars') (checkType' type')
+  typeVars <- withReaderT (Set.union univars') (checkType' type')
   forM_ (Set.difference univars' typeVars) (tell . error' . UnusedUniVar)
   return (Set.difference typeVars univars')
 checkType' (DataT _ _ types) = Set.unions <$> mapM checkType' types
@@ -71,7 +70,7 @@ checkType' (TFun _ typeParams typeBody) = do
   let typeParamList = NonEmpty.toList typeParams
   forM_ (alreadyDefined typeParamList) (tell . error')
   let typeParams' = Set.fromList typeParamList
-  typeVars <- withReader (Set.union typeParams') (checkType' typeBody)
+  typeVars <- withReaderT (Set.union typeParams') (checkType' typeBody)
   forM_ (Set.difference typeParams' typeVars) (tell . warning . UnusedVar)
   return (Set.difference typeVars typeParams')
 
@@ -137,7 +136,7 @@ checkBlock (Return expr) = checkExpr' expr
 checkBlock Void = return emptyVars
 checkBlock (Do expr block) = union' <$> checkExpr' expr <*> checkBlock block
 checkBlock (Mut var expr block) = do
-  withReader vars (check var)
+  withReaderT vars (check var)
   exprVars <- checkExpr' expr
   blockVars <- checkBlock block
   return (union' (insertVar var exprVars) blockVars)
@@ -145,11 +144,11 @@ checkBlock (Debug expr block) = do
   tell (warning $ DebugKeywordUsage $ range expr)
   union' <$> checkExpr' expr <*> checkBlock block
 checkBlock (Let _ binder' expr block) = do
-  exprVars <- withReader (insertVar binder') (checkExpr' expr)
+  exprVars <- withReaderT (insertVar binder') (checkExpr' expr)
   when
     (not (isFunction expr) && memberVar binder' exprVars)
     (tell $ error' $ UsageBeforeInit binder')
-  blockVars <- withReader (insertVar binder') (checkBlock block)
+  blockVars <- withReaderT (insertVar binder') (checkBlock block)
   unless (memberVar binder' blockVars) (tell $ warning $ UnusedVar binder')
   return (union' exprVars (deleteVar binder' blockVars))
 checkBlock (Loop cond actions block) =
@@ -157,7 +156,7 @@ checkBlock (Loop cond actions block) =
 checkBlock (LetPatt _ patt expr block) = do
   exprVars <- checkExpr' expr
   let pattBound = Set.fromList (patternBoundVars patt)
-  blockVars <- withReader (unionVars pattBound) (checkBlock block)
+  blockVars <- withReaderT (unionVars pattBound) (checkBlock block)
   forM_ (Set.difference pattBound $ vars blockVars) (tell . warning . UnusedVar)
   return (union' exprVars $ differenceVars blockVars pattBound)
 
@@ -175,16 +174,16 @@ checkPattern (Discard _) = return Set.empty
 
 checkMatch :: (Pattern, Expr Transformed) -> RW Vars Errors' Vars
 checkMatch (patt, cont) = do
-  pattVars <- withReader vars (checkPattern patt)
+  pattVars <- withReaderT vars (checkPattern patt)
   let pattBound = patternBoundVars patt
   let pattBound' = Set.fromList pattBound
   contVars <- case cont of
     Block _ block -> do
       forM_ (alreadyDefined $ pattBound ++ blockBoundVars block) (tell . error')
-      withReader (unionVars pattBound') (checkBlock block)
+      withReaderT (unionVars pattBound') (checkBlock block)
     _ -> do
       forM_ (alreadyDefined pattBound) (tell . error')
-      withReader (unionVars pattBound') (checkExpr' cont)
+      withReaderT (unionVars pattBound') (checkExpr' cont)
   forM_ (Set.difference pattBound' (vars contVars)) (tell . warning . UnusedVar)
   return (unionVars pattVars (differenceVars contVars pattBound'))
 
@@ -194,7 +193,7 @@ checkExpr' (Data _ _ exprs) = unions' <$> mapM checkExpr' exprs
 checkExpr' (Record _ props) = unions' <$> mapM (checkExpr' . snd) props
 checkExpr' (Tuple _ fst' snd' rest) = unions' <$> mapM checkExpr' (fst' : snd' : rest)
 checkExpr' (List _ exprs) = unions' <$> mapM checkExpr' exprs
-checkExpr' (Var _ var) = withReader vars (check var) >> return (singleVar var)
+checkExpr' (Var _ var) = withReaderT vars (check var) >> return (singleVar var)
 checkExpr' (Bin _ _ _ left right) = union' <$> checkExpr' left <*> checkExpr' right
 checkExpr' (App _ f args) = do
   fVars <- checkExpr' f
@@ -202,7 +201,7 @@ checkExpr' (App _ f args) = do
   return (union' fVars argsVars)
 checkExpr' (GenApp _ genF typeArgs) = do
   fVars <- checkExpr' genF
-  argsVars <- Set.unions <$> withReader tVars (mapM checkType' typeArgs)
+  argsVars <- Set.unions <$> withReaderT tVars (mapM checkType' typeArgs)
   return (unionTVars argsVars fVars)
 checkExpr' (Access _ expr _) = checkExpr' expr
 checkExpr' (Index _ expr _) = checkExpr' expr
@@ -217,10 +216,10 @@ checkExpr' (Fun _ params body) = do
   bodyVars <- case body of
     Block _ block -> do
       forM_ (alreadyDefined $ paramList ++ blockBoundVars block) (tell . error')
-      withReader (unionVars params') (checkBlock block)
+      withReaderT (unionVars params') (checkBlock block)
     _ -> do
       forM_ (alreadyDefined paramList) (tell . error')
-      withReader (unionVars params') (checkExpr' body)
+      withReaderT (unionVars params') (checkExpr' body)
   do
     let unused = Set.difference (Set.filter isRelevant params') (vars bodyVars)
     forM_ unused (tell . warning . UnusedVar)
@@ -229,7 +228,7 @@ checkExpr' (GenFun _ _ typeParams body) = do
   let typeParamList = NonEmpty.toList typeParams
   forM_ (alreadyDefined typeParamList) (tell . error')
   let typeParams' = Set.fromList typeParamList
-  bodyVars <- withReader (unionTVars typeParams') (checkExpr' body)
+  bodyVars <- withReaderT (unionTVars typeParams') (checkExpr' body)
   return (differenceTVars bodyVars typeParams')
 checkExpr' (Block _ block) = do
   forM_ (alreadyDefined $ blockBoundVars block) (tell . error')

@@ -4,14 +4,15 @@ module Fine.Typer.J (
   runTypeChecker,
 ) where
 
-import Control.Monad.RWS.Strict (RWS)
-import Control.Monad.Reader (Reader)
+import Control.Monad.Trans.RWS.Strict (RWS, gets, modify)
+import Control.Monad.Trans.Reader (Reader)
 import Data.Map.Strict qualified as Map
 import Data.Set (Set)
+import Data.String.Interpolate (i)
 import Fine.Error (Error, errorTODO)
 import Fine.Syntax (
   Expr (..),
-  Id,
+  Id (Id),
   Kind (KLit),
   Lit (..),
   LitT (..),
@@ -19,7 +20,7 @@ import Fine.Syntax (
   Range (NoRange),
   Type (..),
  )
-import Fine.Typer.Common (Env, SubsttState, Substts, newSubsttVar)
+import Fine.Typer.Common (Env, SubsttState (..), Substts)
 
 boolType :: Range -> Type Typed
 boolType r = LiteralT (r, KLit r) BoolT
@@ -53,8 +54,11 @@ unify = errorTODO
 unifyVar :: Id -> Type PartiallyTyped -> RWS r [Error] SubsttState' ()
 unifyVar = errorTODO
 
-newSubsttTVar :: (Monoid w) => Range -> RWS r w SubsttState' (Type PartiallyTyped)
-newSubsttTVar r = SubsttTVar <$> newSubsttVar "t" r
+newSubsttVar :: (Monoid w) => Range -> RWS r w SubsttState' (Type PartiallyTyped)
+newSubsttVar r = do
+  n <- gets count
+  modify $ \st -> st{count = n + 1}
+  return $ SubsttTVar $ Id r [i|t#{n}|]
 
 infer :: Expr Transformed -> RWS TypeEnv [Error] SubsttState' (Expr PartiallyTyped)
 infer = errorTODO

@@ -1,6 +1,6 @@
 module Fine.Typer.Eval (runEval) where
 
-import Control.Monad.Reader (Reader, asks, local, runReader)
+import Control.Monad.Trans.Reader (Reader, asks, local, runReader)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Fine.Syntax (Phase (Typed), Type (..))

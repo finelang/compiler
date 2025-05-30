@@ -1,12 +1,14 @@
 module Control.Monad.RW where
 
-import Control.Monad.Reader (ReaderT, runReaderT, withReaderT)
-import Control.Monad.Writer.Strict (Writer, runWriter)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.Writer.Strict (Writer)
+import Control.Monad.Trans.Writer.Strict qualified as Writer
 
 type RW r w a = ReaderT r (Writer w) a
 
-withReader :: (r' -> r) -> RW r w a -> RW r' w a
-withReader = withReaderT
+tell :: (Monoid w) => w -> RW r w ()
+tell = lift . Writer.tell
 
 runRW :: RW r w a -> r -> (a, w)
-runRW rw r = runWriter (runReaderT rw r)
+runRW rw r = Writer.runWriter (runReaderT rw r)

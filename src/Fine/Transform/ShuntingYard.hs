@@ -2,9 +2,8 @@
 
 module Fine.Transform.ShuntingYard (runShuntingYard) where
 
-import Control.Monad.SW (SW, runSW)
-import Control.Monad.State.Class (get, gets, modify)
-import Control.Monad.Writer.Class (tell)
+import Control.Monad.SW (SW, runSW, tell)
+import Control.Monad.Trans.State.Strict (get, gets, modify)
 import Fine.Error (Error (SameInfixPrecedence), errorUNREACHABLE)
 import Fine.Syntax (
   Equation (..),
@@ -97,6 +96,4 @@ sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
 runShuntingYard :: Equation (Expr Transformed) -> (Expr Transformed, [Error])
 runShuntingYard (Operand expr) = (expr, [])
-runShuntingYard (Operation left op chain) =
-  let (expr, _, errs) = runSW (sy chain) ([left], [op])
-   in (expr, errs)
+runShuntingYard (Operation left op chain) = runSW (sy chain) ([left], [op])

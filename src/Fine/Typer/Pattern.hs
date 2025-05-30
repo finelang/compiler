@@ -1,7 +1,7 @@
 module Fine.Typer.Pattern () where
 
 import Control.Monad (forM)
-import Control.Monad.Reader (Reader, asks, local)
+import Control.Monad.Trans.Reader (Reader, asks, local)
 import Data.Semigroup (Max (Max, getMax))
 import Data.String.Interpolate (i)
 import Fine.Error (errorTODO, errorUNREACHABLE)

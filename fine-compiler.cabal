@@ -27,8 +27,10 @@ library
   import:
     options
   exposed-modules:
+    Control.Applicative.Lift.Extra
     Control.Monad.ErrorCollector
     Control.Monad.REC
+    Control.Monad.RS
     Control.Monad.RW
     Control.Monad.SEC
     Control.Monad.SW
@@ -78,7 +80,7 @@ library
     string-interpolate,
     text,
     text-ansi,
-    mtl
+    transformers
 
 executable fine-compiler
   import:
@@ -104,7 +106,7 @@ executable fine-compiler
     string-interpolate,
     text,
     text-ansi,
-    mtl,
+    transformers,
     fine-compiler
 
 test-suite fine-compiler-test
