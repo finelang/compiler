@@ -2,8 +2,9 @@
 
 module Fine.Transform.ShuntingYard (runShuntingYard) where
 
-import Control.Monad.Trans.SW (SW, runSW, tell)
-import Control.Monad.Trans.State.Strict (get, gets, modify)
+import Control.Monad.Errors (Errors, failure)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, gets, modify)
 import Fine.Error (Error (SameInfixPrecedence), errorUNREACHABLE)
 import Fine.Syntax (
   Equation (..),
@@ -12,6 +13,11 @@ import Fine.Syntax (
   Phase (Transformed),
   range,
  )
+
+type SE s e a = StateT s (Errors e) a
+
+fail_ :: e -> SE s e ()
+fail_ = lift . failure
 
 data Assoc = NonAssoc | LeftAssoc | RightAssoc
   deriving (Eq)
@@ -43,10 +49,10 @@ type SYStack = ([Expr'], [Op])
 operatorStack :: SYStack -> [Op]
 operatorStack (_, ops) = ops
 
-modifyOperands :: (Monoid w) => ([Expr'] -> [Expr']) -> SW SYStack w ()
+modifyOperands :: ([Expr'] -> [Expr']) -> SE SYStack c ()
 modifyOperands f = modify $ \(opns, ops) -> (f opns, ops)
 
-modifyOperators :: (Monoid w) => ([Op] -> [Op]) -> SW SYStack w ()
+modifyOperators :: ([Op] -> [Op]) -> SE SYStack c ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
 mkBinOp :: [Expr'] -> Op -> [Expr']
@@ -57,18 +63,18 @@ mkBinOp _ _ = errorUNREACHABLE "Operand stack does not contains two operands."
 consume :: [Expr'] -> [Op] -> [Expr']
 consume = foldl mkBinOp
 
-continueWithOp :: Op -> Equation' -> SW SYStack [Error] Expr'
+continueWithOp :: Op -> Equation' -> SE SYStack Error Expr'
 continueWithOp curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
   modifyOperands (`mkBinOp` top) -- create app
   sy' curr chain
 
-continueWithEquation :: Op -> Equation' -> SW SYStack [Error] Expr'
+continueWithEquation :: Op -> Equation' -> SE SYStack Error Expr'
 continueWithEquation curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
-sy' :: Op -> Equation' -> SW SYStack [Error] Expr'
+sy' :: Op -> Equation' -> SE SYStack Error Expr'
 sy' curr chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators
@@ -83,17 +89,17 @@ sy' curr chain = do
           LeftAssoc -> continueWithOp curr chain
           RightAssoc -> continueWithEquation curr chain
           NonAssoc -> do
-            tell [SameInfixPrecedence top curr]
+            fail_ (SameInfixPrecedence top curr)
             continueWithEquation curr chain
         LT -> continueWithEquation curr chain
 
 -- shunting yard when the next thing to handle is the operand
-sy :: Equation' -> SW SYStack [Error] Expr'
+sy :: Equation' -> SE SYStack Error Expr'
 sy (Operand expr) = do
   (operands, operators) <- get
   return $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
-runShuntingYard :: Equation (Expr Transformed) -> (Expr Transformed, [Error])
-runShuntingYard (Operand expr) = (expr, [])
-runShuntingYard (Operation left op chain) = runSW (sy chain) ([left], [op])
+runShuntingYard :: Equation (Expr Transformed) -> Errors Error (Expr Transformed)
+runShuntingYard (Operand expr) = return expr
+runShuntingYard (Operation left op chain) = evalStateT (sy chain) ([left], [op])

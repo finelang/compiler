@@ -118,7 +118,7 @@ data Kind :: Phase -> HsKind.Type where
   KLit :: Range -> Kind p
   TFunK :: Range -> NonEmpty (Kind p) -> Kind p -> Kind p
   --
-  SubsttKVar :: Id -> Kind PartiallyKinded
+  SubKVar :: Id -> Kind PartiallyKinded
 
 instance Show (Kind p) where
   show :: Kind p -> String
@@ -126,13 +126,13 @@ instance Show (Kind p) where
   show (TFunK _ kinds kind) =
     let argsText = intercalate ", " $ map show $ NonEmpty.toList kinds
      in [i|(#{argsText}) -> #{show kind}|]
-  show (SubsttKVar var) = Text.unpack (idText var)
+  show (SubKVar var) = Text.unpack (idText var)
 
 instance HasRange (Kind p) where
   range :: Kind p -> Range
   range (KLit r) = r
   range (TFunK r _ _) = r
-  range (SubsttKVar var) = range var
+  range (SubKVar var) = range var
 
 -- TYPE
 
@@ -167,7 +167,7 @@ data Type :: Phase -> HsKind.Type where
   TApp :: TypeX p -> Type p -> NonEmpty (Type p) -> Type p
   TFun :: TypeX p -> NonEmpty Id -> Type p -> Type p
   --
-  SubsttTVar :: Id -> Type PartiallyTyped
+  SubTVar :: Id -> Type PartiallyTyped
 
 deriving instance (Show (TypeX p), Show (UniVar p)) => Show (Type p)
 
@@ -183,7 +183,7 @@ typeExt (DataT ext _ _) = ext
 typeExt (TVar ext _) = ext
 typeExt (TApp ext _ _) = ext
 typeExt (TFun ext _ _) = ext
-typeExt (SubsttTVar var) = (range var, KLit NoRange)
+typeExt (SubTVar var) = (range var, KLit NoRange)
 
 instance HasRange (Type Parsed) where
   range :: Type Parsed -> Range

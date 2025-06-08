@@ -1,6 +1,6 @@
 module Fine.Typer (runTyper) where
 
-import Data.List.NonEmpty (NonEmpty)
+import Control.Monad.Errors (Errors)
 import Data.List.NonEmpty qualified as NonEmpty
 import Fine.Error (Error, Warning)
 import Fine.Syntax (
@@ -69,5 +69,5 @@ typedModule :: Module Kinded -> Module Typed
 typedModule (Module exprBinds typeBinds entry) = do
   Module (map typedExprBind exprBinds) (map typedTypeBind typeBinds) (fmap typedExpr entry)
 
-runTyper :: Module Kinded -> (Either (NonEmpty Error) (Module Typed), [Warning])
-runTyper mdule = (Right (typedModule mdule), [])
+runTyper :: Module Kinded -> Errors Error (Module Typed, [Warning])
+runTyper mdule = return (typedModule mdule, [])

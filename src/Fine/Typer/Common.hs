@@ -1,10 +1,4 @@
-module Fine.Typer.Common (
-  Env,
-  fromEnv,
-  Substts,
-  SubsttState (..),
-  initSubsttState,
-) where
+module Fine.Typer.Common where
 
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -18,13 +12,3 @@ fromEnv :: Id -> Env a -> a
 fromEnv var env = case Map.lookup var env of
   Just value -> value
   Nothing -> errorUNREACHABLE [i|'#{var}' should be in environment.|]
-
-type Substts a = Env a
-
-data SubsttState a = SubsttState
-  { count :: Int,
-    substts :: Substts a
-  }
-
-initSubsttState :: SubsttState a
-initSubsttState = SubsttState 1 Map.empty

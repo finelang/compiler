@@ -27,14 +27,8 @@ library
   import:
     options
   exposed-modules:
-    Control.Applicative.Lift.Extra
-    Control.Monad.ErrorCollector
-    Control.Monad.Trans.REC
-    Control.Monad.Trans.RS
-    Control.Monad.Trans.RW
-    Control.Monad.Trans.SEC
-    Control.Monad.Trans.SW
-    Data.Errors
+    Control.Monad.Errors
+    Control.Monad.Trans.Collector
     Data.List.Extra
     Data.List.NonEmpty.Extra
     Data.Tuple.Extra

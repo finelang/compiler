@@ -31,7 +31,7 @@ data Error
   | MutRecBindNotFun Id
   | SameInfixPrecedence Op Op
   | CannotUnifyKinds (Kind PartiallyKinded) (Kind PartiallyKinded)
-  | BadKindSubstt Id (Kind PartiallyKinded)
+  | BadKindSub Id (Kind PartiallyKinded)
 
 instance Show Error where
   show :: Error -> String
@@ -48,7 +48,7 @@ instance Show Error where
   show (SameInfixPrecedence _ _) = errorTODO
   show (CannotUnifyKinds kind kind') =
     [i|Cannot unify kinds #{hl kind} and #{hl kind'}.|]
-  show (BadKindSubstt _ _) = errorTODO
+  show (BadKindSub _ _) = errorTODO
 
 errorPrefix :: String
 errorPrefix = red "Error: "

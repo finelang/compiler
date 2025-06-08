@@ -1,26 +1,16 @@
 module Fine.Typer.J (
   boolType,
   litType,
-  runTypeChecker,
 ) where
 
-import Control.Monad.Trans.RWS.Strict (RWS, gets, modify)
-import Control.Monad.Trans.Reader (Reader)
-import Data.Map.Strict qualified as Map
-import Data.Set (Set)
-import Data.String.Interpolate (i)
-import Fine.Error (Error, errorTODO)
 import Fine.Syntax (
-  Expr (..),
-  Id (Id),
   Kind (KLit),
   Lit (..),
   LitT (..),
-  Phase (PartiallyTyped, Transformed, Typed),
-  Range (NoRange),
-  Type (..),
+  Phase (Typed),
+  Range,
+  Type (LiteralT),
  )
-import Fine.Typer.Common (Env, SubsttState (..), Substts)
 
 boolType :: Range -> Type Typed
 boolType r = LiteralT (r, KLit r) BoolT
@@ -31,45 +21,3 @@ litType r (Str _) = LiteralT (r, KLit r) StrT
 litType r (Int _) = LiteralT (r, KLit r) IntT
 litType r (Float _) = LiteralT (r, KLit r) FloatT
 litType r Unit = LiteralT (r, KLit r) UnitT
-
-type Substts' = Substts (Type PartiallyTyped)
-
-type SubsttState' = SubsttState (Type PartiallyTyped)
-
-type TypeEnv = Env (Type PartiallyTyped)
-
-(#) :: Substts' -> Type PartiallyTyped -> Type PartiallyTyped
-(#) = errorTODO
-
-substtVars :: Type PartiallyTyped -> Set Id
-substtVars = errorTODO
-
-infixr 5 #.
-(#.) :: Substts' -> Substts' -> Substts'
-s #. s' = Map.union s ((s #) <$> s')
-
-unify :: Type PartiallyTyped -> Type PartiallyTyped -> RWS r [Error] SubsttState' ()
-unify = errorTODO
-
-unifyVar :: Id -> Type PartiallyTyped -> RWS r [Error] SubsttState' ()
-unifyVar = errorTODO
-
-newSubsttVar :: (Monoid w) => Range -> RWS r w SubsttState' (Type PartiallyTyped)
-newSubsttVar r = do
-  n <- gets count
-  modify $ \st -> st{count = n + 1}
-  return $ SubsttTVar $ Id r [i|t#{n}|]
-
-infer :: Expr Transformed -> RWS TypeEnv [Error] SubsttState' (Expr PartiallyTyped)
-infer = errorTODO
-
-type TypedSubstts = Substts (Type Typed)
-
-resolveUndecidable :: Substts' -> TypedSubstts
-resolveUndecidable = errorTODO
-
-complete :: Expr PartiallyTyped -> Reader TypedSubstts (Expr Typed)
-complete = errorTODO
-
-runTypeChecker :: Env (Type Typed) -> Type Typed -> Expr Transformed -> Expr Typed
-runTypeChecker = errorTODO
