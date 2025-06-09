@@ -1,9 +1,9 @@
 module Fine.Typer.Kinder.J (runKindChecker, runKindInferrer) where
 
 import Control.Monad (forM, forM_)
-import Control.Monad.Errors (Errors)
-import Control.Monad.Errors qualified as Errors
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Errors (Errors)
+import Control.Monad.Trans.Errors qualified as Errors
 import Control.Monad.Trans.Reader (Reader, ReaderT, asks, local, runReader, runReaderT)
 import Control.Monad.Trans.State.Strict (StateT)
 import Control.Monad.Trans.State.Strict qualified as State

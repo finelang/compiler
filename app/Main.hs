@@ -1,6 +1,5 @@
 module Main (main) where
 
-import Control.Monad.Errors (Errors, runErrors)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
@@ -19,20 +18,19 @@ import System.Environment (getArgs)
 
 type EW e w a = ExceptT e (Writer w) a
 
-try :: (Monoid w) => (a -> Errors Error b) -> a -> EW (NonEmpty Error) w b
+try :: (a -> (Either (NonEmpty Error) b, [Warning])) -> a -> EW (NonEmpty Error) [Warning] b
 try op x = do
-  let result = runErrors $ op x
+  let (result, wrns) = op x
+  lift $ tell wrns
   case result of
     Left errs -> throwE errs
     Right y -> return y
 
 pipeline :: ParsedModule -> EW (NonEmpty Error) [Warning] Text
 pipeline parsed = do
-  (transformed, wrns) <- try runTransformer parsed
-  lift $ tell wrns
+  transformed <- try runTransformer parsed
   kinded <- try runKinder transformed
-  (typed, wrns') <- try runTyper kinded
-  lift $ tell wrns'
+  typed <- try runTyper kinded
   let code = runCodegen typed
   return code
 

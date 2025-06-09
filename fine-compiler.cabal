@@ -27,8 +27,8 @@ library
   import:
     options
   exposed-modules:
-    Control.Monad.Errors
-    Control.Monad.Trans.Collector
+    Control.Monad.Collector
+    Control.Monad.Trans.Errors
     Data.List.Extra
     Data.List.NonEmpty.Extra
     Data.Tuple.Extra

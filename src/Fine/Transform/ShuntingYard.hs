@@ -2,8 +2,8 @@
 
 module Fine.Transform.ShuntingYard (runShuntingYard) where
 
-import Control.Monad.Errors (Errors, failure)
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Errors (Errors, failure)
 import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, gets, modify)
 import Fine.Error (Error (SameInfixPrecedence), errorUNREACHABLE)
 import Fine.Syntax (

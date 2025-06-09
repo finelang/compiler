@@ -1,7 +1,7 @@
-module Fine.Transform.Term (transformType, transformExpr) where
+module Fine.Transform.Term (transformType, runExprTransformer) where
 
 import Control.Monad ((>=>))
-import Control.Monad.Errors (Errors)
+import Control.Monad.Trans.Errors (Errors, runErrors)
 import Control.Monad.Trans.State.Strict (gets, modify, runState)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
@@ -101,3 +101,6 @@ transformExpr (PatternMatching r _ matched matches) =
   PatternMatching r () <$> transformExpr matched <*> (mapM . mapM) transformExpr matches
 transformExpr (Equation _ _ equation) = transformEquation equation
 transformExpr (PartialEquation r _ equation) = transformPartialEquation r equation
+
+runExprTransformer :: Expr Parsed -> Either (NonEmpty Error) (Expr Transformed)
+runExprTransformer = runErrors . transformExpr

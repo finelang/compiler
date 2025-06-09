@@ -1,12 +1,13 @@
 module Fine.Typer.Kinder (runKinder) where
 
-import Control.Monad.Errors (Errors)
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Errors (Errors, runErrors)
 import Control.Monad.Trans.Reader (ReaderT, ask, local, runReaderT, withReaderT)
 
+import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
-import Fine.Error (Error)
+import Fine.Error (Error, Warning)
 import Fine.Syntax (
   Bind (..),
   BindType (..),
@@ -93,5 +94,5 @@ kindedModule (Module exprBinds typeBinds entry) = do
     entry' <- mapM kindedExpr entry
     return $ Module exprBinds' typeBinds' entry'
 
-runKinder :: Module Transformed -> Errors Error (Module Kinded)
-runKinder mdule = runReaderT (kindedModule mdule) ()
+runKinder :: Module Transformed -> (Either (NonEmpty Error) (Module Kinded), [Warning])
+runKinder mdule = (runErrors $ runReaderT (kindedModule mdule) (), [])

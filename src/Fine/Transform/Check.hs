@@ -1,14 +1,14 @@
-module Fine.Transform.Check (runCheckType, runCheckExpr, alreadyDefined) where
+module Fine.Transform.Check (alreadyDefined, runCheckType, runCheckExpr) where
 
 import Control.Monad (forM_, when)
-import Control.Monad.Errors (Errors)
-import Control.Monad.Errors qualified as Errors
+import Control.Monad.Collector (Collector)
+import Control.Monad.Collector qualified as Collector
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Collector (CollectorT)
-import Control.Monad.Trans.Collector qualified as Collector
+import Control.Monad.Trans.Errors (ErrorsT)
+import Control.Monad.Trans.Errors qualified as Errors
 import Control.Monad.Trans.Reader (ReaderT (runReaderT), asks, withReaderT)
 import Data.List (group, sort)
-import Data.List.NonEmpty ((<|))
+import Data.List.NonEmpty (NonEmpty, (<|))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Set (Set, (\\))
 import Data.Set qualified as Set
@@ -28,16 +28,16 @@ import Fine.Syntax (
 import Fine.Syntax.Name (isRelevant)
 import Fine.Syntax.Utils (isFunction, patternBoundVars)
 
-type RCE r c e a = ReaderT r (CollectorT c (Errors e)) a
+type REC r e c a = ReaderT r (ErrorsT e (Collector c)) a
 
-collect :: c -> RCE r c e ()
-collect = lift . Collector.collect
+failure :: e -> REC r e c a
+failure = lift . Errors.failure
 
-failure :: e -> RCE r c e a
-failure = lift . lift . Errors.failure
+collect :: c -> REC r e c ()
+collect = lift . lift . Collector.collect
 
-runRC :: RCE r c e a -> r -> Errors e (a, [c])
-runRC rce r = Collector.runCollectorT (runReaderT rce r)
+runREC :: REC r e c a -> r -> (Either (NonEmpty e) a, [c])
+runREC rec' r = Collector.runCollector $ Errors.runErrorsT $ runReaderT rec' r
 
 alreadyDefined :: [Id] -> [Error]
 alreadyDefined xs = (concat . map mkErr . group . sort) xs
@@ -46,7 +46,7 @@ alreadyDefined xs = (concat . map mkErr . group . sort) xs
   mkErr [_] = []
   mkErr (y : ys) = map (AlreadyDefined y) ys
 
-checked :: Id -> RCE (Set Id) c Error Id
+checked :: Id -> REC (Set Id) Error c Id
 checked var = do
   isDefined <- asks (Set.member var)
   if isDefined
@@ -55,7 +55,7 @@ checked var = do
 
 -- TYPE
 
-checkType :: Type Transformed -> RCE (Set Id) Warning Error (Set Id)
+checkType :: Type Transformed -> REC (Set Id) Error Warning (Set Id)
 checkType (LiteralT _ _) = return Set.empty
 checkType (VoidT _) = return Set.empty
 checkType (TupleT _ fst' snd' rest) = Set.unions <$> mapM checkType (fst' : snd' : rest)
@@ -84,8 +84,8 @@ checkType (TFun _ typeParams typeBody) = do
   forM_ (Set.toList $ typeParams' \\ typeVars) (collect . UnusedVar)
   return (typeVars \\ typeParams')
 
-runCheckType :: Set Id -> Type Transformed -> Errors Error (Set Id, [Warning])
-runCheckType vars type' = runRC (checkType type') vars
+runCheckType :: Set Id -> Type Transformed -> (Either (NonEmpty Error) (Set Id), [Warning])
+runCheckType vars type' = runREC (checkType type') vars
 
 -- EXPR
 
@@ -114,7 +114,7 @@ blockBoundVars (Let _ binder _ block) = binder : blockBoundVars block
 blockBoundVars (Loop _ _ block) = blockBoundVars block
 blockBoundVars (LetPatt _ patt _ block) = patternBoundVars patt ++ blockBoundVars block
 
-checkBlock :: Block Transformed -> RCE (Set Var) Warning Error (Set Var)
+checkBlock :: Block Transformed -> REC (Set Var) Error Warning (Set Var)
 checkBlock (Return expr) = checkExpr expr
 checkBlock Void = return Set.empty
 checkBlock (Do expr block) = Set.union <$> checkExpr expr <*> checkBlock block
@@ -149,7 +149,7 @@ checkBlock (LetPatt _ patt expr block) =
     forM_ (Set.toList $ vVars $ pattBound \\ blockVars) (collect . UnusedVar)
     return (blockVars \\ pattBound)
 
-checkPattern :: Pattern -> RCE (Set Id) Warning Error (Set Var)
+checkPattern :: Pattern -> REC (Set Id) Error Warning (Set Var)
 checkPattern (LiteralP _ _) = return Set.empty
 checkPattern (DataP _ tag patts) =
   (\var pattsVars -> Set.insert (V var) (Set.unions pattsVars))
@@ -161,7 +161,7 @@ checkPattern (ListP _ patts) = Set.unions <$> mapM checkPattern patts
 checkPattern (Capture _) = return Set.empty
 checkPattern (Discard _) = return Set.empty
 
-checkMatch :: (Pattern, Expr Transformed) -> RCE (Set Var) Warning Error (Set Var)
+checkMatch :: (Pattern, Expr Transformed) -> REC (Set Var) Error Warning (Set Var)
 checkMatch (patt, cont) =
   Set.union <$> withReaderT vVars (checkPattern patt) <*> do
     let pattBound = patternBoundVars patt
@@ -176,7 +176,7 @@ checkMatch (patt, cont) =
     forM_ (Set.toList $ vVars $ pattBound' \\ contVars) (collect . UnusedVar)
     return (contVars \\ pattBound')
 
-checkExpr :: Expr Transformed -> RCE (Set Var) Warning Error (Set Var)
+checkExpr :: Expr Transformed -> REC (Set Var) Error Warning (Set Var)
 checkExpr (Literal _ _) = return Set.empty
 checkExpr (Data _ _ exprs) = Set.unions <$> mapM checkExpr exprs
 checkExpr (Record _ props) = Set.unions <$> mapM (checkExpr . snd) props
@@ -220,7 +220,9 @@ checkExpr (Block _ block) = do
   forM_ (alreadyDefined $ blockBoundVars block) failure
   checkBlock block
 
-runCheckExpr :: Set Id -> Set Id -> Expr Transformed -> Errors Error (Set Id, Set Id, [Warning])
-runCheckExpr vars tvars expr = do
-  (free, wrns) <- runRC (checkExpr expr) $ Set.union (Set.map V vars) (Set.map T tvars)
-  return (vVars free, tVars free, wrns)
+runCheckExpr :: Set Id -> Set Id -> Expr Transformed -> (Either (NonEmpty Error) (Set Id, Set Id), [Warning])
+runCheckExpr vars tvars expr =
+  let (result, wrns) = runREC (checkExpr expr) $ Set.union (Set.map V vars) (Set.map T tvars)
+   in case result of
+        Left errs -> (Left errs, wrns)
+        Right allVars -> (Right (vVars allVars, tVars allVars), wrns)
