@@ -1,4 +1,4 @@
-module Fine.Transform.Check (alreadyDefined, runCheckType, runCheckExpr) where
+module Fine.Transform.Check (alreadyDefined, runTypeVarChecker, runExprVarChecker) where
 
 import Control.Monad (forM_, when)
 import Control.Monad.Collector (Collector)
@@ -14,7 +14,7 @@ import Data.Set (Set, (\\))
 import Data.Set qualified as Set
 import Fine.Error (
   Error (AlreadyDefined, UndefinedVar, UnusedUniVar, UsageBeforeInit),
-  Warning (DebugKeywordUsage, UnusedVar),
+  Warning (UnusedVar),
  )
 import Fine.Syntax (
   Block (..),
@@ -23,7 +23,6 @@ import Fine.Syntax (
   Pattern (..),
   Phase (Transformed),
   Type (..),
-  range,
  )
 import Fine.Syntax.Name (isRelevant)
 import Fine.Syntax.Utils (isFunction, patternBoundVars)
@@ -84,8 +83,8 @@ checkType (TFun _ typeParams typeBody) = do
   forM_ (Set.toList $ typeParams' \\ typeVars) (collect . UnusedVar)
   return (typeVars \\ typeParams')
 
-runCheckType :: Set Id -> Type Transformed -> (Either (NonEmpty Error) (Set Id), [Warning])
-runCheckType vars type' = runREC (checkType type') vars
+runTypeVarChecker :: Set Id -> Type Transformed -> (Either (NonEmpty Error) (Set Id), [Warning])
+runTypeVarChecker vars type' = runREC (checkType type') vars
 
 -- EXPR
 
@@ -123,9 +122,7 @@ checkBlock (Mut var expr block) =
     <$> withReaderT vVars (checked var)
     <*> checkExpr expr
     <*> checkBlock block
-checkBlock (Debug expr block) = do
-  collect $ DebugKeywordUsage $ range expr
-  Set.union <$> checkExpr expr <*> checkBlock block
+checkBlock (Debug expr block) = Set.union <$> checkExpr expr <*> checkBlock block
 checkBlock (Let _ binder expr block) = Set.union <$> goExpr <*> goBlock
  where
   binder' = V binder
@@ -220,8 +217,8 @@ checkExpr (Block _ block) = do
   forM_ (alreadyDefined $ blockBoundVars block) failure
   checkBlock block
 
-runCheckExpr :: Set Id -> Set Id -> Expr Transformed -> (Either (NonEmpty Error) (Set Id, Set Id), [Warning])
-runCheckExpr vars tvars expr =
+runExprVarChecker :: Set Id -> Set Id -> Expr Transformed -> (Either (NonEmpty Error) (Set Id, Set Id), [Warning])
+runExprVarChecker vars tvars expr =
   let (result, wrns) = runREC (checkExpr expr) $ Set.union (Set.map V vars) (Set.map T tvars)
    in case result of
         Left errs -> (Left errs, wrns)

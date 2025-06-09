@@ -31,7 +31,7 @@ import Fine.Syntax (
   range,
  )
 import Fine.Syntax.Utils (isFunction)
-import Fine.Transform.Check (alreadyDefined, runCheckExpr, runCheckType)
+import Fine.Transform.Check (alreadyDefined, runExprVarChecker, runTypeVarChecker)
 import Fine.Transform.Term (runExprTransformer, transformType)
 
 type SEC s e c a = StateT s (ErrorsT e (Collector c)) a
@@ -73,7 +73,7 @@ checkType optBinder type' = do
         TFun _ _ _ -> True
         _ -> False
   tVars <- gets (if isTFun then allTypeBinders else currentTypeBinders)
-  let (result, wrns) = runCheckType tVars type'
+  let (result, wrns) = runTypeVarChecker tVars type'
   forM_ wrns collect
   usedTVars <- fromEither result
   unless isTFun $ forM_ optBinder $ \binder' ->
@@ -93,7 +93,7 @@ checkExpr :: Maybe Id -> Expr Transformed -> SEC Env Error Warning ()
 checkExpr optBinder expr = do
   vars <- gets currentExprBinders
   tVars <- gets allTypeBinders
-  let (result, wrns) = runCheckExpr vars tVars expr
+  let (result, wrns) = runExprVarChecker vars tVars expr
   forM_ wrns collect
   (usedVars, usedTVars) <- fromEither result
   unless (isFunction expr) $ forM_ optBinder $ \binder' ->
@@ -115,7 +115,9 @@ transformExprBind bind = do
     ExprBind binder' type' expr -> do
       let type'' = transformType type'
       checkType Nothing type''
-      expr' <- fromEither $ runExprTransformer expr
+      let (result, wrns) = runExprTransformer expr
+      forM_ wrns collect
+      expr' <- fromEither result
       let expr'' = case type'' of
             Forall _ tparams _ -> GenFun (range expr') () tparams expr'
             _ -> expr'
@@ -186,7 +188,9 @@ transformModule (ParsedModule defns entry) = do
   typeBinds <- catMaybes <$> mapM transformTypeDefn defns
   exprBinds <- concat <$> mapM transformExprDefn defns
   entry' <- forM entry $ \expr -> do
-    expr' <- fromEither $ runExprTransformer expr
+    let (result, wrns) = runExprTransformer expr
+    forM_ wrns collect
+    expr' <- fromEither result
     checkExpr Nothing expr'
     return expr'
   warnUnusedBinders

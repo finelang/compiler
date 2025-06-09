@@ -3,8 +3,9 @@
 module Fine.Transform.ShuntingYard (runShuntingYard) where
 
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Errors (Errors, failure)
+import Control.Monad.Trans.Errors (Errors, failure, runErrors)
 import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, gets, modify)
+import Data.List.NonEmpty (NonEmpty)
 import Fine.Error (Error (SameInfixPrecedence), errorUNREACHABLE)
 import Fine.Syntax (
   Equation (..),
@@ -100,6 +101,6 @@ sy (Operand expr) = do
   return $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
-runShuntingYard :: Equation (Expr Transformed) -> Errors Error (Expr Transformed)
+runShuntingYard :: Equation (Expr Transformed) -> Either (NonEmpty Error) (Expr Transformed)
 runShuntingYard (Operand expr) = return expr
-runShuntingYard (Operation left op chain) = evalStateT (sy chain) ([left], [op])
+runShuntingYard (Operation left op chain) = runErrors $ evalStateT (sy chain) ([left], [op])

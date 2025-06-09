@@ -1,48 +1,40 @@
 module Fine.Transform.Term (transformType, runExprTransformer) where
 
-import Control.Monad ((>=>))
-import Control.Monad.Trans.Errors (Errors, runErrors)
+import Control.Monad.Collector (Collector, collect, runCollector)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Errors (ErrorsT (runErrorsT), fromEither)
 import Control.Monad.Trans.State.Strict (gets, modify, runState)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NonEmpty
-import Fine.Error (Error)
+import Fine.Error (Error, Warning (DebugKeywordUsage))
 import Fine.Syntax (
   Block (..),
   Equation (..),
   Expr (..),
   Phase (Parsed, Transformed),
   Range,
-  Type (..),
+  Type,
+  range,
  )
 import Fine.Syntax.Name (irrelevant, param)
 import Fine.Transform.ShuntingYard (runShuntingYard)
+import Unsafe.Coerce (unsafeCoerce)
 
 transformType :: Type Parsed -> Type Transformed
-transformType (LiteralT r lit) = LiteralT r lit
-transformType (VoidT r) = VoidT r
-transformType (TupleT r fst' snd' rest) =
-  TupleT r (transformType fst') (transformType snd') (map transformType rest)
-transformType (ListT r type') = ListT r (transformType type')
-transformType (RecordT r propTypes) =
-  RecordT r $ (map . fmap) transformType propTypes
-transformType (FunT r argTypes bodyType) =
-  FunT r (NonEmpty.map transformType argTypes) (transformType bodyType)
-transformType (Forall r univars type') = Forall r univars (transformType type')
-transformType (DataT r tag types) = DataT r tag (map transformType types)
-transformType (TVar r var) = TVar r var
-transformType (TApp r typeFun typeArgs) =
-  TApp r (transformType typeFun) (NonEmpty.map transformType typeArgs)
-transformType (TFun r typeParams typeBody) = TFun r typeParams (transformType typeBody)
+transformType = unsafeCoerce
 
-transformEquation :: Equation (Expr Parsed) -> Errors Error (Expr Transformed)
-transformEquation = go >=> runShuntingYard
+type EC e c a = ErrorsT e (Collector c) a
+
+transformEquation :: Equation (Expr Parsed) -> EC Error Warning (Expr Transformed)
+transformEquation equation' = do
+  equation'' <- go equation'
+  fromEither $ runShuntingYard equation''
  where
   go (Operand expr) = Operand <$> transformExpr expr
   go (Operation left op equation) =
     Operation <$> transformExpr left <*> return op <*> go equation
 
-transformPartialEquation ::
-  Range -> Equation (Either Range (Expr Parsed)) -> Errors Error (Expr Transformed)
+transformPartialEquation :: Range -> Equation (Either Range (Expr Parsed)) -> EC Error Warning (Expr Transformed)
 transformPartialEquation r' equation' = do
   let (equation'', (_, params)) = runState (go equation') (0 :: Int, [])
   body <- transformEquation equation''
@@ -64,14 +56,15 @@ transformPartialEquation r' equation' = do
     modify $ \(_, ps) -> (n + 1, p : ps)
     return p
 
-transformBlock :: Block Parsed -> Errors Error (Block Transformed)
+transformBlock :: Block Parsed -> EC Error Warning (Block Transformed)
 transformBlock (Return expr) = Return <$> transformExpr expr
 transformBlock Void = return Void
 transformBlock (Do action block) =
   Do <$> transformExpr action <*> transformBlock block
 transformBlock (Mut var expr block) =
   Mut var <$> transformExpr expr <*> transformBlock block
-transformBlock (Debug expr block) =
+transformBlock (Debug expr block) = do
+  lift $ collect $ DebugKeywordUsage $ range expr
   Debug <$> transformExpr expr <*> transformBlock block
 transformBlock (Let isMut binder value block) =
   Let isMut binder <$> transformExpr value <*> transformBlock block
@@ -80,7 +73,7 @@ transformBlock (Loop cond actions block) =
 transformBlock (LetPatt _ pattern value block) =
   LetPatt () pattern <$> transformExpr value <*> transformBlock block
 
-transformExpr :: Expr Parsed -> Errors Error (Expr Transformed)
+transformExpr :: Expr Parsed -> EC Error Warning (Expr Transformed)
 transformExpr (Literal r lit) = return (Literal r lit)
 transformExpr (Data r tag exprs) = Data r tag <$> mapM transformExpr exprs
 transformExpr (Record r props) = Record r <$> (mapM . mapM) transformExpr props
@@ -102,5 +95,5 @@ transformExpr (PatternMatching r _ matched matches) =
 transformExpr (Equation _ _ equation) = transformEquation equation
 transformExpr (PartialEquation r _ equation) = transformPartialEquation r equation
 
-runExprTransformer :: Expr Parsed -> Either (NonEmpty Error) (Expr Transformed)
-runExprTransformer = runErrors . transformExpr
+runExprTransformer :: Expr Parsed -> (Either (NonEmpty Error) (Expr Transformed), [Warning])
+runExprTransformer = runCollector . runErrorsT . transformExpr
