@@ -189,7 +189,6 @@ Args : Args_  { toNonEmptyPARTIAL (reverse $1) }
 
 App : App '(' Args ')'  { mkAppOrFun (range $1 <> range $4) $1 $3 }
     | App '(' ')'       { mkAppOrFun (range $1 <> range $3) $1 ((Right $ Literal (range $2 <> range $3) Unit) :| []) }
-    | App '[' Types ']' { GenApp (range $1 <> range $4) $1 $3 }
     | App '.' Id        { Access (range $1 <> range $3) $1 $3 }
     | App '.' nat       { Index (range $1 <> range $3) $1 (read $ Text.unpack $ tokenLexeme $3) }
     | Atom              { $1 }
@@ -208,6 +207,7 @@ Atom : '(' Exprs ')'                              { if NonEmpty.length $2 >= 2 t
      | false                                      { Literal (range $1) (Bool False) }
      | strlit                                     { Literal (range $1) (Str $ extractStr $1) }
      | Id                                         { Var (range $1) $1 }
+     | Id '[' Types ']'                           { GenApp (range $1 <> range $4) $1 $3 }
      | Ct                                         { Var (range $1) $1 }
      | match Expr '{' Matches '}'                 { PatternMatching (range $1 <> range $5) () $2 $4 }
      | fn '(' OptParams ')' '{' Expr '}'          { Fun (range $1 <> range $7) $3 $6 }

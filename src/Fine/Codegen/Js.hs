@@ -163,7 +163,7 @@ genExprCode (App _ f args) = do
   f' <- genExprCode f
   args' <- Text.intercalate ", " <$> mapM genExprCode (NonEmpty.toList args)
   return [i|#{f'}(#{args'})|]
-genExprCode (GenApp _ f _) = genExprCode f
+genExprCode (GenApp _ fname _) = return $ idText fname
 genExprCode (Access _ expr prop) = do
   expr' <- genExprCode expr
   return [i|#{expr'}.#{prop}|]

@@ -82,8 +82,8 @@ transformExpr (Tuple r fst' snd' rest) =
 transformExpr (List r exprs) = List r <$> mapM transformExpr exprs
 transformExpr (Var r var) = return (Var r var)
 transformExpr (App r f args) = App r <$> transformExpr f <*> mapM transformExpr args
-transformExpr (GenApp r f types) =
-  GenApp r <$> transformExpr f <*> return (NonEmpty.map transformType types)
+transformExpr (GenApp r fname types) =
+  return $ GenApp r fname (NonEmpty.map transformType types)
 transformExpr (Access r expr' prop) = Access r <$> transformExpr expr' <*> return prop
 transformExpr (Index r expr' ix) = Index r <$> transformExpr expr' <*> return ix
 transformExpr (Cond r cond yes no) =

@@ -182,9 +182,9 @@ checkExpr (List _ exprs) = Set.unions <$> mapM checkExpr exprs
 checkExpr (Var _ var) = Set.singleton . V <$> withReaderT vVars (checked var)
 checkExpr (Bin _ _ _ left right) = Set.union <$> checkExpr left <*> checkExpr right
 checkExpr (App _ f args) = Set.unions <$> mapM checkExpr (f <| args)
-checkExpr (GenApp _ genF typeArgs) =
-  (\fVars argsVars -> Set.union fVars (Set.map T $ Set.unions argsVars))
-    <$> checkExpr genF
+checkExpr (GenApp _ fname typeArgs) =
+  (\fVar argsVars -> Set.insert (V fVar) (Set.map T $ Set.unions argsVars))
+    <$> withReaderT vVars (checked fname)
     <*> withReaderT tVars (mapM checkType typeArgs)
 checkExpr (Access _ expr _) = checkExpr expr
 checkExpr (Index _ expr _) = checkExpr expr

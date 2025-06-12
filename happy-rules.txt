@@ -79,23 +79,23 @@ Grammar
 	Args -> Args_                                      (70)
 	App -> App '(' Args ')'                            (71)
 	App -> App '(' ')'                                 (72)
-	App -> App '[' Types ']'                           (73)
-	App -> App '.' Id                                  (74)
-	App -> App '.' nat                                 (75)
-	App -> Atom                                        (76)
-	Atom -> '(' Exprs ')'                              (77)
-	Atom -> '(' ')'                                    (78)
-	Atom -> '{' Props '}'                              (79)
-	Atom -> '{' Block '}'                              (80)
-	Atom -> '{' Expr '}'                               (81)
-	Atom -> '[' Exprs ']'                              (82)
-	Atom -> '[' ']'                                    (83)
-	Atom -> Int                                        (84)
-	Atom -> floatlit                                   (85)
-	Atom -> true                                       (86)
-	Atom -> false                                      (87)
-	Atom -> strlit                                     (88)
-	Atom -> Id                                         (89)
+	App -> App '.' Id                                  (73)
+	App -> App '.' nat                                 (74)
+	App -> Atom                                        (75)
+	Atom -> '(' Exprs ')'                              (76)
+	Atom -> '(' ')'                                    (77)
+	Atom -> '{' Props '}'                              (78)
+	Atom -> '{' Block '}'                              (79)
+	Atom -> '{' Expr '}'                               (80)
+	Atom -> '[' Exprs ']'                              (81)
+	Atom -> '[' ']'                                    (82)
+	Atom -> Int                                        (83)
+	Atom -> floatlit                                   (84)
+	Atom -> true                                       (85)
+	Atom -> false                                      (86)
+	Atom -> strlit                                     (87)
+	Atom -> Id                                         (88)
+	Atom -> Id '[' Types ']'                           (89)
 	Atom -> Ct                                         (90)
 	Atom -> match Expr '{' Matches '}'                 (91)
 	Atom -> fn '(' OptParams ')' '{' Expr '}'          (92)
@@ -265,8 +265,8 @@ Non-terminals
 	Arg             rules 66, 67
 	Args_           rules 68, 69
 	Args            rule  70
-	App             rules 71, 72, 73, 74, 75, 76
-	Atom            rules 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96
+	App             rules 71, 72, 73, 74, 75
+	Atom            rules 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96
 	Equation        rules 97, 98
 	Op              rules 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114
 	PartialEquation rule  115
@@ -506,40 +506,41 @@ State 12
 
 State 13
 
-	Atom -> Id .                                        (rule 89)
+	Atom -> Id .                                        (rule 88)
+	Atom -> Id . '[' Types ']'                          (rule 89)
 
-	and            reduce using rule 89
-	else           reduce using rule 89
-	let            reduce using rule 89
-	run            reduce using rule 89
-	then           reduce using rule 89
-	type           reduce using rule 89
-	'.'            reduce using rule 89
-	'|>'           reduce using rule 89
-	'<|'           reduce using rule 89
-	'&&'           reduce using rule 89
-	'||'           reduce using rule 89
-	'<='           reduce using rule 89
-	'>='           reduce using rule 89
-	'@'            reduce using rule 89
-	'=='           reduce using rule 89
-	'!='           reduce using rule 89
-	'>'            reduce using rule 89
-	'<'            reduce using rule 89
-	'+'            reduce using rule 89
-	'-'            reduce using rule 89
-	'*'            reduce using rule 89
-	'/'            reduce using rule 89
-	'%'            reduce using rule 89
-	'('            reduce using rule 89
-	')'            reduce using rule 89
-	'{'            reduce using rule 89
-	'}'            reduce using rule 89
-	'['            reduce using rule 89
-	']'            reduce using rule 89
-	','            reduce using rule 89
-	';'            reduce using rule 89
-	%eof           reduce using rule 89
+	and            reduce using rule 88
+	else           reduce using rule 88
+	let            reduce using rule 88
+	run            reduce using rule 88
+	then           reduce using rule 88
+	type           reduce using rule 88
+	'.'            reduce using rule 88
+	'|>'           reduce using rule 88
+	'<|'           reduce using rule 88
+	'&&'           reduce using rule 88
+	'||'           reduce using rule 88
+	'<='           reduce using rule 88
+	'>='           reduce using rule 88
+	'@'            reduce using rule 88
+	'=='           reduce using rule 88
+	'!='           reduce using rule 88
+	'>'            reduce using rule 88
+	'<'            reduce using rule 88
+	'+'            reduce using rule 88
+	'-'            reduce using rule 88
+	'*'            reduce using rule 88
+	'/'            reduce using rule 88
+	'%'            reduce using rule 88
+	'('            reduce using rule 88
+	')'            reduce using rule 88
+	'{'            reduce using rule 88
+	'}'            reduce using rule 88
+	'['            shift, and enter state 81
+	']'            reduce using rule 88
+	','            reduce using rule 88
+	';'            reduce using rule 88
+	%eof           reduce using rule 88
 
 
 State 14
@@ -573,7 +574,6 @@ State 14
 	')'            reduce using rule 90
 	'{'            reduce using rule 90
 	'}'            reduce using rule 90
-	'['            reduce using rule 90
 	']'            reduce using rule 90
 	','            reduce using rule 90
 	';'            reduce using rule 90
@@ -582,40 +582,39 @@ State 14
 
 State 15
 
-	Atom -> Int .                                       (rule 84)
+	Atom -> Int .                                       (rule 83)
 
-	and            reduce using rule 84
-	else           reduce using rule 84
-	let            reduce using rule 84
-	run            reduce using rule 84
-	then           reduce using rule 84
-	type           reduce using rule 84
-	'.'            reduce using rule 84
-	'|>'           reduce using rule 84
-	'<|'           reduce using rule 84
-	'&&'           reduce using rule 84
-	'||'           reduce using rule 84
-	'<='           reduce using rule 84
-	'>='           reduce using rule 84
-	'@'            reduce using rule 84
-	'=='           reduce using rule 84
-	'!='           reduce using rule 84
-	'>'            reduce using rule 84
-	'<'            reduce using rule 84
-	'+'            reduce using rule 84
-	'-'            reduce using rule 84
-	'*'            reduce using rule 84
-	'/'            reduce using rule 84
-	'%'            reduce using rule 84
-	'('            reduce using rule 84
-	')'            reduce using rule 84
-	'{'            reduce using rule 84
-	'}'            reduce using rule 84
-	'['            reduce using rule 84
-	']'            reduce using rule 84
-	','            reduce using rule 84
-	';'            reduce using rule 84
-	%eof           reduce using rule 84
+	and            reduce using rule 83
+	else           reduce using rule 83
+	let            reduce using rule 83
+	run            reduce using rule 83
+	then           reduce using rule 83
+	type           reduce using rule 83
+	'.'            reduce using rule 83
+	'|>'           reduce using rule 83
+	'<|'           reduce using rule 83
+	'&&'           reduce using rule 83
+	'||'           reduce using rule 83
+	'<='           reduce using rule 83
+	'>='           reduce using rule 83
+	'@'            reduce using rule 83
+	'=='           reduce using rule 83
+	'!='           reduce using rule 83
+	'>'            reduce using rule 83
+	'<'            reduce using rule 83
+	'+'            reduce using rule 83
+	'-'            reduce using rule 83
+	'*'            reduce using rule 83
+	'/'            reduce using rule 83
+	'%'            reduce using rule 83
+	'('            reduce using rule 83
+	')'            reduce using rule 83
+	'{'            reduce using rule 83
+	'}'            reduce using rule 83
+	']'            reduce using rule 83
+	','            reduce using rule 83
+	';'            reduce using rule 83
+	%eof           reduce using rule 83
 
 
 State 16
@@ -629,9 +628,8 @@ State 17
 
 	App -> App . '(' Args ')'                           (rule 71)
 	App -> App . '(' ')'                                (rule 72)
-	App -> App . '[' Types ']'                          (rule 73)
-	App -> App . '.' Id                                 (rule 74)
-	App -> App . '.' nat                                (rule 75)
+	App -> App . '.' Id                                 (rule 73)
+	App -> App . '.' nat                                (rule 74)
 	Equation -> App . Op Equation                       (rule 97)
 	Equation -> App .                                   (rule 98)
 
@@ -662,7 +660,6 @@ State 17
 	')'            reduce using rule 98
 	'{'            reduce using rule 98
 	'}'            reduce using rule 98
-	'['            shift, and enter state 81
 	']'            reduce using rule 98
 	','            reduce using rule 98
 	';'            reduce using rule 98
@@ -672,40 +669,39 @@ State 17
 
 State 18
 
-	App -> Atom .                                       (rule 76)
+	App -> Atom .                                       (rule 75)
 
-	and            reduce using rule 76
-	else           reduce using rule 76
-	let            reduce using rule 76
-	run            reduce using rule 76
-	then           reduce using rule 76
-	type           reduce using rule 76
-	'.'            reduce using rule 76
-	'|>'           reduce using rule 76
-	'<|'           reduce using rule 76
-	'&&'           reduce using rule 76
-	'||'           reduce using rule 76
-	'<='           reduce using rule 76
-	'>='           reduce using rule 76
-	'@'            reduce using rule 76
-	'=='           reduce using rule 76
-	'!='           reduce using rule 76
-	'>'            reduce using rule 76
-	'<'            reduce using rule 76
-	'+'            reduce using rule 76
-	'-'            reduce using rule 76
-	'*'            reduce using rule 76
-	'/'            reduce using rule 76
-	'%'            reduce using rule 76
-	'('            reduce using rule 76
-	')'            reduce using rule 76
-	'{'            reduce using rule 76
-	'}'            reduce using rule 76
-	'['            reduce using rule 76
-	']'            reduce using rule 76
-	','            reduce using rule 76
-	';'            reduce using rule 76
-	%eof           reduce using rule 76
+	and            reduce using rule 75
+	else           reduce using rule 75
+	let            reduce using rule 75
+	run            reduce using rule 75
+	then           reduce using rule 75
+	type           reduce using rule 75
+	'.'            reduce using rule 75
+	'|>'           reduce using rule 75
+	'<|'           reduce using rule 75
+	'&&'           reduce using rule 75
+	'||'           reduce using rule 75
+	'<='           reduce using rule 75
+	'>='           reduce using rule 75
+	'@'            reduce using rule 75
+	'=='           reduce using rule 75
+	'!='           reduce using rule 75
+	'>'            reduce using rule 75
+	'<'            reduce using rule 75
+	'+'            reduce using rule 75
+	'-'            reduce using rule 75
+	'*'            reduce using rule 75
+	'/'            reduce using rule 75
+	'%'            reduce using rule 75
+	'('            reduce using rule 75
+	')'            reduce using rule 75
+	'{'            reduce using rule 75
+	'}'            reduce using rule 75
+	']'            reduce using rule 75
+	','            reduce using rule 75
+	';'            reduce using rule 75
+	%eof           reduce using rule 75
 
 
 State 19
@@ -795,45 +791,7 @@ State 22
 
 State 23
 
-	Atom -> false .                                     (rule 87)
-
-	and            reduce using rule 87
-	else           reduce using rule 87
-	let            reduce using rule 87
-	run            reduce using rule 87
-	then           reduce using rule 87
-	type           reduce using rule 87
-	'.'            reduce using rule 87
-	'|>'           reduce using rule 87
-	'<|'           reduce using rule 87
-	'&&'           reduce using rule 87
-	'||'           reduce using rule 87
-	'<='           reduce using rule 87
-	'>='           reduce using rule 87
-	'@'            reduce using rule 87
-	'=='           reduce using rule 87
-	'!='           reduce using rule 87
-	'>'            reduce using rule 87
-	'<'            reduce using rule 87
-	'+'            reduce using rule 87
-	'-'            reduce using rule 87
-	'*'            reduce using rule 87
-	'/'            reduce using rule 87
-	'%'            reduce using rule 87
-	'('            reduce using rule 87
-	')'            reduce using rule 87
-	'{'            reduce using rule 87
-	'}'            reduce using rule 87
-	'['            reduce using rule 87
-	']'            reduce using rule 87
-	','            reduce using rule 87
-	';'            reduce using rule 87
-	%eof           reduce using rule 87
-
-
-State 24
-
-	Atom -> true .                                      (rule 86)
+	Atom -> false .                                     (rule 86)
 
 	and            reduce using rule 86
 	else           reduce using rule 86
@@ -862,49 +820,84 @@ State 24
 	')'            reduce using rule 86
 	'{'            reduce using rule 86
 	'}'            reduce using rule 86
-	'['            reduce using rule 86
 	']'            reduce using rule 86
 	','            reduce using rule 86
 	';'            reduce using rule 86
 	%eof           reduce using rule 86
 
 
+State 24
+
+	Atom -> true .                                      (rule 85)
+
+	and            reduce using rule 85
+	else           reduce using rule 85
+	let            reduce using rule 85
+	run            reduce using rule 85
+	then           reduce using rule 85
+	type           reduce using rule 85
+	'.'            reduce using rule 85
+	'|>'           reduce using rule 85
+	'<|'           reduce using rule 85
+	'&&'           reduce using rule 85
+	'||'           reduce using rule 85
+	'<='           reduce using rule 85
+	'>='           reduce using rule 85
+	'@'            reduce using rule 85
+	'=='           reduce using rule 85
+	'!='           reduce using rule 85
+	'>'            reduce using rule 85
+	'<'            reduce using rule 85
+	'+'            reduce using rule 85
+	'-'            reduce using rule 85
+	'*'            reduce using rule 85
+	'/'            reduce using rule 85
+	'%'            reduce using rule 85
+	'('            reduce using rule 85
+	')'            reduce using rule 85
+	'{'            reduce using rule 85
+	'}'            reduce using rule 85
+	']'            reduce using rule 85
+	','            reduce using rule 85
+	';'            reduce using rule 85
+	%eof           reduce using rule 85
+
+
 State 25
 
-	Atom -> strlit .                                    (rule 88)
+	Atom -> strlit .                                    (rule 87)
 
-	and            reduce using rule 88
-	else           reduce using rule 88
-	let            reduce using rule 88
-	run            reduce using rule 88
-	then           reduce using rule 88
-	type           reduce using rule 88
-	'.'            reduce using rule 88
-	'|>'           reduce using rule 88
-	'<|'           reduce using rule 88
-	'&&'           reduce using rule 88
-	'||'           reduce using rule 88
-	'<='           reduce using rule 88
-	'>='           reduce using rule 88
-	'@'            reduce using rule 88
-	'=='           reduce using rule 88
-	'!='           reduce using rule 88
-	'>'            reduce using rule 88
-	'<'            reduce using rule 88
-	'+'            reduce using rule 88
-	'-'            reduce using rule 88
-	'*'            reduce using rule 88
-	'/'            reduce using rule 88
-	'%'            reduce using rule 88
-	'('            reduce using rule 88
-	')'            reduce using rule 88
-	'{'            reduce using rule 88
-	'}'            reduce using rule 88
-	'['            reduce using rule 88
-	']'            reduce using rule 88
-	','            reduce using rule 88
-	';'            reduce using rule 88
-	%eof           reduce using rule 88
+	and            reduce using rule 87
+	else           reduce using rule 87
+	let            reduce using rule 87
+	run            reduce using rule 87
+	then           reduce using rule 87
+	type           reduce using rule 87
+	'.'            reduce using rule 87
+	'|>'           reduce using rule 87
+	'<|'           reduce using rule 87
+	'&&'           reduce using rule 87
+	'||'           reduce using rule 87
+	'<='           reduce using rule 87
+	'>='           reduce using rule 87
+	'@'            reduce using rule 87
+	'=='           reduce using rule 87
+	'!='           reduce using rule 87
+	'>'            reduce using rule 87
+	'<'            reduce using rule 87
+	'+'            reduce using rule 87
+	'-'            reduce using rule 87
+	'*'            reduce using rule 87
+	'/'            reduce using rule 87
+	'%'            reduce using rule 87
+	'('            reduce using rule 87
+	')'            reduce using rule 87
+	'{'            reduce using rule 87
+	'}'            reduce using rule 87
+	']'            reduce using rule 87
+	','            reduce using rule 87
+	';'            reduce using rule 87
+	%eof           reduce using rule 87
 
 
 State 26
@@ -938,7 +931,6 @@ State 26
 	')'            reduce using rule 48
 	'{'            reduce using rule 48
 	'}'            reduce using rule 48
-	'['            reduce using rule 48
 	']'            reduce using rule 48
 	','            reduce using rule 48
 	';'            reduce using rule 48
@@ -976,7 +968,6 @@ State 27
 	')'            reduce using rule 49
 	'{'            reduce using rule 49
 	'}'            reduce using rule 49
-	'['            reduce using rule 49
 	']'            reduce using rule 49
 	','            reduce using rule 49
 	';'            reduce using rule 49
@@ -985,46 +976,45 @@ State 27
 
 State 28
 
-	Atom -> floatlit .                                  (rule 85)
+	Atom -> floatlit .                                  (rule 84)
 
-	and            reduce using rule 85
-	else           reduce using rule 85
-	let            reduce using rule 85
-	run            reduce using rule 85
-	then           reduce using rule 85
-	type           reduce using rule 85
-	'.'            reduce using rule 85
-	'|>'           reduce using rule 85
-	'<|'           reduce using rule 85
-	'&&'           reduce using rule 85
-	'||'           reduce using rule 85
-	'<='           reduce using rule 85
-	'>='           reduce using rule 85
-	'@'            reduce using rule 85
-	'=='           reduce using rule 85
-	'!='           reduce using rule 85
-	'>'            reduce using rule 85
-	'<'            reduce using rule 85
-	'+'            reduce using rule 85
-	'-'            reduce using rule 85
-	'*'            reduce using rule 85
-	'/'            reduce using rule 85
-	'%'            reduce using rule 85
-	'('            reduce using rule 85
-	')'            reduce using rule 85
-	'{'            reduce using rule 85
-	'}'            reduce using rule 85
-	'['            reduce using rule 85
-	']'            reduce using rule 85
-	','            reduce using rule 85
-	';'            reduce using rule 85
-	%eof           reduce using rule 85
+	and            reduce using rule 84
+	else           reduce using rule 84
+	let            reduce using rule 84
+	run            reduce using rule 84
+	then           reduce using rule 84
+	type           reduce using rule 84
+	'.'            reduce using rule 84
+	'|>'           reduce using rule 84
+	'<|'           reduce using rule 84
+	'&&'           reduce using rule 84
+	'||'           reduce using rule 84
+	'<='           reduce using rule 84
+	'>='           reduce using rule 84
+	'@'            reduce using rule 84
+	'=='           reduce using rule 84
+	'!='           reduce using rule 84
+	'>'            reduce using rule 84
+	'<'            reduce using rule 84
+	'+'            reduce using rule 84
+	'-'            reduce using rule 84
+	'*'            reduce using rule 84
+	'/'            reduce using rule 84
+	'%'            reduce using rule 84
+	'('            reduce using rule 84
+	')'            reduce using rule 84
+	'{'            reduce using rule 84
+	'}'            reduce using rule 84
+	']'            reduce using rule 84
+	','            reduce using rule 84
+	';'            reduce using rule 84
+	%eof           reduce using rule 84
 
 
 State 29
 
-	Atom -> '(' . Exprs ')'                             (rule 77)
-	Atom -> '(' . ')'                                   (rule 78)
+	Atom -> '(' . Exprs ')'                             (rule 76)
+	Atom -> '(' . ')'                                   (rule 77)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
@@ -1054,9 +1044,9 @@ State 29
 
 State 30
 
-	Atom -> '{' . Props '}'                             (rule 79)
-	Atom -> '{' . Block '}'                             (rule 80)
-	Atom -> '{' . Expr '}'                              (rule 81)
+	Atom -> '{' . Props '}'                             (rule 78)
+	Atom -> '{' . Block '}'                             (rule 79)
+	Atom -> '{' . Expr '}'                              (rule 80)
 
 	debug          shift, and enter state 53
 	fn             shift, and enter state 20
@@ -1094,8 +1084,8 @@ State 30
 
 State 31
 
-	Atom -> '[' . Exprs ']'                             (rule 82)
-	Atom -> '[' . ']'                                   (rule 83)
+	Atom -> '[' . Exprs ']'                             (rule 81)
+	Atom -> '[' . ']'                                   (rule 82)
 
 	fn             shift, and enter state 20
 	if             shift, and enter state 21
@@ -1262,7 +1252,7 @@ State 42
 
 State 43
 
-	Atom -> '[' Exprs . ']'                             (rule 82)
+	Atom -> '[' Exprs . ']'                             (rule 81)
 
 	']'            shift, and enter state 150
 
@@ -1278,70 +1268,70 @@ State 44
 
 State 45
 
-	Atom -> '[' ']' .                                   (rule 83)
+	Atom -> '[' ']' .                                   (rule 82)
 
-	and            reduce using rule 83
-	else           reduce using rule 83
-	let            reduce using rule 83
-	run            reduce using rule 83
-	then           reduce using rule 83
-	type           reduce using rule 83
-	'.'            reduce using rule 83
-	'|>'           reduce using rule 83
-	'<|'           reduce using rule 83
-	'&&'           reduce using rule 83
-	'||'           reduce using rule 83
-	'<='           reduce using rule 83
-	'>='           reduce using rule 83
-	'@'            reduce using rule 83
-	'=='           reduce using rule 83
-	'!='           reduce using rule 83
-	'>'            reduce using rule 83
-	'<'            reduce using rule 83
-	'+'            reduce using rule 83
-	'-'            reduce using rule 83
-	'*'            reduce using rule 83
-	'/'            reduce using rule 83
-	'%'            reduce using rule 83
-	'('            reduce using rule 83
-	')'            reduce using rule 83
-	'{'            reduce using rule 83
-	'}'            reduce using rule 83
-	'['            reduce using rule 83
-	']'            reduce using rule 83
-	','            reduce using rule 83
-	';'            reduce using rule 83
-	%eof           reduce using rule 83
+	and            reduce using rule 82
+	else           reduce using rule 82
+	let            reduce using rule 82
+	run            reduce using rule 82
+	then           reduce using rule 82
+	type           reduce using rule 82
+	'.'            reduce using rule 82
+	'|>'           reduce using rule 82
+	'<|'           reduce using rule 82
+	'&&'           reduce using rule 82
+	'||'           reduce using rule 82
+	'<='           reduce using rule 82
+	'>='           reduce using rule 82
+	'@'            reduce using rule 82
+	'=='           reduce using rule 82
+	'!='           reduce using rule 82
+	'>'            reduce using rule 82
+	'<'            reduce using rule 82
+	'+'            reduce using rule 82
+	'-'            reduce using rule 82
+	'*'            reduce using rule 82
+	'/'            reduce using rule 82
+	'%'            reduce using rule 82
+	'('            reduce using rule 82
+	')'            reduce using rule 82
+	'{'            reduce using rule 82
+	'}'            reduce using rule 82
+	']'            reduce using rule 82
+	','            reduce using rule 82
+	';'            reduce using rule 82
+	%eof           reduce using rule 82
 
 
 State 46
 
 	Stmt -> Id . '=' Expr ';'                           (rule 43)
 	Prop -> Id . '=' Expr                               (rule 53)
-	Atom -> Id .                                        (rule 89)
+	Atom -> Id .                                        (rule 88)
+	Atom -> Id . '[' Types ']'                          (rule 89)
 
 	'='            shift, and enter state 149
-	'.'            reduce using rule 89
-	'|>'           reduce using rule 89
-	'<|'           reduce using rule 89
-	'&&'           reduce using rule 89
-	'||'           reduce using rule 89
-	'<='           reduce using rule 89
-	'>='           reduce using rule 89
-	'@'            reduce using rule 89
-	'=='           reduce using rule 89
-	'!='           reduce using rule 89
-	'>'            reduce using rule 89
-	'<'            reduce using rule 89
-	'+'            reduce using rule 89
-	'-'            reduce using rule 89
-	'*'            reduce using rule 89
-	'/'            reduce using rule 89
-	'%'            reduce using rule 89
-	'('            reduce using rule 89
-	'}'            reduce using rule 89
-	'['            reduce using rule 89
-	';'            reduce using rule 89
+	'.'            reduce using rule 88
+	'|>'           reduce using rule 88
+	'<|'           reduce using rule 88
+	'&&'           reduce using rule 88
+	'||'           reduce using rule 88
+	'<='           reduce using rule 88
+	'>='           reduce using rule 88
+	'@'            reduce using rule 88
+	'=='           reduce using rule 88
+	'!='           reduce using rule 88
+	'>'            reduce using rule 88
+	'<'            reduce using rule 88
+	'+'            reduce using rule 88
+	'-'            reduce using rule 88
+	'*'            reduce using rule 88
+	'/'            reduce using rule 88
+	'%'            reduce using rule 88
+	'('            reduce using rule 88
+	'}'            reduce using rule 88
+	'['            shift, and enter state 81
+	';'            reduce using rule 88
 
 
 State 47
@@ -1402,7 +1392,7 @@ State 48
 
 State 49
 
-	Atom -> '{' Block . '}'                             (rule 80)
+	Atom -> '{' Block . '}'                             (rule 79)
 
 	'}'            shift, and enter state 145
 
@@ -1410,7 +1400,7 @@ State 49
 State 50
 
 	Props -> Props . ',' Prop                           (rule 50)
-	Atom -> '{' Props . '}'                             (rule 79)
+	Atom -> '{' Props . '}'                             (rule 78)
 
 	'}'            shift, and enter state 143
 	','            shift, and enter state 144
@@ -1427,7 +1417,7 @@ State 51
 State 52
 
 	Stmt -> Expr . ';'                                  (rule 42)
-	Atom -> '{' Expr . '}'                              (rule 81)
+	Atom -> '{' Expr . '}'                              (rule 80)
 
 	'}'            shift, and enter state 141
 	';'            shift, and enter state 142
@@ -1514,47 +1504,46 @@ State 56
 
 State 57
 
-	Atom -> '(' Exprs . ')'                             (rule 77)
+	Atom -> '(' Exprs . ')'                             (rule 76)
 
 	')'            shift, and enter state 130
 
 
 State 58
 
-	Atom -> '(' ')' .                                   (rule 78)
+	Atom -> '(' ')' .                                   (rule 77)
 
-	and            reduce using rule 78
-	else           reduce using rule 78
-	let            reduce using rule 78
-	run            reduce using rule 78
-	then           reduce using rule 78
-	type           reduce using rule 78
-	'.'            reduce using rule 78
-	'|>'           reduce using rule 78
-	'<|'           reduce using rule 78
-	'&&'           reduce using rule 78
-	'||'           reduce using rule 78
-	'<='           reduce using rule 78
-	'>='           reduce using rule 78
-	'@'            reduce using rule 78
-	'=='           reduce using rule 78
-	'!='           reduce using rule 78
-	'>'            reduce using rule 78
-	'<'            reduce using rule 78
-	'+'            reduce using rule 78
-	'-'            reduce using rule 78
-	'*'            reduce using rule 78
-	'/'            reduce using rule 78
-	'%'            reduce using rule 78
-	'('            reduce using rule 78
-	')'            reduce using rule 78
-	'{'            reduce using rule 78
-	'}'            reduce using rule 78
-	'['            reduce using rule 78
-	']'            reduce using rule 78
-	','            reduce using rule 78
-	';'            reduce using rule 78
-	%eof           reduce using rule 78
+	and            reduce using rule 77
+	else           reduce using rule 77
+	let            reduce using rule 77
+	run            reduce using rule 77
+	then           reduce using rule 77
+	type           reduce using rule 77
+	'.'            reduce using rule 77
+	'|>'           reduce using rule 77
+	'<|'           reduce using rule 77
+	'&&'           reduce using rule 77
+	'||'           reduce using rule 77
+	'<='           reduce using rule 77
+	'>='           reduce using rule 77
+	'@'            reduce using rule 77
+	'=='           reduce using rule 77
+	'!='           reduce using rule 77
+	'>'            reduce using rule 77
+	'<'            reduce using rule 77
+	'+'            reduce using rule 77
+	'-'            reduce using rule 77
+	'*'            reduce using rule 77
+	'/'            reduce using rule 77
+	'%'            reduce using rule 77
+	'('            reduce using rule 77
+	')'            reduce using rule 77
+	'{'            reduce using rule 77
+	'}'            reduce using rule 77
+	']'            reduce using rule 77
+	','            reduce using rule 77
+	';'            reduce using rule 77
+	%eof           reduce using rule 77
 
 
 State 59
@@ -1634,8 +1623,8 @@ State 62
 
 State 63
 
-	App -> App '.' . Id                                 (rule 74)
-	App -> App '.' . nat                                (rule 75)
+	App -> App '.' . Id                                 (rule 73)
+	App -> App '.' . nat                                (rule 74)
 
 	id             shift, and enter state 11
 	nat            shift, and enter state 117
@@ -1997,7 +1986,7 @@ State 80
 
 State 81
 
-	App -> App '[' . Types ']'                          (rule 73)
+	Atom -> Id '[' . Types ']'                          (rule 89)
 
 	fn             shift, and enter state 94
 	float          shift, and enter state 95
@@ -2371,7 +2360,7 @@ State 107
 
 State 108
 
-	App -> App '[' Types . ']'                          (rule 73)
+	Atom -> Id '[' Types . ']'                          (rule 89)
 
 	']'            shift, and enter state 205
 
@@ -2456,7 +2445,6 @@ State 115
 	')'            reduce using rule 72
 	'{'            reduce using rule 72
 	'}'            reduce using rule 72
-	'['            reduce using rule 72
 	']'            reduce using rule 72
 	','            reduce using rule 72
 	';'            reduce using rule 72
@@ -2465,7 +2453,44 @@ State 115
 
 State 116
 
-	App -> App '.' Id .                                 (rule 74)
+	App -> App '.' Id .                                 (rule 73)
+
+	and            reduce using rule 73
+	else           reduce using rule 73
+	let            reduce using rule 73
+	run            reduce using rule 73
+	then           reduce using rule 73
+	type           reduce using rule 73
+	'.'            reduce using rule 73
+	'|>'           reduce using rule 73
+	'<|'           reduce using rule 73
+	'&&'           reduce using rule 73
+	'||'           reduce using rule 73
+	'<='           reduce using rule 73
+	'>='           reduce using rule 73
+	'@'            reduce using rule 73
+	'=='           reduce using rule 73
+	'!='           reduce using rule 73
+	'>'            reduce using rule 73
+	'<'            reduce using rule 73
+	'+'            reduce using rule 73
+	'-'            reduce using rule 73
+	'*'            reduce using rule 73
+	'/'            reduce using rule 73
+	'%'            reduce using rule 73
+	'('            reduce using rule 73
+	')'            reduce using rule 73
+	'{'            reduce using rule 73
+	'}'            reduce using rule 73
+	']'            reduce using rule 73
+	','            reduce using rule 73
+	';'            reduce using rule 73
+	%eof           reduce using rule 73
+
+
+State 117
+
+	App -> App '.' nat .                                (rule 74)
 
 	and            reduce using rule 74
 	else           reduce using rule 74
@@ -2494,49 +2519,10 @@ State 116
 	')'            reduce using rule 74
 	'{'            reduce using rule 74
 	'}'            reduce using rule 74
-	'['            reduce using rule 74
 	']'            reduce using rule 74
 	','            reduce using rule 74
 	';'            reduce using rule 74
 	%eof           reduce using rule 74
-
-
-State 117
-
-	App -> App '.' nat .                                (rule 75)
-
-	and            reduce using rule 75
-	else           reduce using rule 75
-	let            reduce using rule 75
-	run            reduce using rule 75
-	then           reduce using rule 75
-	type           reduce using rule 75
-	'.'            reduce using rule 75
-	'|>'           reduce using rule 75
-	'<|'           reduce using rule 75
-	'&&'           reduce using rule 75
-	'||'           reduce using rule 75
-	'<='           reduce using rule 75
-	'>='           reduce using rule 75
-	'@'            reduce using rule 75
-	'=='           reduce using rule 75
-	'!='           reduce using rule 75
-	'>'            reduce using rule 75
-	'<'            reduce using rule 75
-	'+'            reduce using rule 75
-	'-'            reduce using rule 75
-	'*'            reduce using rule 75
-	'/'            reduce using rule 75
-	'%'            reduce using rule 75
-	'('            reduce using rule 75
-	')'            reduce using rule 75
-	'{'            reduce using rule 75
-	'}'            reduce using rule 75
-	'['            reduce using rule 75
-	']'            reduce using rule 75
-	','            reduce using rule 75
-	';'            reduce using rule 75
-	%eof           reduce using rule 75
 
 
 State 118
@@ -2572,29 +2558,30 @@ State 119
 State 120
 
 	Params_ -> Id .                                     (rule 6)
-	Atom -> Id .                                        (rule 89)
+	Atom -> Id .                                        (rule 88)
+	Atom -> Id . '[' Types ']'                          (rule 89)
 
 	match          reduce using rule 6
-	'.'            reduce using rule 89
-	'|>'           reduce using rule 89
-	'<|'           reduce using rule 89
-	'&&'           reduce using rule 89
-	'||'           reduce using rule 89
-	'<='           reduce using rule 89
-	'>='           reduce using rule 89
-	'@'            reduce using rule 89
-	'=='           reduce using rule 89
-	'!='           reduce using rule 89
-	'>'            reduce using rule 89
-	'<'            reduce using rule 89
-	'+'            reduce using rule 89
-	'-'            reduce using rule 89
-	'*'            reduce using rule 89
-	'/'            reduce using rule 89
-	'%'            reduce using rule 89
-	'('            reduce using rule 89
+	'.'            reduce using rule 88
+	'|>'           reduce using rule 88
+	'<|'           reduce using rule 88
+	'&&'           reduce using rule 88
+	'||'           reduce using rule 88
+	'<='           reduce using rule 88
+	'>='           reduce using rule 88
+	'@'            reduce using rule 88
+	'=='           reduce using rule 88
+	'!='           reduce using rule 88
+	'>'            reduce using rule 88
+	'<'            reduce using rule 88
+	'+'            reduce using rule 88
+	'-'            reduce using rule 88
+	'*'            reduce using rule 88
+	'/'            reduce using rule 88
+	'%'            reduce using rule 88
+	'('            reduce using rule 88
 	')'            reduce using rule 6
-	'['            reduce using rule 89
+	'['            shift, and enter state 81
 	','            reduce using rule 6
 
 
@@ -2620,9 +2607,8 @@ State 123
 
 	App -> App . '(' Args ')'                           (rule 71)
 	App -> App . '(' ')'                                (rule 72)
-	App -> App . '[' Types ']'                          (rule 73)
-	App -> App . '.' Id                                 (rule 74)
-	App -> App . '.' nat                                (rule 75)
+	App -> App . '.' Id                                 (rule 73)
+	App -> App . '.' nat                                (rule 74)
 	PartialOperand -> App .                             (rule 118)
 
 	'.'            shift, and enter state 63
@@ -2644,7 +2630,6 @@ State 123
 	'%'            reduce using rule 118
 	'('            shift, and enter state 80
 	')'            reduce using rule 118
-	'['            shift, and enter state 81
 
 
 State 124
@@ -2783,40 +2768,39 @@ State 129
 
 State 130
 
-	Atom -> '(' Exprs ')' .                             (rule 77)
+	Atom -> '(' Exprs ')' .                             (rule 76)
 
-	and            reduce using rule 77
-	else           reduce using rule 77
-	let            reduce using rule 77
-	run            reduce using rule 77
-	then           reduce using rule 77
-	type           reduce using rule 77
-	'.'            reduce using rule 77
-	'|>'           reduce using rule 77
-	'<|'           reduce using rule 77
-	'&&'           reduce using rule 77
-	'||'           reduce using rule 77
-	'<='           reduce using rule 77
-	'>='           reduce using rule 77
-	'@'            reduce using rule 77
-	'=='           reduce using rule 77
-	'!='           reduce using rule 77
-	'>'            reduce using rule 77
-	'<'            reduce using rule 77
-	'+'            reduce using rule 77
-	'-'            reduce using rule 77
-	'*'            reduce using rule 77
-	'/'            reduce using rule 77
-	'%'            reduce using rule 77
-	'('            reduce using rule 77
-	')'            reduce using rule 77
-	'{'            reduce using rule 77
-	'}'            reduce using rule 77
-	'['            reduce using rule 77
-	']'            reduce using rule 77
-	','            reduce using rule 77
-	';'            reduce using rule 77
-	%eof           reduce using rule 77
+	and            reduce using rule 76
+	else           reduce using rule 76
+	let            reduce using rule 76
+	run            reduce using rule 76
+	then           reduce using rule 76
+	type           reduce using rule 76
+	'.'            reduce using rule 76
+	'|>'           reduce using rule 76
+	'<|'           reduce using rule 76
+	'&&'           reduce using rule 76
+	'||'           reduce using rule 76
+	'<='           reduce using rule 76
+	'>='           reduce using rule 76
+	'@'            reduce using rule 76
+	'=='           reduce using rule 76
+	'!='           reduce using rule 76
+	'>'            reduce using rule 76
+	'<'            reduce using rule 76
+	'+'            reduce using rule 76
+	'-'            reduce using rule 76
+	'*'            reduce using rule 76
+	'/'            reduce using rule 76
+	'%'            reduce using rule 76
+	'('            reduce using rule 76
+	')'            reduce using rule 76
+	'{'            reduce using rule 76
+	'}'            reduce using rule 76
+	']'            reduce using rule 76
+	','            reduce using rule 76
+	';'            reduce using rule 76
+	%eof           reduce using rule 76
 
 
 State 131
@@ -2935,117 +2919,7 @@ State 140
 
 State 141
 
-	Atom -> '{' Expr '}' .                              (rule 81)
-
-	and            reduce using rule 81
-	else           reduce using rule 81
-	let            reduce using rule 81
-	run            reduce using rule 81
-	then           reduce using rule 81
-	type           reduce using rule 81
-	'.'            reduce using rule 81
-	'|>'           reduce using rule 81
-	'<|'           reduce using rule 81
-	'&&'           reduce using rule 81
-	'||'           reduce using rule 81
-	'<='           reduce using rule 81
-	'>='           reduce using rule 81
-	'@'            reduce using rule 81
-	'=='           reduce using rule 81
-	'!='           reduce using rule 81
-	'>'            reduce using rule 81
-	'<'            reduce using rule 81
-	'+'            reduce using rule 81
-	'-'            reduce using rule 81
-	'*'            reduce using rule 81
-	'/'            reduce using rule 81
-	'%'            reduce using rule 81
-	'('            reduce using rule 81
-	')'            reduce using rule 81
-	'{'            reduce using rule 81
-	'}'            reduce using rule 81
-	'['            reduce using rule 81
-	']'            reduce using rule 81
-	','            reduce using rule 81
-	';'            reduce using rule 81
-	%eof           reduce using rule 81
-
-
-State 142
-
-	Stmt -> Expr ';' .                                  (rule 42)
-
-	debug          reduce using rule 42
-	fn             reduce using rule 42
-	if             reduce using rule 42
-	let            reduce using rule 42
-	match          reduce using rule 42
-	while          reduce using rule 42
-	false          reduce using rule 42
-	true           reduce using rule 42
-	id             reduce using rule 42
-	capid          reduce using rule 42
-	strlit         reduce using rule 42
-	nat            reduce using rule 42
-	nonnat         reduce using rule 42
-	floatlit       reduce using rule 42
-	'('            reduce using rule 42
-	'{'            reduce using rule 42
-	'}'            reduce using rule 42
-	'['            reduce using rule 42
-
-
-State 143
-
-	Atom -> '{' Props '}' .                             (rule 79)
-
-	and            reduce using rule 79
-	else           reduce using rule 79
-	let            reduce using rule 79
-	run            reduce using rule 79
-	then           reduce using rule 79
-	type           reduce using rule 79
-	'.'            reduce using rule 79
-	'|>'           reduce using rule 79
-	'<|'           reduce using rule 79
-	'&&'           reduce using rule 79
-	'||'           reduce using rule 79
-	'<='           reduce using rule 79
-	'>='           reduce using rule 79
-	'@'            reduce using rule 79
-	'=='           reduce using rule 79
-	'!='           reduce using rule 79
-	'>'            reduce using rule 79
-	'<'            reduce using rule 79
-	'+'            reduce using rule 79
-	'-'            reduce using rule 79
-	'*'            reduce using rule 79
-	'/'            reduce using rule 79
-	'%'            reduce using rule 79
-	'('            reduce using rule 79
-	')'            reduce using rule 79
-	'{'            reduce using rule 79
-	'}'            reduce using rule 79
-	'['            reduce using rule 79
-	']'            reduce using rule 79
-	','            reduce using rule 79
-	';'            reduce using rule 79
-	%eof           reduce using rule 79
-
-
-State 144
-
-	Props -> Props ',' . Prop                           (rule 50)
-
-	id             shift, and enter state 11
-	'='            shift, and enter state 56
-
-	Id             goto state 163
-	Prop           goto state 164
-
-State 145
-
-	Atom -> '{' Block '}' .                             (rule 80)
+	Atom -> '{' Expr '}' .                              (rule 80)
 
 	and            reduce using rule 80
 	else           reduce using rule 80
@@ -3074,40 +2948,148 @@ State 145
 	')'            reduce using rule 80
 	'{'            reduce using rule 80
 	'}'            reduce using rule 80
-	'['            reduce using rule 80
 	']'            reduce using rule 80
 	','            reduce using rule 80
 	';'            reduce using rule 80
 	%eof           reduce using rule 80
 
 
+State 142
+
+	Stmt -> Expr ';' .                                  (rule 42)
+
+	debug          reduce using rule 42
+	fn             reduce using rule 42
+	if             reduce using rule 42
+	let            reduce using rule 42
+	match          reduce using rule 42
+	while          reduce using rule 42
+	false          reduce using rule 42
+	true           reduce using rule 42
+	id             reduce using rule 42
+	capid          reduce using rule 42
+	strlit         reduce using rule 42
+	nat            reduce using rule 42
+	nonnat         reduce using rule 42
+	floatlit       reduce using rule 42
+	'('            reduce using rule 42
+	'{'            reduce using rule 42
+	'}'            reduce using rule 42
+	'['            reduce using rule 42
+
+
+State 143
+
+	Atom -> '{' Props '}' .                             (rule 78)
+
+	and            reduce using rule 78
+	else           reduce using rule 78
+	let            reduce using rule 78
+	run            reduce using rule 78
+	then           reduce using rule 78
+	type           reduce using rule 78
+	'.'            reduce using rule 78
+	'|>'           reduce using rule 78
+	'<|'           reduce using rule 78
+	'&&'           reduce using rule 78
+	'||'           reduce using rule 78
+	'<='           reduce using rule 78
+	'>='           reduce using rule 78
+	'@'            reduce using rule 78
+	'=='           reduce using rule 78
+	'!='           reduce using rule 78
+	'>'            reduce using rule 78
+	'<'            reduce using rule 78
+	'+'            reduce using rule 78
+	'-'            reduce using rule 78
+	'*'            reduce using rule 78
+	'/'            reduce using rule 78
+	'%'            reduce using rule 78
+	'('            reduce using rule 78
+	')'            reduce using rule 78
+	'{'            reduce using rule 78
+	'}'            reduce using rule 78
+	']'            reduce using rule 78
+	','            reduce using rule 78
+	';'            reduce using rule 78
+	%eof           reduce using rule 78
+
+
+State 144
+
+	Props -> Props ',' . Prop                           (rule 50)
+
+	id             shift, and enter state 11
+	'='            shift, and enter state 56
+
+	Id             goto state 163
+	Prop           goto state 164
+
+State 145
+
+	Atom -> '{' Block '}' .                             (rule 79)
+
+	and            reduce using rule 79
+	else           reduce using rule 79
+	let            reduce using rule 79
+	run            reduce using rule 79
+	then           reduce using rule 79
+	type           reduce using rule 79
+	'.'            reduce using rule 79
+	'|>'           reduce using rule 79
+	'<|'           reduce using rule 79
+	'&&'           reduce using rule 79
+	'||'           reduce using rule 79
+	'<='           reduce using rule 79
+	'>='           reduce using rule 79
+	'@'            reduce using rule 79
+	'=='           reduce using rule 79
+	'!='           reduce using rule 79
+	'>'            reduce using rule 79
+	'<'            reduce using rule 79
+	'+'            reduce using rule 79
+	'-'            reduce using rule 79
+	'*'            reduce using rule 79
+	'/'            reduce using rule 79
+	'%'            reduce using rule 79
+	'('            reduce using rule 79
+	')'            reduce using rule 79
+	'{'            reduce using rule 79
+	'}'            reduce using rule 79
+	']'            reduce using rule 79
+	','            reduce using rule 79
+	';'            reduce using rule 79
+	%eof           reduce using rule 79
+
+
 State 146
 
 	Stmt -> Id . '=' Expr ';'                           (rule 43)
-	Atom -> Id .                                        (rule 89)
+	Atom -> Id .                                        (rule 88)
+	Atom -> Id . '[' Types ']'                          (rule 89)
 
 	'='            shift, and enter state 162
-	'.'            reduce using rule 89
-	'|>'           reduce using rule 89
-	'<|'           reduce using rule 89
-	'&&'           reduce using rule 89
-	'||'           reduce using rule 89
-	'<='           reduce using rule 89
-	'>='           reduce using rule 89
-	'@'            reduce using rule 89
-	'=='           reduce using rule 89
-	'!='           reduce using rule 89
-	'>'            reduce using rule 89
-	'<'            reduce using rule 89
-	'+'            reduce using rule 89
-	'-'            reduce using rule 89
-	'*'            reduce using rule 89
-	'/'            reduce using rule 89
-	'%'            reduce using rule 89
-	'('            reduce using rule 89
-	'}'            reduce using rule 89
-	'['            reduce using rule 89
-	';'            reduce using rule 89
+	'.'            reduce using rule 88
+	'|>'           reduce using rule 88
+	'<|'           reduce using rule 88
+	'&&'           reduce using rule 88
+	'||'           reduce using rule 88
+	'<='           reduce using rule 88
+	'>='           reduce using rule 88
+	'@'            reduce using rule 88
+	'=='           reduce using rule 88
+	'!='           reduce using rule 88
+	'>'            reduce using rule 88
+	'<'            reduce using rule 88
+	'+'            reduce using rule 88
+	'-'            reduce using rule 88
+	'*'            reduce using rule 88
+	'/'            reduce using rule 88
+	'%'            reduce using rule 88
+	'('            reduce using rule 88
+	'}'            reduce using rule 88
+	'['            shift, and enter state 81
+	';'            reduce using rule 88
 
 
 State 147
@@ -3173,40 +3155,39 @@ State 149
 
 State 150
 
-	Atom -> '[' Exprs ']' .                             (rule 82)
+	Atom -> '[' Exprs ']' .                             (rule 81)
 
-	and            reduce using rule 82
-	else           reduce using rule 82
-	let            reduce using rule 82
-	run            reduce using rule 82
-	then           reduce using rule 82
-	type           reduce using rule 82
-	'.'            reduce using rule 82
-	'|>'           reduce using rule 82
-	'<|'           reduce using rule 82
-	'&&'           reduce using rule 82
-	'||'           reduce using rule 82
-	'<='           reduce using rule 82
-	'>='           reduce using rule 82
-	'@'            reduce using rule 82
-	'=='           reduce using rule 82
-	'!='           reduce using rule 82
-	'>'            reduce using rule 82
-	'<'            reduce using rule 82
-	'+'            reduce using rule 82
-	'-'            reduce using rule 82
-	'*'            reduce using rule 82
-	'/'            reduce using rule 82
-	'%'            reduce using rule 82
-	'('            reduce using rule 82
-	')'            reduce using rule 82
-	'{'            reduce using rule 82
-	'}'            reduce using rule 82
-	'['            reduce using rule 82
-	']'            reduce using rule 82
-	','            reduce using rule 82
-	';'            reduce using rule 82
-	%eof           reduce using rule 82
+	and            reduce using rule 81
+	else           reduce using rule 81
+	let            reduce using rule 81
+	run            reduce using rule 81
+	then           reduce using rule 81
+	type           reduce using rule 81
+	'.'            reduce using rule 81
+	'|>'           reduce using rule 81
+	'<|'           reduce using rule 81
+	'&&'           reduce using rule 81
+	'||'           reduce using rule 81
+	'<='           reduce using rule 81
+	'>='           reduce using rule 81
+	'@'            reduce using rule 81
+	'=='           reduce using rule 81
+	'!='           reduce using rule 81
+	'>'            reduce using rule 81
+	'<'            reduce using rule 81
+	'+'            reduce using rule 81
+	'-'            reduce using rule 81
+	'*'            reduce using rule 81
+	'/'            reduce using rule 81
+	'%'            reduce using rule 81
+	'('            reduce using rule 81
+	')'            reduce using rule 81
+	'{'            reduce using rule 81
+	'}'            reduce using rule 81
+	']'            reduce using rule 81
+	','            reduce using rule 81
+	';'            reduce using rule 81
+	%eof           reduce using rule 81
 
 
 State 151
@@ -3823,30 +3804,31 @@ State 196
 
 State 197
 
-	Atom -> Id .                                        (rule 89)
+	Atom -> Id .                                        (rule 88)
+	Atom -> Id . '[' Types ']'                          (rule 89)
 	Atom -> fn '(' match Id . ')' '{' Matches '}'       (rule 94)
 
-	'.'            reduce using rule 89
-	'|>'           reduce using rule 89
-	'<|'           reduce using rule 89
-	'&&'           reduce using rule 89
-	'||'           reduce using rule 89
-	'<='           reduce using rule 89
-	'>='           reduce using rule 89
-	'@'            reduce using rule 89
-	'=='           reduce using rule 89
-	'!='           reduce using rule 89
-	'>'            reduce using rule 89
-	'<'            reduce using rule 89
-	'+'            reduce using rule 89
-	'-'            reduce using rule 89
-	'*'            reduce using rule 89
-	'/'            reduce using rule 89
-	'%'            reduce using rule 89
-	'('            reduce using rule 89
+	'.'            reduce using rule 88
+	'|>'           reduce using rule 88
+	'<|'           reduce using rule 88
+	'&&'           reduce using rule 88
+	'||'           reduce using rule 88
+	'<='           reduce using rule 88
+	'>='           reduce using rule 88
+	'@'            reduce using rule 88
+	'=='           reduce using rule 88
+	'!='           reduce using rule 88
+	'>'            reduce using rule 88
+	'<'            reduce using rule 88
+	'+'            reduce using rule 88
+	'-'            reduce using rule 88
+	'*'            reduce using rule 88
+	'/'            reduce using rule 88
+	'%'            reduce using rule 88
+	'('            reduce using rule 88
 	')'            shift, and enter state 242
-	'{'            reduce using rule 89
-	'['            reduce using rule 89
+	'{'            reduce using rule 88
+	'['            shift, and enter state 81
 
 
 State 198
@@ -3907,7 +3889,6 @@ State 199
 	')'            reduce using rule 96
 	'{'            reduce using rule 96
 	'}'            reduce using rule 96
-	'['            reduce using rule 96
 	']'            reduce using rule 96
 	','            reduce using rule 96
 	';'            reduce using rule 96
@@ -3998,7 +3979,6 @@ State 203
 	')'            reduce using rule 71
 	'{'            reduce using rule 71
 	'}'            reduce using rule 71
-	'['            reduce using rule 71
 	']'            reduce using rule 71
 	','            reduce using rule 71
 	';'            reduce using rule 71
@@ -4036,40 +4016,39 @@ State 204
 
 State 205
 
-	App -> App '[' Types ']' .                          (rule 73)
+	Atom -> Id '[' Types ']' .                          (rule 89)
 
-	and            reduce using rule 73
-	else           reduce using rule 73
-	let            reduce using rule 73
-	run            reduce using rule 73
-	then           reduce using rule 73
-	type           reduce using rule 73
-	'.'            reduce using rule 73
-	'|>'           reduce using rule 73
-	'<|'           reduce using rule 73
-	'&&'           reduce using rule 73
-	'||'           reduce using rule 73
-	'<='           reduce using rule 73
-	'>='           reduce using rule 73
-	'@'            reduce using rule 73
-	'=='           reduce using rule 73
-	'!='           reduce using rule 73
-	'>'            reduce using rule 73
-	'<'            reduce using rule 73
-	'+'            reduce using rule 73
-	'-'            reduce using rule 73
-	'*'            reduce using rule 73
-	'/'            reduce using rule 73
-	'%'            reduce using rule 73
-	'('            reduce using rule 73
-	')'            reduce using rule 73
-	'{'            reduce using rule 73
-	'}'            reduce using rule 73
-	'['            reduce using rule 73
-	']'            reduce using rule 73
-	','            reduce using rule 73
-	';'            reduce using rule 73
-	%eof           reduce using rule 73
+	and            reduce using rule 89
+	else           reduce using rule 89
+	let            reduce using rule 89
+	run            reduce using rule 89
+	then           reduce using rule 89
+	type           reduce using rule 89
+	'.'            reduce using rule 89
+	'|>'           reduce using rule 89
+	'<|'           reduce using rule 89
+	'&&'           reduce using rule 89
+	'||'           reduce using rule 89
+	'<='           reduce using rule 89
+	'>='           reduce using rule 89
+	'@'            reduce using rule 89
+	'=='           reduce using rule 89
+	'!='           reduce using rule 89
+	'>'            reduce using rule 89
+	'<'            reduce using rule 89
+	'+'            reduce using rule 89
+	'-'            reduce using rule 89
+	'*'            reduce using rule 89
+	'/'            reduce using rule 89
+	'%'            reduce using rule 89
+	'('            reduce using rule 89
+	')'            reduce using rule 89
+	'{'            reduce using rule 89
+	'}'            reduce using rule 89
+	']'            reduce using rule 89
+	','            reduce using rule 89
+	';'            reduce using rule 89
+	%eof           reduce using rule 89
 
 
 State 206
@@ -4645,7 +4624,6 @@ State 244
 	')'            reduce using rule 91
 	'{'            reduce using rule 91
 	'}'            reduce using rule 91
-	'['            reduce using rule 91
 	']'            reduce using rule 91
 	','            reduce using rule 91
 	';'            reduce using rule 91
@@ -5459,7 +5437,6 @@ State 300
 	')'            reduce using rule 92
 	'{'            reduce using rule 92
 	'}'            reduce using rule 92
-	'['            reduce using rule 92
 	']'            reduce using rule 92
 	','            reduce using rule 92
 	';'            reduce using rule 92
@@ -5497,7 +5474,6 @@ State 301
 	')'            reduce using rule 93
 	'{'            reduce using rule 93
 	'}'            reduce using rule 93
-	'['            reduce using rule 93
 	']'            reduce using rule 93
 	','            reduce using rule 93
 	';'            reduce using rule 93
@@ -5597,7 +5573,6 @@ State 306
 	')'            reduce using rule 94
 	'{'            reduce using rule 94
 	'}'            reduce using rule 94
-	'['            reduce using rule 94
 	']'            reduce using rule 94
 	','            reduce using rule 94
 	';'            reduce using rule 94
@@ -5658,7 +5633,6 @@ State 309
 	')'            reduce using rule 95
 	'{'            reduce using rule 95
 	'}'            reduce using rule 95
-	'['            reduce using rule 95
 	']'            reduce using rule 95
 	','            reduce using rule 95
 	';'            reduce using rule 95

@@ -272,7 +272,7 @@ data Expr (p :: Phase)
   | Var (ExprX p) Id
   | Bin (ExprX p) (NotParsed p) Op (Expr p) (Expr p)
   | App (ExprX p) (Expr p) (NonEmpty (Expr p))
-  | GenApp (ExprX p) (Expr p) (NonEmpty (Type p))
+  | GenApp (ExprX p) Id (NonEmpty (Type p))
   | Access (ExprX p) (Expr p) Id
   | Index (ExprX p) (Expr p) Int
   | Cond (ExprX p) (Expr p) (Expr p) (Expr p)

@@ -50,8 +50,8 @@ kindedExpr (List r exprs) = List r <$> mapM kindedExpr exprs
 kindedExpr (Var r var) = return (Var r var)
 kindedExpr (Bin r _ op left right) = Bin r () op <$> kindedExpr left <*> kindedExpr right
 kindedExpr (App r f args) = App r <$> kindedExpr f <*> mapM kindedExpr args
-kindedExpr (GenApp r f types) =
-  GenApp r <$> kindedExpr f <*> do
+kindedExpr (GenApp r fname types) =
+  GenApp r fname <$> do
     kindEnv <- ask
     mapM (lift . runKindChecker kindEnv) types
 kindedExpr (Access r expr' prop) = Access r <$> kindedExpr expr' <*> return prop
