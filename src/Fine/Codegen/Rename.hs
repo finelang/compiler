@@ -26,68 +26,66 @@ substt name = asks (Map.findWithDefault name name)
 
 renameBlock :: Block Typed -> Reader Substts (Block Typed)
 renameBlock (Return expr) = Return <$> renameExpr expr
-renameBlock block@Void = return block
+renameBlock block@Void = pure block
 renameBlock (Do action block) = Do <$> renameExpr action <*> renameBlock block
 renameBlock (Mut var expr block) =
   Mut <$> substt var <*> renameExpr expr <*> renameBlock block
-renameBlock (Debug expr block) = Debug <$> renameExpr expr <*> renameBlock block
-renameBlock (Let isMut bound value block) =
-  Let isMut <$> substt bound <*> renameExpr value <*> renameBlock block
+renameBlock (LetMut bound value block) =
+  LetMut <$> substt bound <*> renameExpr value <*> renameBlock block
+renameBlock (Let _ patt expr block) =
+  Let () <$> renamePatt patt <*> renameExpr expr <*> renameBlock block
+renameBlock (Debug r expr block) = Debug r <$> renameExpr expr <*> renameBlock block
 renameBlock (Loop cond actions block) =
   Loop <$> renameExpr cond <*> renameBlock actions <*> renameBlock block
-renameBlock (LetPatt _ patt expr block) =
-  LetPatt () <$> renamePatt patt <*> renameExpr expr <*> renameBlock block
 
 renamePatt :: Pattern -> Reader Substts Pattern
-renamePatt patt@(LiteralP _ _) = return patt
+renamePatt patt@(LiteralP _ _) = pure patt
 renamePatt (DataP r tag patts) = DataP r tag <$> mapM renamePatt patts
 renamePatt (RecordP r props) = RecordP r <$> (mapM . mapM) renamePatt props
 renamePatt (TupleP r fst' snd' rest) =
   TupleP r <$> renamePatt fst' <*> renamePatt snd' <*> mapM renamePatt rest
-renamePatt (ListP r patts) = ListP r <$> mapM renamePatt patts
 renamePatt (Capture name) = Capture <$> substt name
-renamePatt patt@(Discard _) = return patt
+renamePatt patt@(Discard _) = pure patt
 
 renameMatch :: (Pattern, Expr Typed) -> Reader Substts (Pattern, Expr Typed)
 renameMatch (patt, expr) = (,) <$> renamePatt patt <*> renameExpr expr
 
 renameExpr :: Expr Typed -> Reader Substts (Expr Typed)
-renameExpr expr@(Literal _ _) = return expr
+renameExpr expr@(Literal _ _ _) = pure expr
 renameExpr (Data ext tag exprs) = Data ext tag <$> mapM renameExpr exprs
-renameExpr (Record ext props) = Record ext <$> (mapM . mapM) renameExpr props
-renameExpr (Tuple ext fst' snd' rest) =
-  Tuple ext <$> renameExpr fst' <*> renameExpr snd' <*> mapM renameExpr rest
-renameExpr (List ext exprs) = List ext <$> mapM renameExpr exprs
+renameExpr (Record ext r props) = Record ext r <$> (mapM . mapM) renameExpr props
+renameExpr (Tuple ext r fst' snd' rest) =
+  Tuple ext r <$> renameExpr fst' <*> renameExpr snd' <*> mapM renameExpr rest
 renameExpr (Var ext name) = Var ext <$> substt name
 renameExpr (Bin ext _ op left right) = Bin ext () op <$> renameExpr left <*> renameExpr right
-renameExpr (App ext f args) = App ext <$> renameExpr f <*> mapM renameExpr args
-renameExpr (GenApp ext fname typeArgs) = GenApp ext <$> substt fname <*> return typeArgs
-renameExpr (Access ext expr prop) = Access ext <$> renameExpr expr <*> return prop
-renameExpr (Index ext expr ix) = Index ext <$> renameExpr expr <*> return ix
-renameExpr (Cond ext cond yes no) =
-  Cond ext <$> renameExpr cond <*> renameExpr yes <*> renameExpr no
-renameExpr (Fun ext params body) =
-  Fun ext <$> mapM substt params <*> renameExpr body
-renameExpr (GenFun ext _ typeParams body) = GenFun ext () typeParams <$> renameExpr body
-renameExpr (Block ext block) =
-  Block ext <$> renameBlock block
-renameExpr (PatternMatching ext _ expr matches) =
-  PatternMatching ext () <$> renameExpr expr <*> mapM renameMatch matches
+renameExpr (App ext f arg) = App ext <$> renameExpr f <*> renameExpr arg
+renameExpr (GenApp ext _ fname typeArgs) = GenApp ext () <$> substt fname <*> pure typeArgs
+renameExpr (Access ext expr prop) = Access ext <$> renameExpr expr <*> pure prop
+renameExpr (Index ext r expr ix) = Index ext r <$> renameExpr expr <*> pure ix
+renameExpr (Cond ext r cond yes no) =
+  Cond ext r <$> renameExpr cond <*> renameExpr yes <*> renameExpr no
+renameExpr (Fun ext param body) =
+  Fun ext <$> substt param <*> renameExpr body
+renameExpr (GenFun ext _ _ typeParams body) = GenFun ext () () typeParams <$> renameExpr body
+renameExpr (Block ext r block) =
+  Block ext r <$> renameBlock block
+renameExpr (PatternMatching ext r _ expr matches) =
+  PatternMatching ext r () <$> renameExpr expr <*> mapM renameMatch matches
 
 renameBind :: Bind OfExpr Typed -> Reader Substts (Bind OfExpr Typed)
 renameBind (ExprBind binder' type' expr) = do
   binder'' <- substt binder'
-  expr' <- (if isCtor expr then return else renameExpr) expr
-  return (ExprBind binder'' type' expr')
+  expr' <- (if isCtor expr then pure else renameExpr) expr
+  pure (ExprBind binder'' type' expr')
 renameBind (ForeignBind binder' type' code) = do
   binder'' <- substt binder'
-  return (ForeignBind binder'' type' code)
+  pure (ForeignBind binder'' type' code)
 
 renameModule :: Module Typed -> Reader Substts (Module Typed)
 renameModule mdule@(Module exprs _ entry) = do
   exprs' <- mapM renameBind exprs
   entry' <- mapM renameExpr entry
-  return (mdule{moduleExprs = exprs', moduleEntry = entry'})
+  pure (mdule{moduleExprs = exprs', moduleEntry = entry'})
 
 runRenamer :: [Text] -> Module Typed -> Module Typed
 runRenamer invalidNames mdule =

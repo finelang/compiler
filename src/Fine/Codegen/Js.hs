@@ -1,14 +1,11 @@
 module Fine.Codegen.Js (runCodegen) where
 
 import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import Data.List.NonEmpty qualified as NonEmpty
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Fine.Codegen.Ready (readyModule)
 import Fine.Codegen.Rename (runRenamer)
-import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (
   Bind (ExprBind, ForeignBind),
   BindType (OfExpr),
@@ -22,6 +19,7 @@ import Fine.Syntax (
   Range (NoRange),
   idText,
  )
+import GHC.Err.Extra (errorUNREACHABLE)
 
 type Indentation = Text
 
@@ -31,7 +29,7 @@ withIndentation = local . const
 increaseIndentation :: Reader Indentation Text
 increaseIndentation = do
   indent <- ask
-  return (indent <> "  ")
+  pure (indent <> "  ")
 
 type Expr' = Expr Ready
 
@@ -66,7 +64,7 @@ genOpCode RPipe = errorUNREACHABLE "Reverse pipe operation generates function ap
 genPropCode :: (Id, Expr') -> Reader Indentation Text
 genPropCode (prop, value) = do
   value' <- genExprCode value
-  return [i|#{prop}: #{value'}|]
+  pure [i|#{prop}: #{value'}|]
 
 genPropsCode :: [(Id, Expr')] -> Reader Indentation Text
 genPropsCode props = Text.intercalate ", " <$> mapM genPropCode props
@@ -80,127 +78,116 @@ genBlockCode :: Block' -> Reader Indentation Text
 genBlockCode (Return expr) = do
   expr' <- genExprCode expr
   indent <- ask
-  return [i|#{indent}return #{expr'};\n|]
-genBlockCode Void = return Text.empty
+  pure [i|#{indent}return #{expr'};\n|]
+genBlockCode Void = pure Text.empty
 genBlockCode (Do stmt block) = do
   stmt' <- genExprCode stmt
   block' <- genBlockCode block
   indent <- ask
-  return [i|#{indent}#{stmt'};\n#{block'}|]
+  pure [i|#{indent}#{stmt'};\n#{block'}|]
 genBlockCode (Mut var expr block) = do
   expr' <- genExprCode expr
   block' <- genBlockCode block
   indent <- ask
-  return [i|#{indent}#{var} = #{expr'};\n#{block'}|]
-genBlockCode (Debug expr block) = do
+  pure [i|#{indent}#{var} = #{expr'};\n#{block'}|]
+genBlockCode (LetMut bound expr block) = do
   expr' <- genExprCode expr
   block' <- genBlockCode block
   indent <- ask
-  return [i|#{indent}console.log(#{expr'});\n#{block'}|]
-genBlockCode (Let isMut bound expr block) = do
-  let keyword = if isMut then "let" else "const" :: Text
+  pure [i|#{indent}let #{bound} = #{expr'};\n#{block'}|]
+genBlockCode (Debug _ expr block) = do
   expr' <- genExprCode expr
   block' <- genBlockCode block
   indent <- ask
-  return [i|#{indent}#{keyword} #{bound} = #{expr'};\n#{block'}|]
+  pure [i|#{indent}console.log(#{expr'});\n#{block'}|]
 genBlockCode (Loop cond actions block) = do
   cond' <- genExprCode cond
   actions' <- genStmtsCode actions
   block' <- genBlockCode block
   indent <- ask
-  return [i|#{indent}while (#{cond'}) {\n#{actions'}#{indent}}\n#{block'}|]
+  pure [i|#{indent}while (#{cond'}) {\n#{actions'}#{indent}}\n#{block'}|]
 genBlockCode (If _ cond ifBlock block) = do
   cond' <- genExprCode cond
   ifBlock' <- genStmtsCode ifBlock
   block' <- genBlockCode block
   indent <- ask
-  return [i|#{indent}if (#{cond'}) {\n#{ifBlock'}#{indent}}\n#{block'}|]
+  pure [i|#{indent}if (#{cond'}) {\n#{ifBlock'}#{indent}}\n#{block'}|]
+genBlockCode (LetImmut _ bound expr block) = do
+  expr' <- genExprCode expr
+  block' <- genBlockCode block
+  indent <- ask
+  pure [i|#{indent}const #{bound} = #{expr'};\n#{block'}|]
 
 genStmtsCode :: Block' -> Reader Indentation Text
 genStmtsCode block = do
   indent <- increaseIndentation
   withIndentation indent (genBlockCode block)
 
-genFunCode :: NonEmpty Id -> Expr' -> Reader Indentation Text
-genFunCode params body =
-  let params' = Text.intercalate ", " $ map idText $ NonEmpty.toList params
-   in case body of
-        Block _ block -> do
-          body' <- genStmtsCode block
-          indent <- ask
-          return [i|((#{params'}) => {\n#{body'}#{indent}})|]
-        _ -> do
-          body' <- genExprCode body
-          return [i|((#{params'}) => #{body'})|]
-
 genExprCode :: Expr' -> Reader Indentation Text
-genExprCode (Literal _ lit) = return (genLitCode lit)
+genExprCode (Literal _ _ lit) = pure (genLitCode lit)
 genExprCode (Data _ tag exprs) = do
   let tagged = [i|$tag: "#{tag}"|] :: Text
   exprs' <- genIndexedPropsCode exprs
-  return $
+  pure $
     if null exprs
       then [i|({#{tagged}})|]
       else [i|({#{tagged}, #{exprs'}})|]
-genExprCode (Record _ props) = do
+genExprCode (Record _ _ props) = do
   props' <- genPropsCode props
-  return [i|({#{props'}})|]
-genExprCode (Tuple _ fst' snd' rest) = do
+  pure [i|({#{props'}})|]
+genExprCode (Tuple _ _ fst' snd' rest) = do
   exprs' <- genIndexedPropsCode (fst' : snd' : rest)
-  return [i|({#{exprs'}})|]
-genExprCode (List _ exprs) = do
-  exprs' <- Text.intercalate ", " <$> mapM genExprCode exprs
-  return [i|[#{exprs'}]|]
-genExprCode (Var _ var) = return (idText var)
-genExprCode (Bin t _ Pipe arg f) = genExprCode (App t f (arg :| []))
-genExprCode (Bin t _ RPipe f arg) = genExprCode (App t f (arg :| []))
+  pure [i|({#{exprs'}})|]
+genExprCode (Var _ var) = pure (idText var)
+genExprCode (Bin t _ Pipe arg f) = genExprCode (App t f arg)
+genExprCode (Bin t _ RPipe f arg) = genExprCode (App t f arg)
 genExprCode (Bin _ _ op left right) = do
   let op' = genOpCode op
   left' <- genExprCode left
   right' <- genExprCode right
-  return [i|(#{left'} #{op'} #{right'})|]
-genExprCode (App _ f args) = do
+  pure [i|(#{left'} #{op'} #{right'})|]
+genExprCode (App _ f arg) = do
   f' <- genExprCode f
-  args' <- Text.intercalate ", " <$> mapM genExprCode (NonEmpty.toList args)
-  return [i|#{f'}(#{args'})|]
-genExprCode (GenApp _ fname _) = return $ idText fname
+  arg' <- genExprCode arg
+  pure [i|#{f'}(#{arg'})|]
 genExprCode (Access _ expr prop) = do
   expr' <- genExprCode expr
-  return [i|#{expr'}.#{prop}|]
-genExprCode (Index _ expr ix) = do
+  pure [i|#{expr'}.#{prop}|]
+genExprCode (Index _ _ expr ix) = do
   expr' <- genExprCode expr
-  return [i|#{expr'}[#{ix}]|]
-genExprCode (Cond _ cond yes no) = do
+  pure [i|#{expr'}[#{ix}]|]
+genExprCode (Cond _ _ cond yes no) = do
   cond' <- genExprCode cond
   yes' <- genExprCode yes
   no' <- genExprCode no
-  return [i|#{cond'} ? #{yes'} : #{no'}|]
-genExprCode (Fun _ params body) = genFunCode params body
-genExprCode (GenFun _ _ _ body) = genExprCode body
-genExprCode (Block _ block) = do
+  pure [i|#{cond'} ? #{yes'} : #{no'}|]
+genExprCode (Fun _ param body) = do
+  body' <- genExprCode body
+  pure [i|(#{param} => #{body'})|]
+genExprCode (Block _ _ block) = do
   content <- genStmtsCode block
   indent <- ask
-  return [i|(() => {\n#{content}#{indent}})()|]
+  pure [i|(() => {\n#{content}#{indent}})()|]
 
 genBindCode :: Bind OfExpr Ready -> Reader Indentation Text
 genBindCode (ExprBind binder' _ expr) = do
   expr' <- genExprCode expr
-  return [i|const #{binder'} = #{expr'};|]
+  pure [i|const #{binder'} = #{expr'};|]
 genBindCode (ForeignBind binder' _ code) =
-  return [i|const #{binder'} = #{code};|]
+  pure [i|const #{binder'} = #{code};|]
 
 genModuleCode :: Module Ready -> Reader Indentation Text
 genModuleCode (Module values _ entry) = do
   case (values, entry) of
-    ([], Nothing) -> return ""
+    ([], Nothing) -> pure ""
     ([], Just expr) -> (<> ";\n") <$> genExprCode expr
     (_, Nothing) -> do
       defns <- fmap (Text.intercalate "\n\n") (mapM genBindCode values)
-      return defns
+      pure defns
     (_, Just expr) -> do
       defns <- fmap (Text.intercalate "\n\n") (mapM genBindCode values)
       expr' <- genExprCode expr
-      return [i|#{defns}\n\n#{expr'};\n|]
+      pure [i|#{defns}\n\n#{expr'};\n|]
 
 runCodegen :: Module Typed -> Text
 runCodegen mdule =

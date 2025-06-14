@@ -43,7 +43,7 @@ instance (Monad m) => Monad (ErrorsT e m) where
   ErrorsT mex >>= f = ErrorsT $ do
     ex <- mex
     case ex of
-      Left es -> return (Left es)
+      Left es -> pure (Left es)
       Right x -> runErrorsT (f x)
 
 instance MonadTrans (ErrorsT e) where

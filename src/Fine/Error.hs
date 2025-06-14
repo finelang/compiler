@@ -1,8 +1,6 @@
 module Fine.Error (
   Warning (..),
   Error (..),
-  errorTODO,
-  errorUNREACHABLE,
   wrapWarning,
   wrapError,
 )
@@ -11,14 +9,8 @@ where
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Fine.Syntax (Id, Kind, Op, Phase (PartiallyKinded), Range)
-import GHC.Stack (HasCallStack)
+import GHC.Err.Extra (errorTODO)
 import String.ANSI (red, yellow)
-
-errorTODO :: (HasCallStack) => a
-errorTODO = error "Not Implemented"
-
-errorUNREACHABLE :: (HasCallStack) => String -> a
-errorUNREACHABLE message = error $ "This section of code should be unreachable. " ++ message
 
 hl :: (Show a) => a -> Text
 hl x = [i|'#{show x}'|]

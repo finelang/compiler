@@ -28,7 +28,6 @@ import Fine.Syntax (
   Phase (Parsed, Transformed),
   Type (..),
   binder,
-  range,
  )
 import Fine.Syntax.Utils (isFunction)
 import Fine.Transform.Check (alreadyDefined, runExprVarChecker, runTypeVarChecker)
@@ -54,15 +53,15 @@ data Env = Env
   }
 
 initEnv :: [Defn] -> SEC Env e c ()
-initEnv [] = return ()
+initEnv [] = pure ()
 initEnv (defn : defns) = do
   case defn of
-    Defn _ -> return ()
+    Defn _ -> pure ()
     TypeDefn (TypeBind binder' _) ->
       modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
     DataDefn (TypeBind binder' _) _ -> do
       modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
-    MutRecDefns _ -> return ()
+    MutRecDefns _ -> pure ()
   initEnv defns
 
 -- TYPE
@@ -85,7 +84,7 @@ transformTypeBind (TypeBind binder' type') = do
   let type'' = transformType type'
   modify (\st -> st{currentTypeBinders = Set.insert binder' (currentTypeBinders st)})
   checkType (Just binder') type''
-  return (TypeBind binder' type'')
+  pure (TypeBind binder' type'')
 
 -- EXPR
 
@@ -119,14 +118,14 @@ transformExprBind bind = do
       forM_ wrns collect
       expr' <- fromEither result
       let expr'' = case type'' of
-            Forall _ tparams _ -> GenFun (range expr') () tparams expr'
+            Forall _ _ tparams _ -> GenFun () () () tparams expr'
             _ -> expr'
       checkExpr (Just binder') expr''
-      return (ExprBind binder' type'' expr'')
+      pure (ExprBind binder' type'' expr'')
     ForeignBind binder' type' code -> do
       let type'' = transformType type'
       checkType Nothing type''
-      return (ForeignBind binder' type'' code)
+      pure (ForeignBind binder' type'' code)
 
 -- MODULE
 
@@ -146,7 +145,7 @@ checkRepeatedBinders defns = do
 
 transformExprDefn :: Defn -> SEC Env Error Warning [Bind OfExpr Transformed]
 transformExprDefn (Defn bind) = singleton <$> transformExprBind bind
-transformExprDefn (TypeDefn _) = return []
+transformExprDefn (TypeDefn _) = pure []
 transformExprDefn (DataDefn _ binds) = NonEmpty.toList <$> mapM transformExprBind binds
 transformExprDefn (MutRecDefns binds) = do
   currentBinders <- gets currentExprBinders
@@ -158,17 +157,17 @@ transformExprDefn (MutRecDefns binds) = do
     modify (\st -> st{currentExprBinders = Set.union rest currentBinders})
     transformExprBind bind
   modify (\st -> st{currentExprBinders = Set.union binders currentBinders})
-  return $ NonEmpty.toList binds'
+  pure $ NonEmpty.toList binds'
  where
   hasFunExpr :: Bind OfExpr Parsed -> Bool
   hasFunExpr (ExprBind _ _ expr) = isFunction expr
   hasFunExpr (ForeignBind _ _ _) = False
 
 transformTypeDefn :: Defn -> SEC Env Error Warning (Maybe (Bind OfType Transformed))
-transformTypeDefn (Defn _) = return Nothing
+transformTypeDefn (Defn _) = pure Nothing
 transformTypeDefn (TypeDefn bind) = Just <$> transformTypeBind bind
 transformTypeDefn (DataDefn bind _) = Just <$> transformTypeBind bind
-transformTypeDefn (MutRecDefns _) = return Nothing
+transformTypeDefn (MutRecDefns _) = pure Nothing
 
 warnUnusedBinders :: SEC Env e Warning ()
 warnUnusedBinders = do
@@ -192,9 +191,9 @@ transformModule (ParsedModule defns entry) = do
     forM_ wrns collect
     expr' <- fromEither result
     checkExpr Nothing expr'
-    return expr'
+    pure expr'
   warnUnusedBinders
-  return (Module exprBinds typeBinds entry')
+  pure (Module exprBinds typeBinds entry')
 
 runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Transformed), [Warning])
 runTransformer mdule =

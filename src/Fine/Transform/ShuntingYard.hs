@@ -6,14 +6,14 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Errors (Errors, failure, runErrors)
 import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, gets, modify)
 import Data.List.NonEmpty (NonEmpty)
-import Fine.Error (Error (SameInfixPrecedence), errorUNREACHABLE)
+import Fine.Error (Error (SameInfixPrecedence))
 import Fine.Syntax (
   Equation (..),
   Expr (Bin),
   Op (..),
   Phase (Transformed),
-  range,
  )
+import GHC.Err.Extra (errorUNREACHABLE)
 
 type SE s e a = StateT s (Errors e) a
 
@@ -58,7 +58,7 @@ modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
 mkBinOp :: [Expr'] -> Op -> [Expr']
 mkBinOp (right : left : rest) op =
-  Bin (range left <> range right) () op left right : rest
+  Bin () () op left right : rest
 mkBinOp _ _ = errorUNREACHABLE "Operand stack does not contains two operands."
 
 consume :: [Expr'] -> [Op] -> [Expr']
@@ -98,9 +98,9 @@ sy' curr chain = do
 sy :: Equation' -> SE SYStack Error Expr'
 sy (Operand expr) = do
   (operands, operators) <- get
-  return $ head $ consume (expr : operands) operators
+  pure $ head $ consume (expr : operands) operators
 sy (Operation expr curr chain) = modifyOperands (expr :) >> sy' curr chain
 
 runShuntingYard :: Equation (Expr Transformed) -> Either (NonEmpty Error) (Expr Transformed)
-runShuntingYard (Operand expr) = return expr
+runShuntingYard (Operand expr) = pure expr
 runShuntingYard (Operation left op chain) = runErrors $ evalStateT (sy chain) ([left], [op])

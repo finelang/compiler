@@ -24,7 +24,7 @@ try op x = do
   lift $ tell wrns
   case result of
     Left errs -> throwE errs
-    Right y -> return y
+    Right y -> pure y
 
 pipeline :: ParsedModule -> EW (NonEmpty Error) [Warning] Text
 pipeline parsed = do
@@ -32,13 +32,13 @@ pipeline parsed = do
   kinded <- try runKinder transformed
   typed <- try runTyper kinded
   let code = runCodegen typed
-  return code
+  pure code
 
 getPaths :: IO (String, String)
 getPaths = do
   args <- getArgs
   case args of
-    (x : y : _) -> return (x, y)
+    (x : y : _) -> pure (x, y)
     _ -> error "Not enough arguments."
 
 warn :: (Foldable t) => t Warning -> IO ()

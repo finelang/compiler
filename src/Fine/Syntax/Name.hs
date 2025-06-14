@@ -2,8 +2,8 @@ module Fine.Syntax.Name where
 
 import Data.String.Interpolate (i)
 import Data.Text qualified as Text
-import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (Id (Id), Range (NoRange))
+import GHC.Err.Extra (errorUNREACHABLE)
 
 matchedVar :: Range -> Id
 matchedVar r = Id r "$"
@@ -13,9 +13,6 @@ param r x = Id r [i|x#{x}|]
 
 tagProp :: Id
 tagProp = Id NoRange "$tag"
-
-lengthProp :: Id
-lengthProp = Id NoRange "length"
 
 irrelevant :: Id
 irrelevant = Id NoRange "_"

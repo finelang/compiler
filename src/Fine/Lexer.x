@@ -39,7 +39,7 @@ tokens :-
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
   "float"                     { mkt Float }
-  "fn"                        { mkt Fn }
+  "forall"                    { mkt Forall }
   "foreign"                   { mkt Foreign }
   "if"                        { mkt If }
   "int"                       { mkt Int }
@@ -50,7 +50,6 @@ tokens :-
   "string"                    { mkt Str }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
-  "type"                      { mkt Type }
   "void"                      { mkt Void }
   "while"                     { mkt While }
   "_"+                        { mkt Discard }
@@ -64,6 +63,7 @@ tokens :-
   "="                         { mkt Assign }
   "."                         { mkt Dot }
   ":"                         { mkt Colon }
+  \\                          { mkt BSlash }
   "|>"                        { mkt Pipe }
   "<|"                        { mkt RPipe }
   "&&"                        { mkt And }
@@ -84,8 +84,6 @@ tokens :-
   ")"                         { mkt Cpar }
   "{"                         { mkt Obrace }
   "}"                         { mkt Cbrace }
-  "["                         { mkt Osquare }
-  "]"                         { mkt Csquare }
   ","                         { mkt Comma }
   ";"                         { mkt Semi }
 
@@ -96,6 +94,7 @@ tokens :-
   | Debug
   | Else
   | Fn
+  | Forall
   | Foreign
   | If
   | Let
@@ -103,7 +102,6 @@ tokens :-
   | Mut
   | Run
   | Then
-  | Type
   | While
   -- identifiers
   | FalseTok
@@ -114,8 +112,7 @@ tokens :-
   | Bool
   | Void
   | Discard
-  | Id
-  | CapId
+  | Id | CapId
   -- literals
   | StrLit
   | Nat
@@ -126,19 +123,15 @@ tokens :-
   | Assign
   | Dot
   | Colon
+  | BSlash
   | Pipe | RPipe
   | And | Or
   | Ccat
   | Le | Lt | Ge | Gt | Eq | Neq
   | Add | Sub | Mult | Div | Rest
-  | Opar
-  | Cpar
-  | Obrace
-  | Cbrace
-  | Osquare
-  | Csquare
-  | Comma
-  | Semi
+  | Opar | Cpar
+  | Obrace | Cbrace
+  | Comma | Semi
   deriving (Show)
 
 data TokenPosn = TokenPosn

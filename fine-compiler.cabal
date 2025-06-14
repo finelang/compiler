@@ -54,6 +54,7 @@ library
     Fine.Typer.Kinder
     Fine.Typer.Kinder.J
     Fine.Typer.Pattern
+    GHC.Err.Extra
   hs-source-dirs:
     src
   default-extensions:

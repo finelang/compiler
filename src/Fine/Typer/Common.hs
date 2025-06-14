@@ -3,8 +3,8 @@ module Fine.Typer.Common where
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.String.Interpolate (i)
-import Fine.Error (errorUNREACHABLE)
 import Fine.Syntax (Id)
+import GHC.Err.Extra (errorUNREACHABLE)
 
 type Env a = Map Id a
 

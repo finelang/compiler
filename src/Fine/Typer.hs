@@ -21,7 +21,7 @@ asTyped :: Type Kinded -> Type Typed
 asTyped = unsafeCoerce
 
 tempType :: Type Typed
-tempType = LiteralT (NoRange, KLit NoRange) UnitT
+tempType = LiteralT (KLit NoRange) NoRange UnitT
 
 typedBlock :: Block Kinded -> Block Typed
 typedBlock (Return expr) = Return $ typedExpr expr
@@ -29,34 +29,33 @@ typedBlock Void = Void
 typedBlock (Do action block) = Do (typedExpr action) (typedBlock block)
 typedBlock (Mut var expr block) =
   Mut var (typedExpr expr) (typedBlock block)
-typedBlock (Debug expr block) = Debug (typedExpr expr) (typedBlock block)
-typedBlock (Let isMut binder value block) =
-  Let isMut binder (typedExpr value) (typedBlock block)
+typedBlock (LetMut binder value block) =
+  LetMut binder (typedExpr value) (typedBlock block)
+typedBlock (Let _ patt expr block) =
+  Let () patt (typedExpr expr) (typedBlock block)
+typedBlock (Debug r expr block) = Debug r (typedExpr expr) (typedBlock block)
 typedBlock (Loop cond actions block) =
   Loop (typedExpr cond) (typedBlock actions) (typedBlock block)
-typedBlock (LetPatt _ patt expr block) =
-  LetPatt () patt (typedExpr expr) (typedBlock block)
 
 typedExpr :: Expr Kinded -> Expr Typed
-typedExpr (Literal r lit) = Literal (r, tempType) lit
-typedExpr (Data r tag exprs) = Data (r, tempType) tag (map typedExpr exprs)
-typedExpr (Record r props) = Record (r, tempType) $ (map . fmap) typedExpr props
-typedExpr (Tuple r fst' snd' rest) =
-  Tuple (r, tempType) (typedExpr fst') (typedExpr snd') (map typedExpr rest)
-typedExpr (List r exprs) = List (r, tempType) (map typedExpr exprs)
-typedExpr (Var r var) = Var (r, tempType) var
-typedExpr (Bin r _ op left right) = Bin (r, tempType) () op (typedExpr left) (typedExpr right)
-typedExpr (App r f args) = App (r, tempType) (typedExpr f) (NonEmpty.map typedExpr args)
-typedExpr (GenApp r fname targs) = GenApp (r, tempType) fname (NonEmpty.map asTyped targs)
-typedExpr (Access r expr prop) = Access (r, tempType) (typedExpr expr) prop
-typedExpr (Index r expr ix) = Index (r, tempType) (typedExpr expr) ix
-typedExpr (Cond r cond yes no) =
-  Cond (r, tempType) (typedExpr cond) (typedExpr yes) (typedExpr no)
-typedExpr (PatternMatching r _ expr matches) =
-  PatternMatching (r, tempType) () (typedExpr expr) $ (NonEmpty.map . fmap) typedExpr matches
-typedExpr (Fun r params body) = Fun (r, tempType) params (typedExpr body)
-typedExpr (GenFun r _ tparams body) = GenFun (r, tempType) () tparams (typedExpr body)
-typedExpr (Block r block) = Block (r, tempType) (typedBlock block)
+typedExpr (Literal _ r lit) = Literal tempType r lit
+typedExpr (Data _ tag exprs) = Data tempType tag (map typedExpr exprs)
+typedExpr (Record _ r props) = Record tempType r $ (map . fmap) typedExpr props
+typedExpr (Tuple _ r fst' snd' rest) =
+  Tuple tempType r (typedExpr fst') (typedExpr snd') (map typedExpr rest)
+typedExpr (Var _ var) = Var tempType var
+typedExpr (Bin _ _ op left right) = Bin tempType () op (typedExpr left) (typedExpr right)
+typedExpr (App _ f arg) = App tempType (typedExpr f) (typedExpr arg)
+typedExpr (GenApp _ _ fname targs) = GenApp tempType () fname (NonEmpty.map asTyped targs)
+typedExpr (Access _ expr prop) = Access tempType (typedExpr expr) prop
+typedExpr (Index _ r expr ix) = Index tempType r (typedExpr expr) ix
+typedExpr (Cond _ r cond yes no) =
+  Cond tempType r (typedExpr cond) (typedExpr yes) (typedExpr no)
+typedExpr (PatternMatching _ r _ expr matches) =
+  PatternMatching tempType r () (typedExpr expr) $ (NonEmpty.map . fmap) typedExpr matches
+typedExpr (Fun _ param body) = Fun tempType param (typedExpr body)
+typedExpr (GenFun _ _ _ tparams body) = GenFun tempType () () tparams (typedExpr body)
+typedExpr (Block _ r block) = Block tempType r (typedBlock block)
 
 typedExprBind :: Bind OfExpr Kinded -> Bind OfExpr Typed
 typedExprBind (ExprBind binder type' expr) = ExprBind binder (asTyped type') (typedExpr expr)
