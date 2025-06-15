@@ -33,23 +33,23 @@ tokens :-
 
   $white+                     ;
   "//"\-*[^$symbol].*         ;
-  "bool"                      { mkt Bool }
+  "Bool"                      { mkt Bool }
   "debug"                     { mkt Debug }
   "else"                      { mkt Else }
   "false"                     { mkt FalseTok }
-  "float"                     { mkt Float }
+  "Float"                     { mkt Float }
   "forall"                    { mkt Forall }
   "foreign"                   { mkt Foreign }
   "if"                        { mkt If }
-  "int"                       { mkt Int }
+  "Int"                       { mkt Int }
   "let"                       { mkt Let }
   "match"                     { mkt Match }
   "mut"                       { mkt Mut }
   "run"                       { mkt Run }
-  "string"                    { mkt Str }
+  "String"                    { mkt Str }
   "then"                      { mkt Then }
   "true"                      { mkt TrueTok }
-  "void"                      { mkt Void }
+  "Void"                      { mkt Void }
   "while"                     { mkt While }
   "_"+                        { mkt Discard }
   [$small][$alpha $digit]*    { mkt Id }
