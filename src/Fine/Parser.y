@@ -10,7 +10,7 @@ import qualified Data.Text as Text
 import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
-import Fine.Syntax.Name (irrelevant)
+import Fine.Syntax.Name (irrelevant, matchedParam)
 import Fine.Syntax.Utils (mkDataDefn)
 }
 
@@ -186,6 +186,7 @@ Atom : '(' OptExprs ')'             { mkTuple (range $1 <> range $3) (reverse $2
      | strlit                       { Literal () (range $1) (Str $ extractStr $1) }
      | Id                           { Var () $1 }
      | match Access '{' Matches '}' { PatternMatching () (range $1 <> range $5) () $2 $4 }
+     | '\\' match '{' Matches '}'   { mkMatchFun (range $1 <> range $5) (matchedParam (range $2)) $4 }
 -- TODO: gen app
 
 Matches_ : Matches_ ';' Match { $3 : $1 }
@@ -265,6 +266,7 @@ Defn : let TyId Params '=' Type       { TypeDefn (TypeBind $2 (foldr (TFun ()) $
      | let Id ':' Forall              { TypingDefn $2 $4 }
      | let foreign Id '=' strlit      { ForeignDefn $3 (extractStr $5) }
      | let Id '=' Expr                { ValueDefn $2 $4 }
+     | let Id Params '=' Expr         { ValueDefn $2 (foldr (Fun ()) $5 $3) }
 
 Ctors_ : Ctors_ ';' Ctor  { $3 : $1 }
        | Ctor             { [$1] }
@@ -295,6 +297,8 @@ mkTupleP r (p1 : p2 : ps) = TupleP r p1 p2 ps
 
 mkTupleT r (t :| []) = t
 mkTupleT r (t1 :| (t2 : ts)) = TupleT () r t1 t2 ts
+
+mkMatchFun r p ms = Fun () p (PatternMatching () r () (Var () p) ms)
 
 parseError tokens = error . show . head $ tokens
 }

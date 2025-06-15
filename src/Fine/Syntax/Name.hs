@@ -8,6 +8,9 @@ import GHC.Err.Extra (errorUNREACHABLE)
 matchedVar :: Range -> Id
 matchedVar r = Id r "$"
 
+matchedParam :: Range -> Id
+matchedParam r = Id r "$param"
+
 param :: Range -> Int -> Id
 param r x = Id r [i|x#{x}|]
 
