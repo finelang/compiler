@@ -384,10 +384,11 @@ binder (TypeBind idn _) = idn
 binder (ForeignBind idn _ _) = idn
 
 data Defn
-  = Defn (Bind OfExpr Parsed)
+  = ValueDefn Id (Expr Parsed)
+  | ForeignDefn Id Text
+  | TypingDefn Id (Type Parsed)
   | TypeDefn (Bind OfType Parsed)
   | DataDefn (Bind OfType Parsed) (NonEmpty (Bind OfExpr Parsed))
-  | MutRecDefns (NonEmpty (Bind OfExpr Parsed))
 
 data ParsedModule
   = ParsedModule [Defn] (Maybe (Expr Parsed))

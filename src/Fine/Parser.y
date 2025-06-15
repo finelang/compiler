@@ -19,7 +19,6 @@ import Fine.Syntax.Utils (mkDataDefn)
 %error { parseError }
 
 %token
-  and       { Token Lex.AndKw _ _ }
   debug     { Token Lex.Debug _ _ }
   else      { Token Lex.Else _ _ }
   forall    { Token Lex.Forall _ _ }
@@ -259,19 +258,13 @@ Entry : run Expr    { Just $2 }
 Defns : Defns Defn  { $2 : $1 }
       | {- empty -} { [] }
 
-Defn : let TyId Params '=' Type             { TypeDefn (TypeBind $2 (foldr (TFun ()) $5 $3)) }
-     | let TyId '=' Type                    { TypeDefn (TypeBind $2 $4) }
-     | let TyId Params '{' Ctors '}'        { mkDataDefn $2 (Just $3) $5 }
-     | let TyId '{' Ctors '}'               { mkDataDefn $2 Nothing $4 }
-     | let foreign Id ':' Forall '=' strlit { Defn (ForeignBind $3 $5 (extractStr $7)) }
-     | let MutRecBinds                      { if NonEmpty.length $2 > 1 then MutRecDefns $2 else Defn (NonEmpty.head $2) }
-
-MutRecBinds_ : MutRecBinds_ and ExprBind  { $3 : $1 }
-             | ExprBind                   { [$1] }
-
-MutRecBinds : MutRecBinds_  { toNonEmptyPARTIAL (reverse $1) }
-
-ExprBind : Id ':' Forall '=' Expr { ExprBind $1 $3 $5 }
+Defn : let TyId Params '=' Type       { TypeDefn (TypeBind $2 (foldr (TFun ()) $5 $3)) }
+     | let TyId '=' Type              { TypeDefn (TypeBind $2 $4) }
+     | let TyId Params '{' Ctors '}'  { mkDataDefn $2 (Just $3) $5 }
+     | let TyId '{' Ctors '}'         { mkDataDefn $2 Nothing $4 }
+     | let Id ':' Forall              { TypingDefn $2 $4 }
+     | let foreign Id '=' strlit      { ForeignDefn $3 (extractStr $5) }
+     | let Id '=' Expr                { ValueDefn $2 $4 }
 
 Ctors_ : Ctors_ ';' Ctor  { $3 : $1 }
        | Ctor             { [$1] }

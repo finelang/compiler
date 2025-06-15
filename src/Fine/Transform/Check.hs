@@ -43,7 +43,7 @@ alreadyDefined xs = (concat . map mkErr . group . sort) xs
  where
   mkErr [] = []
   mkErr [_] = []
-  mkErr (y : ys) = map (AlreadyDefined y) ys
+  mkErr (_ : ys) = map AlreadyDefined ys
 
 checked :: Id -> REC (Set Id) Error c Id
 checked var = do

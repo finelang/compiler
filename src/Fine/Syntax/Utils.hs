@@ -28,6 +28,10 @@ isFunction (Fun _ _ _) = True
 isFunction (GenFun _ _ _ _ body) = isFunction body
 isFunction _ = False
 
+isTFunction :: Type p -> Bool
+isTFunction (TFun _ _ _) = True
+isTFunction _ = False
+
 isCtor :: Expr p -> Bool
 isCtor (Data _ _ _) = True
 isCtor (Fun _ _ body) = isCtor body

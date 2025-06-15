@@ -10,11 +10,13 @@ import Control.Monad.Trans.State.Strict (StateT, evalStateT, gets, modify)
 import Data.List (singleton)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Maybe (catMaybes, mapMaybe)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (catMaybes)
 import Data.Set (Set, (\\))
 import Data.Set qualified as Set
 import Fine.Error (
-  Error (MutRecBindNotFun, UsageBeforeInit),
+  Error (AlreadyDefined, InvalidBinding, MissingTyping, RepeatedTyping, UsageBeforeInit),
   Warning (UnusedVar),
  )
 import Fine.Syntax (
@@ -29,8 +31,8 @@ import Fine.Syntax (
   Type (..),
   binder,
  )
-import Fine.Syntax.Utils (isFunction)
-import Fine.Transform.Check (alreadyDefined, runExprVarChecker, runTypeVarChecker)
+import Fine.Syntax.Utils (isFunction, isTFunction)
+import Fine.Transform.Check (runExprVarChecker, runTypeVarChecker)
 import Fine.Transform.Term (runExprTransformer, transformType)
 
 type SEC s e c a = StateT s (ErrorsT e (Collector c)) a
@@ -45,134 +47,158 @@ collect :: c -> SEC s e c ()
 collect = lift . lift . Collector.collect
 
 data Env = Env
-  { currentExprBinders :: Set Id,
+  { allExprBinders :: Set Id,
+    currentExprBinders :: Set Id,
     usedExprBinders :: Set Id,
-    allTypeBinders :: Set Id, -- all binders to make available for type functions
+    --
+    validNonFunctionFreeVars :: Set Id,
+    --
+    allTypeBinders :: Set Id,
     currentTypeBinders :: Set Id,
-    usedTypeBinders :: Set Id
+    usedTypeBinders :: Set Id,
+    --
+    exprTypings :: Map Id (Type Parsed)
   }
 
-initEnv :: [Defn] -> SEC Env e c ()
-initEnv [] = pure ()
-initEnv (defn : defns) = do
-  case defn of
-    Defn _ -> pure ()
-    TypeDefn (TypeBind binder' _) ->
-      modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
-    DataDefn (TypeBind binder' _) _ -> do
-      modify (\st -> st{allTypeBinders = Set.insert binder' (allTypeBinders st)})
-    MutRecDefns _ -> pure ()
-  initEnv defns
+initEnv :: [Defn] -> SEC Env Error c ()
+initEnv = mapM_ go
+ where
+  go (ValueDefn binder' _) = addExprBinder binder'
+  go (ForeignDefn binder' _) = do
+    addExprBinder binder'
+    modify $ \env@Env{validNonFunctionFreeVars} ->
+      env{validNonFunctionFreeVars = Set.insert binder' validNonFunctionFreeVars}
+  go (TypingDefn binder' type') = do
+    typings <- gets exprTypings
+    if Map.member binder' typings
+      then failure (RepeatedTyping binder')
+      else modify $ \env -> env{exprTypings = Map.insert binder' type' typings}
+  go (TypeDefn (TypeBind binder' _)) = addTypeBinder binder'
+  go (DataDefn (TypeBind binder' _) ctBinds) = do
+    addTypeBinder binder'
+    let ctBinders = NonEmpty.map binder ctBinds
+    forM_ ctBinders $ \ctBinder -> do
+      addExprBinder ctBinder
+      modify $ \env@Env{validNonFunctionFreeVars} ->
+        env{validNonFunctionFreeVars = Set.insert ctBinder validNonFunctionFreeVars}
+  addExprBinder binder' = do
+    binders <- gets allExprBinders
+    if Set.member binder' binders
+      then failure (AlreadyDefined binder')
+      else modify $ \env -> env{allExprBinders = Set.insert binder' binders}
+  addTypeBinder binder' = do
+    binders <- gets allTypeBinders
+    if Set.member binder' binders
+      then failure (AlreadyDefined binder')
+      else modify $ \env -> env{allTypeBinders = Set.insert binder' binders}
 
 -- TYPE
 
 checkType :: Maybe Id -> Type Transformed -> SEC Env Error Warning ()
 checkType optBinder type' = do
-  let isTFun = case type' of
-        TFun _ _ _ -> True
-        _ -> False
+  forM_ optBinder $ \binder' ->
+    modify $ \env@Env{currentTypeBinders} ->
+      env{currentTypeBinders = Set.insert binder' currentTypeBinders}
+  let isTFun = isTFunction type'
   tVars <- gets (if isTFun then allTypeBinders else currentTypeBinders)
   let (result, wrns) = runTypeVarChecker tVars type'
   forM_ wrns collect
   usedTVars <- fromEither result
   unless isTFun $ forM_ optBinder $ \binder' ->
     when (Set.member binder' usedTVars) (failure $ UsageBeforeInit binder')
-  modify (\st -> st{usedTypeBinders = Set.union usedTVars (usedTypeBinders st)})
+  modify $ \env@Env{usedTypeBinders} ->
+    env{usedTypeBinders = Set.union usedTVars usedTypeBinders}
 
 transformTypeBind :: Bind OfType Parsed -> SEC Env Error Warning (Bind OfType Transformed)
 transformTypeBind (TypeBind binder' type') = do
   let type'' = transformType type'
-  modify (\st -> st{currentTypeBinders = Set.insert binder' (currentTypeBinders st)})
   checkType (Just binder') type''
   pure (TypeBind binder' type'')
 
 -- EXPR
 
-checkExpr :: Maybe Id -> Expr Transformed -> SEC Env Error Warning ()
-checkExpr optBinder expr = do
-  vars <- gets currentExprBinders
+checkBoundExpr :: Id -> Expr Transformed -> SEC Env Error Warning ()
+checkBoundExpr binder' expr = do
+  let isFun = isFunction expr
+  modify $ \env@Env{currentExprBinders} ->
+    env{currentExprBinders = Set.insert binder' currentExprBinders}
+  unless isFun $ modify $ \env@Env{validNonFunctionFreeVars} ->
+    env{validNonFunctionFreeVars = Set.insert binder' validNonFunctionFreeVars}
+  vars <- gets (if isFun then allExprBinders else currentExprBinders)
   tVars <- gets allTypeBinders
   let (result, wrns) = runExprVarChecker vars tVars expr
   forM_ wrns collect
   (usedVars, usedTVars) <- fromEither result
-  unless (isFunction expr) $ forM_ optBinder $ \binder' ->
+  unless isFun $ do
     when (Set.member binder' usedVars) (failure $ UsageBeforeInit binder')
-  modify
-    ( \st ->
-        st
-          { usedExprBinders = Set.union usedVars (usedExprBinders st),
-            usedTypeBinders = Set.union usedTVars (usedTypeBinders st)
-          }
-    )
+    invalidFreeVars <- gets (Set.difference usedVars . validNonFunctionFreeVars)
+    forM_ invalidFreeVars (failure . InvalidBinding binder')
+  modify $ \env@Env{usedExprBinders, usedTypeBinders} ->
+    env
+      { usedExprBinders = Set.union usedVars usedExprBinders,
+        usedTypeBinders = Set.union usedTVars usedTypeBinders
+      }
+
+checkEntryExpr :: Expr Transformed -> SEC Env Error Warning ()
+checkEntryExpr expr = do
+  vars <- gets allExprBinders
+  tVars <- gets allTypeBinders
+  let (result, wrns) = runExprVarChecker vars tVars expr
+  forM_ wrns collect
+  (usedVars, usedTVars) <- fromEither result
+  modify $ \env@Env{usedExprBinders, usedTypeBinders} ->
+    env
+      { usedExprBinders = Set.union usedVars usedExprBinders,
+        usedTypeBinders = Set.union usedTVars usedTypeBinders
+      }
 
 transformExprBind :: Bind OfExpr Parsed -> SEC Env Error Warning (Bind OfExpr Transformed)
-transformExprBind bind = do
-  do
-    let binder' = binder bind
-    modify (\st -> st{currentExprBinders = Set.insert binder' (currentExprBinders st)})
-  case bind of
-    ExprBind binder' type' expr -> do
-      let type'' = transformType type'
-      checkType Nothing type''
-      let (result, wrns) = runExprTransformer expr
-      forM_ wrns collect
-      expr' <- fromEither result
-      let expr'' = case type'' of
-            Forall _ _ tparams _ -> GenFun () () () tparams expr'
-            _ -> expr'
-      checkExpr (Just binder') expr''
-      pure (ExprBind binder' type'' expr'')
-    ForeignBind binder' type' code -> do
-      let type'' = transformType type'
-      checkType Nothing type''
-      pure (ForeignBind binder' type'' code)
+transformExprBind (ExprBind binder' type' expr) = do
+  let type'' = transformType type'
+  checkType Nothing type''
+  let (result, wrns) = runExprTransformer expr
+  forM_ wrns collect
+  expr' <- fromEither result
+  let expr'' = case type'' of
+        Forall _ _ tparams _ -> GenFun () () () tparams expr'
+        _ -> expr'
+  checkBoundExpr binder' expr''
+  pure (ExprBind binder' type'' expr'')
+transformExprBind (ForeignBind binder' type' code) = do
+  let type'' = transformType type'
+  checkType Nothing type''
+  modify $ \env@Env{currentExprBinders} ->
+    env{currentExprBinders = Set.insert binder' currentExprBinders}
+  pure (ForeignBind binder' type'' code)
 
 -- MODULE
 
-checkRepeatedBinders :: [Defn] -> SEC s Error c ()
-checkRepeatedBinders defns = do
-  forM_ (alreadyDefined $ concat $ map exprDefnBinders defns) failure
-  forM_ (alreadyDefined $ mapMaybe typeDefnBinder defns) failure
- where
-  exprDefnBinders (Defn bind) = [binder bind]
-  exprDefnBinders (DataDefn _ ctors) = map binder $ NonEmpty.toList ctors
-  exprDefnBinders (MutRecDefns binds) = map binder $ NonEmpty.toList binds
-  exprDefnBinders _ = []
-
-  typeDefnBinder (TypeDefn bind) = Just (binder bind)
-  typeDefnBinder (DataDefn bind _) = Just (binder bind)
-  typeDefnBinder _ = Nothing
-
 transformExprDefn :: Defn -> SEC Env Error Warning [Bind OfExpr Transformed]
-transformExprDefn (Defn bind) = singleton <$> transformExprBind bind
+transformExprDefn (ValueDefn binder' value) = do
+  optType <- gets (Map.lookup binder' . exprTypings)
+  case optType of
+    Just type' -> singleton <$> transformExprBind (ExprBind binder' type' value)
+    Nothing -> failure (MissingTyping binder')
+transformExprDefn (ForeignDefn binder' code) = do
+  optType <- gets (Map.lookup binder' . exprTypings)
+  case optType of
+    Just type' -> singleton <$> transformExprBind (ForeignBind binder' type' code)
+    Nothing -> failure (MissingTyping binder')
 transformExprDefn (TypeDefn _) = pure []
 transformExprDefn (DataDefn _ binds) = NonEmpty.toList <$> mapM transformExprBind binds
-transformExprDefn (MutRecDefns binds) = do
-  currentBinders <- gets currentExprBinders
-  let binders = Set.fromList $ map binder $ NonEmpty.toList binds
-  binds' <- forM binds $ \bind -> do
-    let binder' = binder bind
-    unless (hasFunExpr bind) (failure $ MutRecBindNotFun binder')
-    let rest = Set.delete binder' binders
-    modify (\st -> st{currentExprBinders = Set.union rest currentBinders})
-    transformExprBind bind
-  modify (\st -> st{currentExprBinders = Set.union binders currentBinders})
-  pure $ NonEmpty.toList binds'
- where
-  hasFunExpr :: Bind OfExpr Parsed -> Bool
-  hasFunExpr (ExprBind _ _ expr) = isFunction expr
-  hasFunExpr (ForeignBind _ _ _) = False
+transformExprDefn (TypingDefn _ _) = pure []
 
 transformTypeDefn :: Defn -> SEC Env Error Warning (Maybe (Bind OfType Transformed))
-transformTypeDefn (Defn _) = pure Nothing
+transformTypeDefn (ValueDefn _ _) = pure Nothing
+transformTypeDefn (ForeignDefn _ _) = pure Nothing
 transformTypeDefn (TypeDefn bind) = Just <$> transformTypeBind bind
 transformTypeDefn (DataDefn bind _) = Just <$> transformTypeBind bind
-transformTypeDefn (MutRecDefns _) = pure Nothing
+transformTypeDefn (TypingDefn _ _) = pure Nothing
 
 warnUnusedBinders :: SEC Env e Warning ()
 warnUnusedBinders = do
   do
-    all' <- gets currentExprBinders
+    all' <- gets allExprBinders
     used <- gets usedExprBinders
     forM_ (Set.toList $ all' \\ used) (collect . UnusedVar)
   do
@@ -182,7 +208,6 @@ warnUnusedBinders = do
 
 transformModule :: ParsedModule -> SEC Env Error Warning (Module Transformed)
 transformModule (ParsedModule defns entry) = do
-  checkRepeatedBinders defns
   initEnv defns
   typeBinds <- catMaybes <$> mapM transformTypeDefn defns
   exprBinds <- concat <$> mapM transformExprDefn defns
@@ -190,7 +215,7 @@ transformModule (ParsedModule defns entry) = do
     let (result, wrns) = runExprTransformer expr
     forM_ wrns collect
     expr' <- fromEither result
-    checkExpr Nothing expr'
+    checkEntryExpr expr'
     pure expr'
   warnUnusedBinders
   pure (Module exprBinds typeBinds entry')
@@ -198,5 +223,13 @@ transformModule (ParsedModule defns entry) = do
 runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Transformed), [Warning])
 runTransformer mdule =
   let env =
-        Env Set.empty Set.empty Set.empty Set.empty Set.empty
+        Env
+          Set.empty
+          Set.empty
+          Set.empty
+          Set.empty
+          Set.empty
+          Set.empty
+          Set.empty
+          Map.empty
    in Collector.runCollector $ Errors.runErrorsT $ evalStateT (transformModule mdule) env

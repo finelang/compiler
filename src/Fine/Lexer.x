@@ -33,7 +33,6 @@ tokens :-
 
   $white+                     ;
   "//"\-*[^$symbol].*         ;
-  "and"                       { mkt AndKw }
   "bool"                      { mkt Bool }
   "debug"                     { mkt Debug }
   "else"                      { mkt Else }
@@ -90,8 +89,7 @@ tokens :-
 {
   data TokenType
   -- keywords
-  = AndKw
-  | Debug
+  = Debug
   | Else
   | Fn
   | Forall

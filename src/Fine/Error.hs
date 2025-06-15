@@ -18,9 +18,11 @@ hl x = [i|'#{show x}'|]
 data Error
   = UndefinedVar Id
   | UnusedUniVar Id
-  | AlreadyDefined Id Id
+  | AlreadyDefined Id
   | UsageBeforeInit Id
-  | MutRecBindNotFun Id
+  | RepeatedTyping Id
+  | MissingTyping Id
+  | InvalidBinding Id Id
   | SameInfixPrecedence Op Op
   | CannotUnifyKinds (Kind PartiallyKinded) (Kind PartiallyKinded)
   | BadKindSub Id (Kind PartiallyKinded)
@@ -31,12 +33,16 @@ instance Show Error where
     [i|Variable #{hl var} is not defined.|]
   show (UnusedUniVar var) =
     [i|Universally quantified variable #{hl var} is not used.|]
-  show (AlreadyDefined _ repeated) =
+  show (AlreadyDefined repeated) =
     [i|Variable #{hl repeated} is already defined.|]
   show (UsageBeforeInit var) =
     [i|Variable #{hl var} cannot be read during its own initialization.|]
-  show (MutRecBindNotFun var) =
-    [i|The expression bound to #{hl var} must be a function expression.|]
+  show (RepeatedTyping var) =
+    [i|A type for #{hl var} already exists.|]
+  show (MissingTyping var) =
+    [i|The type definition for #{hl var} is missing.|]
+  show (InvalidBinding binder invalid) =
+    [i|Non function #{hl binder} cannot use #{hl invalid} in its definition.|]
   show (SameInfixPrecedence _ _) = errorTODO
   show (CannotUnifyKinds kind kind') =
     [i|Cannot unify kinds #{hl kind} and #{hl kind'}.|]
