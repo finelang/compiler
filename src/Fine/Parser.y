@@ -73,6 +73,7 @@ import Fine.Syntax.Utils (mkDataDefn)
   '}'       { Token Lex.Cbrace _ _ }
   ','       { Token Lex.Comma _ _ }
   ';'       { Token Lex.Semi _ _ }
+  '\''      { Token Lex.Tick _ _ }
 
 %expect 0
 
@@ -189,9 +190,9 @@ Atom : '(' OptExprs ')'             { mkTuple (range $1 <> range $3) (reverse $2
      | false                        { Literal () (range $1) (Bool False) }
      | strlit                       { Literal () (range $1) (Str $ extractStr $1) }
      | Id                           { Var () $1 }
+     | Id TArgs                     { GenApp () () $1 $2 }
      | match Access '{' Matches '}' { PatternMatching () (range $1 <> range $5) () $2 $4 }
      | '\\' match '{' Matches '}'   { mkMatchFun (range $1 <> range $5) (matchedParam (range $2)) $4 }
--- TODO: gen app
 
 Matches_ : Matches_ ';' Match { $3 : $1 }
          | Match              { [$1] }
@@ -254,6 +255,11 @@ TAtom : '(' Types ')'     { mkTupleT (range $1 <> range $3) $2 }
 
 TAtoms : TAtoms TAtom { $2 : $1 }
        | TAtom        { [$1] }
+
+TArgs_ : TArgs_ '\'' TAtom  { $3 : $1 }
+       | '\'' TAtom         { [$2] }
+
+TArgs : TArgs_  { toNonEmptyPARTIAL (reverse $1) }
 
 -- MODULE
 

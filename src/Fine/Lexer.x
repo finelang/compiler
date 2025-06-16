@@ -87,6 +87,7 @@ tokens :-
   "}"                         { mkt Cbrace }
   ","                         { mkt Comma }
   ";"                         { mkt Semi }
+  "'"                         { mkt Tick }
 
 {
   data TokenType
@@ -133,6 +134,7 @@ tokens :-
   | Opar | Cpar
   | Obrace | Cbrace
   | Comma | Semi
+  | Tick
   deriving (Show)
 
 data TokenPosn = TokenPosn
