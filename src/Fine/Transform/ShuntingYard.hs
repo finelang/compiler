@@ -9,11 +9,12 @@ import Data.List.NonEmpty (NonEmpty)
 import Fine.Error (Error (SameInfixPrecedence))
 import Fine.Syntax (
   Equation (..),
-  Expr (Bin),
+  Expr (App, Bin),
   Op (..),
-  Phase (Transformed),
+  Phase (Parsed, Transformed),
  )
 import GHC.Err.Extra (errorUNREACHABLE)
+import Unsafe.Coerce (unsafeCoerce)
 
 type SE s e a = StateT s (Errors e) a
 
@@ -23,7 +24,7 @@ fail_ = lift . failure
 data Assoc = NonAssoc | LeftAssoc | RightAssoc
   deriving (Eq)
 
-fixity :: Op -> (Assoc, Int)
+fixity :: Op p -> (Assoc, Int)
 fixity Pipe = (LeftAssoc, 0)
 fixity RPipe = (RightAssoc, 0)
 fixity Or = (RightAssoc, 2)
@@ -45,37 +46,40 @@ type Expr' = Expr Transformed
 
 type Equation' = Equation Expr'
 
-type SYStack = ([Expr'], [Op])
+type Op' = Op Parsed
 
-operatorStack :: SYStack -> [Op]
+type SYStack = ([Expr'], [Op'])
+
+operatorStack :: SYStack -> [Op']
 operatorStack (_, ops) = ops
 
 modifyOperands :: ([Expr'] -> [Expr']) -> SE SYStack c ()
 modifyOperands f = modify $ \(opns, ops) -> (f opns, ops)
 
-modifyOperators :: ([Op] -> [Op]) -> SE SYStack c ()
+modifyOperators :: ([Op'] -> [Op']) -> SE SYStack c ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
-mkBinOp :: [Expr'] -> Op -> [Expr']
-mkBinOp (right : left : rest) op =
-  Bin () () op left right : rest
-mkBinOp _ _ = errorUNREACHABLE "Operand stack does not contains two operands."
+mkBinExpr :: [Expr'] -> Op' -> [Expr']
+mkBinExpr (arg : f : rest) Pipe = App () f arg : rest
+mkBinExpr (f : arg : rest) RPipe = App () f arg : rest
+mkBinExpr (right : left : rest) op = Bin () () (unsafeCoerce op) left right : rest
+mkBinExpr _ _ = errorUNREACHABLE "Operand stack does not contains two operands."
 
-consume :: [Expr'] -> [Op] -> [Expr']
-consume = foldl mkBinOp
+consume :: [Expr'] -> [Op'] -> [Expr']
+consume = foldl mkBinExpr
 
-continueWithOp :: Op -> Equation' -> SE SYStack Error Expr'
+continueWithOp :: Op' -> Equation' -> SE SYStack Error Expr'
 continueWithOp curr chain = do
   top <- gets (head . operatorStack)
   modifyOperators tail -- remove top from operators
-  modifyOperands (`mkBinOp` top) -- create app
+  modifyOperands (`mkBinExpr` top) -- create app
   sy' curr chain
 
-continueWithEquation :: Op -> Equation' -> SE SYStack Error Expr'
+continueWithEquation :: Op' -> Equation' -> SE SYStack Error Expr'
 continueWithEquation curr chain = modifyOperators (curr :) >> sy chain
 
 -- shunting yard when the next thing to handle is the operator
-sy' :: Op -> Equation' -> SE SYStack Error Expr'
+sy' :: Op' -> Equation' -> SE SYStack Error Expr'
 sy' curr chain = do
   noOperators <- gets (null . operatorStack)
   if noOperators

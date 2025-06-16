@@ -211,28 +211,29 @@ instance HasType (Type Kinded) (Kind Kinded) where
 
 -- EXPR
 
-data Op
-  = Add
-  | Sub
-  | Mult
-  | Div
-  | Rest
-  | Eq
-  | Neq
-  | Lt
-  | Gt
-  | Le
-  | Ge
-  | And
-  | Or
-  | Concat
-  | Pipe
-  | RPipe
-  deriving (Show)
+data Op (p :: Phase) where
+  Add :: Op p
+  Sub :: Op p
+  Mult :: Op p
+  Div :: Op p
+  Rest :: Op p
+  Eq :: Op p
+  Neq :: Op p
+  Lt :: Op p
+  Gt :: Op p
+  Le :: Op p
+  Ge :: Op p
+  And :: Op p
+  Or :: Op p
+  Concat :: Op p
+  Pipe :: Op Parsed
+  RPipe :: Op Parsed
+
+deriving instance (Show (Op p))
 
 data Equation t
   = Operand t
-  | Operation t Op (Equation t)
+  | Operation t (Op Parsed) (Equation t)
   deriving (Show)
 
 instance (HasRange t) => HasRange (Equation t) where
@@ -273,7 +274,7 @@ data Expr (p :: Phase)
   | Record (TypeX p) Range [(Id, Expr p)]
   | Tuple (TypeX p) Range (Expr p) (Expr p) [Expr p]
   | Var (TypeX p) Id
-  | Bin (TypeX p) (NotParsed p) Op (Expr p) (Expr p)
+  | Bin (TypeX p) (NotParsed p) (Op Ready) (Expr p) (Expr p)
   | App (TypeX p) (Expr p) (Expr p)
   | GenApp (TypeX p) (NotReady p) Id (NonEmpty (Type p))
   | Access (TypeX p) (Expr p) Id

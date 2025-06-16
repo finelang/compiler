@@ -8,7 +8,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax (Id, Kind, Op, Phase (PartiallyKinded), Range)
+import Fine.Syntax (Id, Kind, Op, Phase (Parsed, PartiallyKinded), Range)
 import GHC.Err.Extra (errorTODO)
 import String.ANSI (red, yellow)
 
@@ -23,7 +23,7 @@ data Error
   | RepeatedTyping Id
   | MissingTyping Id
   | InvalidBinding Id Id
-  | SameInfixPrecedence Op Op
+  | SameInfixPrecedence (Op Parsed) (Op Parsed)
   | CannotUnifyKinds (Kind PartiallyKinded) (Kind PartiallyKinded)
   | BadKindSub Id (Kind PartiallyKinded)
 

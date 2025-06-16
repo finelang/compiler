@@ -19,7 +19,6 @@ import Fine.Syntax (
   Range (NoRange),
   idText,
  )
-import GHC.Err.Extra (errorUNREACHABLE)
 
 type Indentation = Text
 
@@ -43,7 +42,7 @@ genLitCode (Bool False) = "false"
 genLitCode (Str s) = [i|"#{s}"|]
 genLitCode (Unit) = "null"
 
-genOpCode :: Op -> Text
+genOpCode :: Op Ready -> Text
 genOpCode And = "&&"
 genOpCode Or = "||"
 genOpCode Le = "<="
@@ -58,8 +57,6 @@ genOpCode Mult = "*"
 genOpCode Div = "/"
 genOpCode Rest = "%"
 genOpCode Concat = "+"
-genOpCode Pipe = errorUNREACHABLE "Pipe operation generates function application code."
-genOpCode RPipe = errorUNREACHABLE "Reverse pipe operation generates function application code."
 
 genPropCode :: (Id, Expr') -> Reader Indentation Text
 genPropCode (prop, value) = do
@@ -139,8 +136,6 @@ genExprCode (Tuple _ _ fst' snd' rest) = do
   exprs' <- genIndexedPropsCode (fst' : snd' : rest)
   pure [i|({#{exprs'}})|]
 genExprCode (Var _ var) = pure (idText var)
-genExprCode (Bin t _ Pipe arg f) = genExprCode (App t f arg)
-genExprCode (Bin t _ RPipe f arg) = genExprCode (App t f arg)
 genExprCode (Bin _ _ op left right) = do
   let op' = genOpCode op
   left' <- genExprCode left
