@@ -65,6 +65,8 @@ tokens :-
   \\                          { mkt BSlash }
   "|>"                        { mkt Pipe }
   "<|"                        { mkt RPipe }
+  "<."                        { mkt Comp }
+  ".>"                        { mkt RComp }
   "&&"                        { mkt And }
   "||"                        { mkt Or }
   "@"                         { mkt Ccat }
@@ -123,6 +125,7 @@ tokens :-
   | Colon
   | BSlash
   | Pipe | RPipe
+  | Comp | RComp
   | And | Or
   | Ccat
   | Le | Lt | Ge | Gt | Eq | Neq

@@ -9,9 +9,11 @@ import Data.List.NonEmpty (NonEmpty)
 import Fine.Error (Error (SameInfixPrecedence))
 import Fine.Syntax (
   Equation (..),
-  Expr (App, Bin),
+  Expr (App, Bin, Fun, Var),
+  Id (Id),
   Op (..),
   Phase (Parsed, Transformed),
+  Range (NoRange),
  )
 import GHC.Err.Extra (errorUNREACHABLE)
 import Unsafe.Coerce (unsafeCoerce)
@@ -41,6 +43,8 @@ fixity Sub = (LeftAssoc, 6)
 fixity Mult = (LeftAssoc, 7)
 fixity Div = (LeftAssoc, 7)
 fixity Rest = (LeftAssoc, 7)
+fixity Comp = (RightAssoc, 9)
+fixity RComp = (LeftAssoc, 9)
 
 type Expr' = Expr Transformed
 
@@ -60,9 +64,17 @@ modifyOperators :: ([Op'] -> [Op']) -> SE SYStack c ()
 modifyOperators f = modify $ \(opns, ops) -> (opns, f ops)
 
 mkBinExpr :: [Expr'] -> Op' -> [Expr']
-mkBinExpr (arg : f : rest) Pipe = App () f arg : rest
-mkBinExpr (f : arg : rest) RPipe = App () f arg : rest
-mkBinExpr (right : left : rest) op = Bin () () (unsafeCoerce op) left right : rest
+mkBinExpr (right : left : rest) op = go op : rest
+ where
+  go Pipe = App () right left
+  go RPipe = App () left right
+  go Comp =
+    let param = Id NoRange "x"
+     in Fun () param (App () left (App () right (Var () param)))
+  go RComp =
+    let param = Id NoRange "x"
+     in Fun () param (App () right (App () left (Var () param)))
+  go op' = Bin () () (unsafeCoerce op') left right
 mkBinExpr _ _ = errorUNREACHABLE "Operand stack does not contains two operands."
 
 consume :: [Expr'] -> [Op'] -> [Expr']

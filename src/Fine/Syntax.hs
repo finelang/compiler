@@ -228,6 +228,8 @@ data Op (p :: Phase) where
   Concat :: Op p
   Pipe :: Op Parsed
   RPipe :: Op Parsed
+  Comp :: Op Parsed
+  RComp :: Op Parsed
 
 deriving instance (Show (Op p))
 

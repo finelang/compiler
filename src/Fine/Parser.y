@@ -51,6 +51,8 @@ import Fine.Syntax.Utils (mkDataDefn)
   '\\'      { Token Lex.BSlash _ _ }
   '|>'      { Token Lex.Pipe _ _ }
   '<|'      { Token Lex.RPipe _ _ }
+  '<.'      { Token Lex.Comp _ _ }
+  '.>'      { Token Lex.RComp _ _ }
   '&&'      { Token Lex.And _ _ }
   '||'      { Token Lex.Or _ _ }
   '<='      { Token Lex.Le _ _ }
@@ -152,6 +154,8 @@ Equation : App Op Equation  { Operation $1 $2 $3 }
 
 Op : '|>' { Pipe }
    | '<|' { RPipe }
+   | '<.' { Comp }
+   | '.>' { RComp }
    | '&&' { And }
    | '||' { Or }
    | '<=' { Le }
