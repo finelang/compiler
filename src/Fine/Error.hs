@@ -8,7 +8,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax (Id, Kind, Op, Phase (Parsed, PartiallyKinded), Range)
+import Fine.Syntax (Id, Kind, Phase (PartiallyKinded), Range)
 import GHC.Err.Extra (errorTODO)
 import String.ANSI (red, yellow)
 
@@ -23,7 +23,6 @@ data Error
   | RepeatedTyping Id
   | MissingTyping Id
   | InvalidBinding Id Id
-  | SameInfixPrecedence (Op Parsed) (Op Parsed)
   | CannotUnifyKinds (Kind PartiallyKinded) (Kind PartiallyKinded)
   | BadKindSub Id (Kind PartiallyKinded)
 
@@ -43,7 +42,6 @@ instance Show Error where
     [i|The type definition for #{hl var} is missing.|]
   show (InvalidBinding binder invalid) =
     [i|Non function #{hl binder} cannot use #{hl invalid} in its definition.|]
-  show (SameInfixPrecedence _ _) = errorTODO
   show (CannotUnifyKinds kind kind') =
     [i|Cannot unify kinds #{hl kind} and #{hl kind'}.|]
   show (BadKindSub _ _) = errorTODO

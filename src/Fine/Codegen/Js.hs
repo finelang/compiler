@@ -42,7 +42,7 @@ genLitCode (Bool False) = "false"
 genLitCode (Str s) = [i|"#{s}"|]
 genLitCode (Unit) = "null"
 
-genOpCode :: Op Ready -> Text
+genOpCode :: Op -> Text
 genOpCode And = "&&"
 genOpCode Or = "||"
 genOpCode Le = "<="
@@ -136,7 +136,7 @@ genExprCode (Tuple _ _ fst' snd' rest) = do
   exprs' <- genIndexedPropsCode (fst' : snd' : rest)
   pure [i|({#{exprs'}})|]
 genExprCode (Var _ var) = pure (idText var)
-genExprCode (Bin _ _ op left right) = do
+genExprCode (Bin _ op left right) = do
   let op' = genOpCode op
   left' <- genExprCode left
   right' <- genExprCode right

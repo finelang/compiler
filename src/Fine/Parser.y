@@ -77,6 +77,15 @@ import Fine.Syntax.Utils (mkDataDefn)
 
 %expect 0
 
+%left '|>' %right '<|'
+%right '||'
+%right '&&'
+%nonassoc '==' '!=' '<=' '>=' '<' '>'
+%right '@'
+%left '+' '-'
+%left '*' '/' '%'
+%left '.>' %right '<.'
+
 %%
 
 Module : Defns Entry  { ParsedModule (reverse $1) $2 }
@@ -146,31 +155,29 @@ Stmt : let mut Id '=' Expr            { LetMut $3 $5 }
 
 -- EXPR
 
-Expr : Equation                     { equationToExpr $1 }
+Expr : Equation                     { $1 }
      | if Expr then Expr else Expr  { Cond () (range $1 <> range $6) $2 $4 $6 }
      | '\\' OptParams '->' Expr     { foldr (Fun ()) $4 $2 }
 
-Equation : App Op Equation  { Operation $1 $2 $3 }
-         | App              { Operand $1 }
-
-Op : '|>' { Pipe }
-   | '<|' { RPipe }
-   | '<.' { Comp }
-   | '.>' { RComp }
-   | '&&' { And }
-   | '||' { Or }
-   | '<=' { Le }
-   | '>=' { Ge }
-   | '==' { Eq }
-   | '!=' { Neq }
-   | '<'  { Lt }
-   | '>'  { Gt }
-   | '+'  { Add }
-   | '-'  { Sub }
-   | '*'  { Mult }
-   | '/'  { Div }
-   | '%'  { Rest }
-   | '@'  { Concat }
+Equation : Equation '|>' Equation { App () $3 $1 }
+         | Equation '<|' Equation { App () $1 $3 }
+         | Equation '<.' Equation { let x = Id NoRange "x" in Fun () x (App () $1 (App () $3 (Var () x))) }
+         | Equation '.>' Equation { let x = Id NoRange "x" in Fun () x (App () $3 (App () $1 (Var () x))) }
+         | Equation '&&' Equation { Bin () And $1 $3 }
+         | Equation '||' Equation { Bin () Or $1 $3 }
+         | Equation '<=' Equation { Bin () Le $1 $3 }
+         | Equation '>=' Equation { Bin () Ge $1 $3 }
+         | Equation '==' Equation { Bin () Eq $1 $3 }
+         | Equation '!=' Equation { Bin () Neq $1 $3 }
+         | Equation '<' Equation  { Bin () Lt $1 $3 }
+         | Equation '>' Equation  { Bin () Gt $1 $3 }
+         | Equation '+' Equation  { Bin () Add $1 $3 }
+         | Equation '-' Equation  { Bin () Sub $1 $3 }
+         | Equation '*' Equation  { Bin () Mult $1 $3 }
+         | Equation '/' Equation  { Bin () Div $1 $3 }
+         | Equation '%' Equation  { Bin () Rest $1 $3 }
+         | Equation '@' Equation  { Bin () Concat $1 $3 }
+         | App                    { $1 }
 
 App : App Access  { App () $1 $2 }
     | Access      { $1 }
@@ -293,9 +300,6 @@ tryUnblock _ (Return expr) = expr
 tryUnblock r block = Block () r block
 
 snoc (x :| xs) y = x :| xs ++ [y]
-
-equationToExpr (Operand expr) = expr
-equationToExpr equation = Equation (range equation) () equation
 
 mkTuple r [] = Literal () r Unit
 mkTuple _ [expr] = expr

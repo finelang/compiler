@@ -45,8 +45,6 @@ library
     Fine.Syntax.Utils
     Fine.Transform
     Fine.Transform.Check
-    Fine.Transform.ShuntingYard
-    Fine.Transform.Term
     Fine.Typer
     Fine.Typer.Common
     Fine.Typer.Eval

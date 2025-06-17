@@ -168,7 +168,7 @@ checkExpr (Data _ _ exprs) = Set.unions <$> mapM checkExpr exprs
 checkExpr (Record _ _ props) = Set.unions <$> mapM (checkExpr . snd) props
 checkExpr (Tuple _ _ fst' snd' rest) = Set.unions <$> mapM checkExpr (fst' : snd' : rest)
 checkExpr (Var _ var) = Set.singleton . V <$> withReaderT vVars (checked var)
-checkExpr (Bin _ _ _ left right) = Set.union <$> checkExpr left <*> checkExpr right
+checkExpr (Bin _ _ left right) = Set.union <$> checkExpr left <*> checkExpr right
 checkExpr (App _ f arg) = Set.union <$> checkExpr f <*> checkExpr arg
 checkExpr (GenApp _ _ fname typeArgs) =
   (\fVar argsVars -> Set.insert (V fVar) (Set.map T $ Set.unions argsVars))

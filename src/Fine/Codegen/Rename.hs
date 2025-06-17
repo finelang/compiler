@@ -57,7 +57,7 @@ renameExpr (Record ext r props) = Record ext r <$> (mapM . mapM) renameExpr prop
 renameExpr (Tuple ext r fst' snd' rest) =
   Tuple ext r <$> renameExpr fst' <*> renameExpr snd' <*> mapM renameExpr rest
 renameExpr (Var ext name) = Var ext <$> substt name
-renameExpr (Bin ext _ op left right) = Bin ext () op <$> renameExpr left <*> renameExpr right
+renameExpr (Bin ext op left right) = Bin ext op <$> renameExpr left <*> renameExpr right
 renameExpr (App ext f arg) = App ext <$> renameExpr f <*> renameExpr arg
 renameExpr (GenApp ext _ fname typeArgs) = GenApp ext () <$> substt fname <*> pure typeArgs
 renameExpr (Access ext expr prop) = Access ext <$> renameExpr expr <*> pure prop

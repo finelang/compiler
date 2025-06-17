@@ -47,7 +47,7 @@ kindedExpr (Record ext r props) = Record ext r <$> (mapM . mapM) kindedExpr prop
 kindedExpr (Tuple ext r fst' snd' rest) =
   Tuple ext r <$> kindedExpr fst' <*> kindedExpr snd' <*> mapM kindedExpr rest
 kindedExpr (Var ext var) = pure (Var ext var)
-kindedExpr (Bin ext _ op left right) = Bin ext () op <$> kindedExpr left <*> kindedExpr right
+kindedExpr (Bin ext op left right) = Bin ext op <$> kindedExpr left <*> kindedExpr right
 kindedExpr (App ext f arg) = App ext <$> kindedExpr f <*> kindedExpr arg
 kindedExpr (GenApp ext _ fname types) =
   GenApp ext () fname <$> do

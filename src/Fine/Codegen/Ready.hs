@@ -74,7 +74,7 @@ applyPath mut matched path =
   applyPiece expr (PropTo prop) = Access () expr prop
   applyPiece expr (IndexTo ix) = Index () NoRange expr ix
 
-  applyEnd expr (EqualsTo expr') = Left (Bin () () Eq expr expr')
+  applyEnd expr (EqualsTo expr') = Left (Bin () Eq expr expr')
   applyEnd expr (Is var) = Right $ (if mut then Mut else LetImmut ()) var expr
 
 matchedVar' :: Id
@@ -93,7 +93,7 @@ transformMatches matched matches =
               [] -> Literal () NoRange (Bool True)
               (c : cs) ->
                 let (cs', c') = unsnoc (c :| cs)
-                 in foldr (Bin () () And) c' cs'
+                 in foldr (Bin () And) c' cs'
          in If () cond ifBlock
    in foldr ($) Void ifStmts
 
@@ -129,7 +129,7 @@ readyExpr (Record _ r props) = Record () r $ (map . fmap) readyExpr props
 readyExpr (Tuple _ r fst' snd' rest) =
   Tuple () r (readyExpr fst') (readyExpr snd') (map readyExpr rest)
 readyExpr (Var _ var) = Var () var
-readyExpr (Bin _ _ op left right) = Bin () () op (readyExpr left) (readyExpr right)
+readyExpr (Bin _ op left right) = Bin () op (readyExpr left) (readyExpr right)
 readyExpr (App _ f arg) = App () (readyExpr f) (readyExpr arg)
 readyExpr (GenApp _ _ fname _) = Var () fname
 readyExpr (Access _ expr prop) = Access () (readyExpr expr) prop

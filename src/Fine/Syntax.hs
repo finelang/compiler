@@ -11,7 +11,6 @@ module Fine.Syntax (
   LitT (..),
   Type (..),
   Op (..),
-  Equation (..),
   Lit (..),
   Block (..),
   Expr (..),
@@ -103,10 +102,6 @@ type family ReadyOnly (p :: Phase) where
 type family NotReady (p :: Phase) where
   NotReady Ready = Void
   NotReady _ = ()
-
-type family ParsedOnly (p :: Phase) where
-  ParsedOnly Parsed = ()
-  ParsedOnly _ = Void
 
 type family NotParsed (p :: Phase) where
   NotParsed Parsed = Void
@@ -211,37 +206,28 @@ instance HasType (Type Kinded) (Kind Kinded) where
 
 -- EXPR
 
-data Op (p :: Phase) where
-  Add :: Op p
-  Sub :: Op p
-  Mult :: Op p
-  Div :: Op p
-  Rest :: Op p
-  Eq :: Op p
-  Neq :: Op p
-  Lt :: Op p
-  Gt :: Op p
-  Le :: Op p
-  Ge :: Op p
-  And :: Op p
-  Or :: Op p
-  Concat :: Op p
-  Pipe :: Op Parsed
-  RPipe :: Op Parsed
-  Comp :: Op Parsed
-  RComp :: Op Parsed
-
-deriving instance (Show (Op p))
-
-data Equation t
-  = Operand t
-  | Operation t (Op Parsed) (Equation t)
-  deriving (Show)
-
-instance (HasRange t) => HasRange (Equation t) where
-  range :: (HasRange t) => Equation t -> Range
-  range (Operand x) = range x
-  range (Operation x _ equation) = range x <> range equation
+data Op
+  = Add
+  | Sub
+  | Mult
+  | Div
+  | Rest
+  | Eq
+  | Neq
+  | Lt
+  | Gt
+  | Le
+  | Ge
+  | And
+  | Or
+  | Concat
+  deriving
+    ( -- | Pipe
+      -- | RPipe
+      -- | Comp
+      -- | RComp
+      Show
+    )
 
 data Lit
   = Int Int
@@ -276,7 +262,7 @@ data Expr (p :: Phase)
   | Record (TypeX p) Range [(Id, Expr p)]
   | Tuple (TypeX p) Range (Expr p) (Expr p) [Expr p]
   | Var (TypeX p) Id
-  | Bin (TypeX p) (NotParsed p) (Op Ready) (Expr p) (Expr p)
+  | Bin (TypeX p) Op (Expr p) (Expr p)
   | App (TypeX p) (Expr p) (Expr p)
   | GenApp (TypeX p) (NotReady p) Id (NonEmpty (Type p))
   | Access (TypeX p) (Expr p) Id
@@ -286,13 +272,11 @@ data Expr (p :: Phase)
   | GenFun (TypeX p) (NotParsed p) (NotReady p) (NonEmpty Id) (Expr p)
   | Block (TypeX p) Range (Block p)
   | PatternMatching (TypeX p) Range (NotReady p) (Expr p) (NonEmpty (Pattern, Expr p))
-  | Equation Range (ParsedOnly p) (Equation (Expr p))
 
 deriving instance
   ( Show (TypeX p),
     Show (Type p),
     Show (NotParsed p),
-    Show (ParsedOnly p),
     Show (NotReady p),
     Show (Block p)
   ) =>
@@ -305,7 +289,7 @@ instance HasRange (Expr p) where
   range (Record _ r _) = r
   range (Tuple _ r _ _ _) = r
   range (Var _ var) = range var
-  range (Bin _ _ _ left right) = range left <> range right
+  range (Bin _ _ left right) = range left <> range right
   range (App _ f arg) = range f <> range arg
   range (GenApp _ _ fname types) = range fname <> range (NonEmpty.last types)
   range (Access _ obj prop) = range obj <> range prop
@@ -315,7 +299,6 @@ instance HasRange (Expr p) where
   range (GenFun _ _ _ tparams body) = range (NonEmpty.head tparams) <> range body
   range (Block _ r _) = r
   range (PatternMatching _ r _ _ _) = r
-  range (Equation r _ _) = r
 
 typeExt :: Expr p -> TypeX p
 typeExt (Literal t _ _) = t
@@ -323,7 +306,7 @@ typeExt (Data t _ _) = t
 typeExt (Record t _ _) = t
 typeExt (Tuple t _ _ _ _) = t
 typeExt (Var t _) = t
-typeExt (Bin t _ _ _ _) = t
+typeExt (Bin t _ _ _) = t
 typeExt (App t _ _) = t
 typeExt (GenApp t _ _ _) = t
 typeExt (Access t _ _) = t
@@ -333,8 +316,6 @@ typeExt (Fun t _ _) = t
 typeExt (GenFun t _ _ _ _) = t
 typeExt (Block t _ _) = t
 typeExt (PatternMatching t _ _ _ _) = t
-typeExt (Equation _ _ _) =
-  errorUNREACHABLE "Equation AST doesn't store its type because it only exists until transformation phase."
 
 instance HasType (Expr Typed) (Type Typed) where
   typeof :: Expr Typed -> Type Typed

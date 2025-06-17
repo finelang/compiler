@@ -44,7 +44,7 @@ typedExpr (Record _ r props) = Record tempType r $ (map . fmap) typedExpr props
 typedExpr (Tuple _ r fst' snd' rest) =
   Tuple tempType r (typedExpr fst') (typedExpr snd') (map typedExpr rest)
 typedExpr (Var _ var) = Var tempType var
-typedExpr (Bin _ _ op left right) = Bin tempType () op (typedExpr left) (typedExpr right)
+typedExpr (Bin _ op left right) = Bin tempType op (typedExpr left) (typedExpr right)
 typedExpr (App _ f arg) = App tempType (typedExpr f) (typedExpr arg)
 typedExpr (GenApp _ _ fname targs) = GenApp tempType () fname (NonEmpty.map asTyped targs)
 typedExpr (Access _ expr prop) = Access tempType (typedExpr expr) prop

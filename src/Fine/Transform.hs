@@ -16,12 +16,19 @@ import Data.Maybe (catMaybes)
 import Data.Set (Set, (\\))
 import Data.Set qualified as Set
 import Fine.Error (
-  Error (AlreadyDefined, InvalidBinding, MissingTyping, RepeatedTyping, UsageBeforeInit),
-  Warning (UnusedVar),
+  Error (
+    AlreadyDefined,
+    InvalidBinding,
+    MissingTyping,
+    RepeatedTyping,
+    UsageBeforeInit
+  ),
+  Warning (DebugKeywordUsage, UnusedVar),
  )
 import Fine.Syntax (
   Bind (..),
   BindType (..),
+  Block (..),
   Defn (..),
   Expr (..),
   Id,
@@ -33,7 +40,7 @@ import Fine.Syntax (
  )
 import Fine.Syntax.Utils (isFunction, isTFunction)
 import Fine.Transform.Check (runExprVarChecker, runTypeVarChecker)
-import Fine.Transform.Term (runExprTransformer, transformType)
+import Unsafe.Coerce (unsafeCoerce)
 
 type SEC s e c a = StateT s (ErrorsT e (Collector c)) a
 
@@ -94,6 +101,9 @@ initEnv = mapM_ go
 
 -- TYPE
 
+transformType :: Type Parsed -> Type Transformed
+transformType = unsafeCoerce
+
 checkType :: Maybe Id -> Type Transformed -> SEC Env Error Warning ()
 checkType optBinder type' = do
   forM_ optBinder $ \binder' ->
@@ -116,6 +126,43 @@ transformTypeBind (TypeBind binder' type') = do
   pure (TypeBind binder' type'')
 
 -- EXPR
+
+transformBlock :: Block Parsed -> SEC s e Warning (Block Transformed)
+transformBlock (Return expr) = Return <$> transformExpr expr
+transformBlock Void = pure Void
+transformBlock (Do action block) =
+  Do <$> transformExpr action <*> transformBlock block
+transformBlock (Mut var expr block) =
+  Mut var <$> transformExpr expr <*> transformBlock block
+transformBlock (LetMut binder' value block) =
+  LetMut binder' <$> transformExpr value <*> transformBlock block
+transformBlock (Let _ pattern value block) =
+  Let () pattern <$> transformExpr value <*> transformBlock block
+transformBlock (Debug r expr block) = do
+  collect $ DebugKeywordUsage r
+  Debug r <$> transformExpr expr <*> transformBlock block
+transformBlock (Loop cond actions block) =
+  Loop <$> transformExpr cond <*> transformBlock actions <*> transformBlock block
+
+transformExpr :: Expr Parsed -> SEC s e Warning (Expr Transformed)
+transformExpr (Literal ext r lit) = pure (Literal ext r lit)
+transformExpr (Data ext tag exprs) = Data ext tag <$> mapM transformExpr exprs
+transformExpr (Record ext r props) = Record ext r <$> (mapM . mapM) transformExpr props
+transformExpr (Tuple ext r fst' snd' rest) =
+  Tuple ext r <$> transformExpr fst' <*> transformExpr snd' <*> mapM transformExpr rest
+transformExpr (Var ext var) = pure (Var ext var)
+transformExpr (Bin ext op left right) = Bin ext op <$> transformExpr left <*> transformExpr right
+transformExpr (App ext f arg) = App ext <$> transformExpr f <*> transformExpr arg
+transformExpr (GenApp ext _ fname types) =
+  pure $ GenApp ext () fname (NonEmpty.map transformType types)
+transformExpr (Access ext expr' prop) = Access ext <$> transformExpr expr' <*> pure prop
+transformExpr (Index ext r expr' ix) = Index ext r <$> transformExpr expr' <*> pure ix
+transformExpr (Cond ext r cond yes no) =
+  Cond ext r <$> transformExpr cond <*> transformExpr yes <*> transformExpr no
+transformExpr (Fun ext param' body) = Fun ext param' <$> transformExpr body
+transformExpr (Block ext r block) = Block ext r <$> transformBlock block
+transformExpr (PatternMatching ext r _ matched matches) =
+  PatternMatching ext r () <$> transformExpr matched <*> (mapM . mapM) transformExpr matches
 
 checkBoundExpr :: Id -> Expr Transformed -> SEC Env Error Warning ()
 checkBoundExpr binder' expr = do
@@ -156,9 +203,7 @@ transformExprBind :: Bind OfExpr Parsed -> SEC Env Error Warning (Bind OfExpr Tr
 transformExprBind (ExprBind binder' type' expr) = do
   let type'' = transformType type'
   checkType Nothing type''
-  let (result, wrns) = runExprTransformer expr
-  forM_ wrns collect
-  expr' <- fromEither result
+  expr' <- transformExpr expr
   let expr'' = case type'' of
         Forall _ _ tparams _ -> GenFun () () () tparams expr'
         _ -> expr'
@@ -212,9 +257,7 @@ transformModule (ParsedModule defns entry) = do
   typeBinds <- catMaybes <$> mapM transformTypeDefn defns
   exprBinds <- concat <$> mapM transformExprDefn defns
   entry' <- forM entry $ \expr -> do
-    let (result, wrns) = runExprTransformer expr
-    forM_ wrns collect
-    expr' <- fromEither result
+    expr' <- transformExpr expr
     checkEntryExpr expr'
     pure expr'
   warnUnusedBinders
