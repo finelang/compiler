@@ -1,6 +1,9 @@
 module Fine.Codegen.Js (runCodegen) where
 
+import Control.Monad (forM)
 import Control.Monad.Trans.Reader (Reader, ask, local, runReader)
+import Data.Maybe (maybeToList)
+import Data.Set qualified as Set
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -14,10 +17,11 @@ import Fine.Syntax (
   Id (Id),
   Lit (..),
   Module (Module),
+  Name (Name),
   Op (..),
   Phase (Ready, Typed),
   Range (NoRange),
-  idText,
+  qualifiedText,
  )
 
 type Indentation = Text
@@ -135,7 +139,7 @@ genExprCode (Record _ _ props) = do
 genExprCode (Tuple _ _ fst' snd' rest) = do
   exprs' <- genIndexedPropsCode (fst' : snd' : rest)
   pure [i|({#{exprs'}})|]
-genExprCode (Var _ var) = pure (idText var)
+genExprCode (Var _ var) = pure (qualifiedText var)
 genExprCode (Bin _ op left right) = do
   let op' = genOpCode op
   left' <- genExprCode left
@@ -167,22 +171,21 @@ genExprCode (Block _ _ block) = do
 genBindCode :: Bind OfExpr Ready -> Reader Indentation Text
 genBindCode (ExprBind binder' _ expr) = do
   expr' <- genExprCode expr
-  pure [i|const #{binder'} = #{expr'};|]
+  pure $ case binder' of
+    Name _ (Just _) _ -> [i|#{binder'} = #{expr'};|]
+    _ -> [i|const #{binder'} = #{expr'};|]
 genBindCode (ForeignBind binder' _ code) =
   pure [i|const #{binder'} = #{code};|]
 
 genModuleCode :: Module Ready -> Reader Indentation Text
-genModuleCode (Module values _ entry) = do
-  case (values, entry) of
-    ([], Nothing) -> pure ""
-    ([], Just expr) -> (<> ";\n") <$> genExprCode expr
-    (_, Nothing) -> do
-      defns <- fmap (Text.intercalate "\n\n") (mapM genBindCode values)
-      pure defns
-    (_, Just expr) -> do
-      defns <- fmap (Text.intercalate "\n\n") (mapM genBindCode values)
-      expr' <- genExprCode expr
-      pure [i|#{defns}\n\n#{expr'};\n|]
+genModuleCode (Module values _ entry typeCtors) = do
+  ctorPrefixes <- forM (Set.toAscList typeCtors) $ \ctor ->
+    pure [i|const #{ctor} = {};|]
+  values' <- mapM genBindCode values
+  entry' <- fmap maybeToList $ forM entry $ \expr -> do
+    expr' <- genExprCode expr
+    pure [i|#{expr'};|]
+  pure $ Text.intercalate "\n\n" $ ctorPrefixes ++ values' ++ entry'
 
 runCodegen :: Module Typed -> Text
 runCodegen mdule =

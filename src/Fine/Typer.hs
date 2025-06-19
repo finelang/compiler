@@ -65,8 +65,8 @@ typedTypeBind :: Bind OfType Kinded -> Bind OfType Typed
 typedTypeBind (TypeBind binder type') = TypeBind binder (asTyped type')
 
 typedModule :: Module Kinded -> Module Typed
-typedModule (Module exprBinds typeBinds entry) = do
-  Module (map typedExprBind exprBinds) (map typedTypeBind typeBinds) (fmap typedExpr entry)
+typedModule (Module exprBinds typeBinds entry typeCtors) = do
+  Module (map typedExprBind exprBinds) (map typedTypeBind typeBinds) (fmap typedExpr entry) typeCtors
 
 runTyper :: Module Kinded -> (Either (NonEmpty Error) (Module Typed), [Warning])
 runTyper mdule = (Right (typedModule mdule), [])

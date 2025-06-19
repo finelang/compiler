@@ -20,12 +20,13 @@ import Fine.Syntax (
   Block (..),
   Expr (..),
   Id,
+  Name,
   Pattern (..),
   Phase (Transformed),
   Type (..),
  )
 import Fine.Syntax.Name (isRelevant)
-import Fine.Syntax.Utils (isFunction, patternBoundVars)
+import Fine.Syntax.Utils (isFunction, patternBoundVars, unqualified)
 
 type REC r e c a = ReaderT r (ErrorsT e (Collector c)) a
 
@@ -43,9 +44,9 @@ alreadyDefined xs = (concat . map mkErr . group . sort) xs
  where
   mkErr [] = []
   mkErr [_] = []
-  mkErr (_ : ys) = map AlreadyDefined ys
+  mkErr (_ : ys) = map (AlreadyDefined . unqualified) ys
 
-checked :: Id -> REC (Set Id) Error c Id
+checked :: Name -> REC (Set Name) Error c Name
 checked var = do
   isDefined <- asks (Set.member var)
   if isDefined
@@ -54,7 +55,7 @@ checked var = do
 
 -- TYPE
 
-checkType :: Type Transformed -> REC (Set Id) Error Warning (Set Id)
+checkType :: Type Transformed -> REC (Set Name) Error Warning (Set Name)
 checkType (LiteralT _ _ _) = pure Set.empty
 checkType (VoidT _ _) = pure Set.empty
 checkType (TupleT _ _ fst' snd' rest) = Set.unions <$> mapM checkType (fst' : snd' : rest)
@@ -63,7 +64,7 @@ checkType (FunT _ at bt) = Set.union <$> checkType at <*> checkType bt
 checkType (Forall _ _ univars type') = do
   let univarList = NonEmpty.toList univars
   forM_ (alreadyDefined univarList) failure
-  let univars' = Set.fromList univarList
+  let univars' = Set.fromList $ map unqualified univarList
   typeVars <- withReaderT (Set.union univars') (checkType type')
   forM_ (univars' \\ typeVars) (failure . UnusedUniVar)
   pure (typeVars \\ univars')
@@ -71,26 +72,27 @@ checkType (DataT _ _ types) = Set.unions <$> mapM checkType types
 checkType (TVar _ var) = Set.singleton <$> checked var
 checkType (TApp _ tf ta) = Set.union <$> checkType tf <*> checkType ta
 checkType (TFun _ tp tb) = do
-  tbVars <- withReaderT (Set.insert tp) (checkType tb)
-  if Set.member tp tbVars
-    then pure (Set.delete tp tbVars)
-    else collect (UnusedVar tp) >> pure tbVars
+  let tp' = unqualified tp
+  tbVars <- withReaderT (Set.insert tp') (checkType tb)
+  if Set.member tp' tbVars
+    then pure (Set.delete tp' tbVars)
+    else collect (UnusedVar tp') >> pure tbVars
 
-runTypeVarChecker :: Set Id -> Type Transformed -> (Either (NonEmpty Error) (Set Id), [Warning])
+runTypeVarChecker :: Set Name -> Type Transformed -> (Either (NonEmpty Error) (Set Name), [Warning])
 runTypeVarChecker vars type' = runREC (checkType type') vars
 
 -- EXPR
 
-data Var = V Id | T Id
+data Var = V Name | T Name
   deriving (Eq, Ord)
 
-vVars :: Set Var -> Set Id
+vVars :: Set Var -> Set Name
 vVars = Set.foldr (\var vars -> maybe vars (`Set.insert` vars) (justVVar var)) Set.empty
  where
   justVVar (V var) = Just var
   justVVar _ = Nothing
 
-tVars :: Set Var -> Set Id
+tVars :: Set Var -> Set Name
 tVars = Set.foldr (\var vars -> maybe vars (`Set.insert` vars) (justTVar var)) Set.empty
  where
   justTVar (T var) = Just var
@@ -112,28 +114,28 @@ checkBlock Void = pure Set.empty
 checkBlock (Do expr block) = Set.union <$> checkExpr expr <*> checkBlock block
 checkBlock (Mut var expr block) =
   (\var' exprVars blockVars -> Set.insert (V var') $ Set.union exprVars blockVars)
-    <$> withReaderT vVars (checked var)
+    <$> withReaderT vVars (checked $ unqualified var)
     <*> checkExpr expr
     <*> checkBlock block
 checkBlock (LetMut binder expr block) = Set.union <$> goExpr <*> goBlock
  where
-  binder' = V binder
+  binder' = V (unqualified binder)
   goExpr = do
     exprVars <- withReaderT (Set.insert binder') (checkExpr expr)
     when
       (not (isFunction expr) && Set.member binder' exprVars)
-      (failure $ UsageBeforeInit binder)
+      (failure $ UsageBeforeInit $ unqualified binder)
     pure exprVars
   goBlock = do
     blockVars <- withReaderT (Set.insert binder') (checkBlock block)
     if (Set.member binder' blockVars)
       then pure (Set.delete binder' blockVars)
-      else (collect $ UnusedVar binder) >> pure blockVars
+      else (collect $ UnusedVar $ unqualified binder) >> pure blockVars
 checkBlock (Let _ (Capture binder) expr block) =
   checkBlock (LetMut binder expr block) -- check as if it is a mutable var local binding
 checkBlock (Let _ patt expr block) =
   Set.union <$> checkExpr expr <*> do
-    let boundVars = Set.fromList $ map V $ patternBoundVars patt
+    let boundVars = Set.fromList $ map (V . unqualified) $ patternBoundVars patt
     blockVars <- withReaderT (Set.union boundVars) (checkBlock block)
     forM_ (Set.toList $ vVars $ boundVars \\ blockVars) (collect . UnusedVar)
     pure (blockVars \\ boundVars)
@@ -141,7 +143,7 @@ checkBlock (Debug _ expr block) = Set.union <$> checkExpr expr <*> checkBlock bl
 checkBlock (Loop cond actions block) =
   Set.unions <$> sequence [checkExpr cond, checkBlock actions, checkBlock block]
 
-checkPattern :: Pattern -> REC (Set Id) Error Warning (Set Var)
+checkPattern :: Pattern -> REC (Set Name) Error Warning (Set Var)
 checkPattern (LiteralP _ _) = pure Set.empty
 checkPattern (DataP _ tag patts) =
   (\var pattsVars -> Set.insert (V var) (Set.unions pattsVars))
@@ -157,7 +159,7 @@ checkMatch (patt, cont) =
   Set.union <$> withReaderT vVars (checkPattern patt) <*> do
     let boundVars = patternBoundVars patt
     forM_ (alreadyDefined boundVars) failure
-    let boundVars' = Set.fromList $ map V boundVars
+    let boundVars' = Set.fromList $ map (V . unqualified) boundVars
     contVars <- withReaderT (Set.union boundVars') (checkExpr cont)
     forM_ (Set.toList $ vVars $ boundVars' \\ contVars) (collect . UnusedVar)
     pure (contVars \\ boundVars')
@@ -182,21 +184,21 @@ checkExpr (PatternMatching _ _ _ expr matches) =
     <$> checkExpr expr
     <*> mapM checkMatch matches
 checkExpr (Fun _ param body) = do
-  let param' = V param
+  let param' = V (unqualified param)
   bodyVars <- withReaderT (Set.insert param') (checkExpr body)
-  when (isRelevant param && Set.notMember param' bodyVars) (collect $ UnusedVar param)
+  when (isRelevant param && Set.notMember param' bodyVars) (collect $ UnusedVar $ unqualified param)
   pure (Set.delete param' bodyVars)
 checkExpr (GenFun _ _ _ typeParams body) = do
   let typeParamList = NonEmpty.toList typeParams
   forM_ (alreadyDefined typeParamList) failure
-  let typeParams' = Set.fromList $ map T typeParamList
+  let typeParams' = Set.fromList $ map (T . unqualified) typeParamList
   bodyVars <- withReaderT (Set.union typeParams') (checkExpr body)
   pure (bodyVars \\ typeParams')
 checkExpr (Block _ _ block) = do
   forM_ (alreadyDefined $ blockBoundVars block) failure
   checkBlock block
 
-runExprVarChecker :: Set Id -> Set Id -> Expr Transformed -> (Either (NonEmpty Error) (Set Id, Set Id), [Warning])
+runExprVarChecker :: Set Name -> Set Name -> Expr Transformed -> (Either (NonEmpty Error) (Set Name, Set Name), [Warning])
 runExprVarChecker vars tvars expr =
   let (result, wrns) = runREC (checkExpr expr) $ Set.union (Set.map V vars) (Set.map T tvars)
    in case result of

@@ -8,7 +8,7 @@ where
 
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Fine.Syntax (Id, Kind, Phase (PartiallyKinded), Range)
+import Fine.Syntax (Id, Kind, Name, Phase (PartiallyKinded), Range)
 import GHC.Err.Extra (errorTODO)
 import String.ANSI (red, yellow)
 
@@ -16,13 +16,13 @@ hl :: (Show a) => a -> Text
 hl x = [i|'#{show x}'|]
 
 data Error
-  = UndefinedVar Id
-  | UnusedUniVar Id
-  | AlreadyDefined Id
-  | UsageBeforeInit Id
+  = UndefinedVar Name
+  | UnusedUniVar Name
+  | AlreadyDefined Name
+  | UsageBeforeInit Name
   | RepeatedTyping Id
   | MissingTyping Id
-  | InvalidBinding Id Id
+  | InvalidBinding Name Name
   | CannotUnifyKinds (Kind PartiallyKinded) (Kind PartiallyKinded)
   | BadKindSub Id (Kind PartiallyKinded)
 
@@ -53,7 +53,7 @@ wrapError :: Error -> String
 wrapError err = [i|#{errorPrefix}#{err}|]
 
 data Warning
-  = UnusedVar Id
+  = UnusedVar Name
   | DebugKeywordUsage Range
 
 instance Show Warning where

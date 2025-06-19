@@ -1,11 +1,12 @@
 module Fine.Typer.Eval (runEval) where
 
 import Control.Monad.Trans.Reader (Reader, asks, local, runReader)
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Fine.Syntax (Phase (Typed), Type (..))
-import Fine.Typer.Common (Env)
+import Fine.Syntax (Name, Phase (Typed), Type (..))
+import Fine.Syntax.Utils (unqualified)
 
-eval :: Type Typed -> Reader (Env (Type Typed)) (Type Typed)
+eval :: Type Typed -> Reader (Map Name (Type Typed)) (Type Typed)
 eval type'@(LiteralT _ _ _) = pure type'
 eval type'@(VoidT _ _) = pure type'
 eval (TupleT k r fst' snd' rest) =
@@ -19,9 +20,9 @@ eval (TApp k tf ta) = do
   tf' <- eval tf
   ta' <- eval ta
   case tf' of
-    TFun _ tp tb -> local (Map.insert tp ta') (eval tb)
+    TFun _ tp tb -> local (Map.insert (unqualified tp) ta') (eval tb)
     _ -> pure $ TApp k tf' ta'
 eval (TFun k tp tb) = TFun k tp <$> eval tb
 
-runEval :: Env (Type Typed) -> Type Typed -> Type Typed
+runEval :: Map Name (Type Typed) -> Type Typed -> Type Typed
 runEval env type' = runReader (eval type') env

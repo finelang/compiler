@@ -33,12 +33,12 @@ import Fine.Syntax (
   Expr (..),
   Id,
   Module (Module),
+  Name,
   ParsedModule (ParsedModule),
   Phase (Parsed, Transformed),
   Type (..),
-  binder,
  )
-import Fine.Syntax.Utils (isFunction, isTFunction)
+import Fine.Syntax.Utils (binder, isFunction, isTFunction, unqualified)
 import Fine.Transform.Check (runExprVarChecker, runTypeVarChecker)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -54,35 +54,39 @@ collect :: c -> SEC s e c ()
 collect = lift . lift . Collector.collect
 
 data Env = Env
-  { allExprBinders :: Set Id,
-    currentExprBinders :: Set Id,
-    usedExprBinders :: Set Id,
+  { allExprBinders :: Set Name,
+    currentExprBinders :: Set Name,
+    usedExprBinders :: Set Name,
     --
-    validNonFunctionFreeVars :: Set Id,
+    validNonFunctionFreeVars :: Set Name,
     --
-    allTypeBinders :: Set Id,
-    currentTypeBinders :: Set Id,
-    usedTypeBinders :: Set Id,
+    allTypeBinders :: Set Name,
+    currentTypeBinders :: Set Name,
+    usedTypeBinders :: Set Name,
     --
-    exprTypings :: Map Id (Type Parsed)
+    exprTypings :: Map Id (Type Parsed),
+    --
+    typeCtors :: Set Id
   }
 
 initEnv :: [Defn] -> SEC Env Error c ()
 initEnv = mapM_ go
  where
-  go (ValueDefn binder' _) = addExprBinder binder'
+  go (ValueDefn binder' _) = addExprBinder $ unqualified binder'
   go (ForeignDefn binder' _) = do
-    addExprBinder binder'
+    let binder'' = unqualified binder'
+    addExprBinder binder''
     modify $ \env@Env{validNonFunctionFreeVars} ->
-      env{validNonFunctionFreeVars = Set.insert binder' validNonFunctionFreeVars}
+      env{validNonFunctionFreeVars = Set.insert binder'' validNonFunctionFreeVars}
   go (TypingDefn binder' type') = do
     typings <- gets exprTypings
     if Map.member binder' typings
       then failure (RepeatedTyping binder')
       else modify $ \env -> env{exprTypings = Map.insert binder' type' typings}
-  go (TypeDefn (TypeBind binder' _)) = addTypeBinder binder'
+  go (TypeDefn (TypeBind binder' _)) = addTypeBinder $ unqualified binder'
   go (DataDefn (TypeBind binder' _) ctBinds) = do
-    addTypeBinder binder'
+    addTypeBinder $ unqualified binder'
+    modify $ \env@Env{typeCtors} -> env{typeCtors = Set.insert binder' typeCtors}
     let ctBinders = NonEmpty.map binder ctBinds
     forM_ ctBinders $ \ctBinder -> do
       addExprBinder ctBinder
@@ -108,14 +112,15 @@ checkType :: Maybe Id -> Type Transformed -> SEC Env Error Warning ()
 checkType optBinder type' = do
   forM_ optBinder $ \binder' ->
     modify $ \env@Env{currentTypeBinders} ->
-      env{currentTypeBinders = Set.insert binder' currentTypeBinders}
+      env{currentTypeBinders = Set.insert (unqualified binder') currentTypeBinders}
   let isTFun = isTFunction type'
   tVars <- gets (if isTFun then allTypeBinders else currentTypeBinders)
   let (result, wrns) = runTypeVarChecker tVars type'
   forM_ wrns collect
   usedTVars <- fromEither result
-  unless isTFun $ forM_ optBinder $ \binder' ->
-    when (Set.member binder' usedTVars) (failure $ UsageBeforeInit binder')
+  unless isTFun $ forM_ optBinder $ \binder' -> do
+    let name = unqualified binder'
+    when (Set.member name usedTVars) (failure $ UsageBeforeInit name)
   modify $ \env@Env{usedTypeBinders} ->
     env{usedTypeBinders = Set.union usedTVars usedTypeBinders}
 
@@ -164,7 +169,7 @@ transformExpr (Block ext r block) = Block ext r <$> transformBlock block
 transformExpr (PatternMatching ext r _ matched matches) =
   PatternMatching ext r () <$> transformExpr matched <*> (mapM . mapM) transformExpr matches
 
-checkBoundExpr :: Id -> Expr Transformed -> SEC Env Error Warning ()
+checkBoundExpr :: Name -> Expr Transformed -> SEC Env Error Warning ()
 checkBoundExpr binder' expr = do
   let isFun = isFunction expr
   modify $ \env@Env{currentExprBinders} ->
@@ -213,7 +218,7 @@ transformExprBind (ForeignBind binder' type' code) = do
   let type'' = transformType type'
   checkType Nothing type''
   modify $ \env@Env{currentExprBinders} ->
-    env{currentExprBinders = Set.insert binder' currentExprBinders}
+    env{currentExprBinders = Set.insert (unqualified binder') currentExprBinders}
   pure (ForeignBind binder' type'' code)
 
 -- MODULE
@@ -222,7 +227,7 @@ transformExprDefn :: Defn -> SEC Env Error Warning [Bind OfExpr Transformed]
 transformExprDefn (ValueDefn binder' value) = do
   optType <- gets (Map.lookup binder' . exprTypings)
   case optType of
-    Just type' -> singleton <$> transformExprBind (ExprBind binder' type' value)
+    Just type' -> singleton <$> transformExprBind (ExprBind (unqualified binder') type' value)
     Nothing -> failure (MissingTyping binder')
 transformExprDefn (ForeignDefn binder' code) = do
   optType <- gets (Map.lookup binder' . exprTypings)
@@ -260,8 +265,9 @@ transformModule (ParsedModule defns entry) = do
     expr' <- transformExpr expr
     checkEntryExpr expr'
     pure expr'
+  typeCtors' <- gets typeCtors
   warnUnusedBinders
-  pure (Module exprBinds typeBinds entry')
+  pure (Module exprBinds typeBinds entry' typeCtors')
 
 runTransformer :: ParsedModule -> (Either (NonEmpty Error) (Module Transformed), [Warning])
 runTransformer mdule =
@@ -275,4 +281,5 @@ runTransformer mdule =
           Set.empty
           Set.empty
           Map.empty
+          Set.empty
    in Collector.runCollector $ Errors.runErrorsT $ evalStateT (transformModule mdule) env

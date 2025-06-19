@@ -9,7 +9,9 @@ import Control.Monad.Trans.State.Strict (StateT)
 import Control.Monad.Trans.State.Strict qualified as State
 import Control.Monad.Trans.Writer.Strict (Writer, runWriter, tell)
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Map.Strict.Extra (find)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String.Interpolate (i)
@@ -17,13 +19,14 @@ import Fine.Error (Error (BadKindSub, CannotUnifyKinds))
 import Fine.Syntax (
   Id (Id),
   Kind (..),
+  Name,
   Phase (Kinded, PartiallyKinded, Transformed),
   Range (NoRange),
   Type (..),
   range,
   typeof,
  )
-import Fine.Typer.Common (Env, fromEnv)
+import Fine.Syntax.Utils (unqualified)
 import Unsafe.Coerce (unsafeCoerce)
 
 type RSE r s e a = ReaderT r (StateT s (Errors e)) a
@@ -40,7 +43,7 @@ failure = lift . lift . Errors.failure
 runRS :: RSE r s e a -> r -> s -> Errors e a
 runRS rse r s = State.evalStateT (runReaderT rse r) s
 
-type Sub = Env (Kind PartiallyKinded)
+type Sub = Map Id (Kind PartiallyKinded)
 
 compose :: Sub -> Sub -> Sub
 compose s s' = Map.union s (apply s <$> s')
@@ -55,7 +58,7 @@ subVars (KLit _) = Set.empty
 subVars (TFunK ak bk) = Set.union (subVars ak) (subVars bk)
 subVars (SubKVar var) = Set.singleton var
 
-type KindedSub = Env (Kind Kinded)
+type KindedSub = Map Id (Kind Kinded)
 
 resolveUndecidable :: Sub -> KindedSub
 resolveUndecidable s =
@@ -103,7 +106,7 @@ newSubVar r = do
   modify $ \ctx -> ctx{subCount = n + 1}
   pure $ SubKVar $ Id r [i|k#{n}|]
 
-type KindEnv = Env (Kind PartiallyKinded)
+type KindEnv = Map Name (Kind PartiallyKinded)
 
 klit :: Kind PartiallyKinded
 klit = KLit NoRange
@@ -133,7 +136,8 @@ infer t@(FunT _ at bt) = do
   pure $ FunT (KLit $ range t) at' bt'
 infer (Forall _ r vars type') = do
   varKinds <- mapM (newSubVar . range) vars
-  let extraCtx = Map.fromList $ NonEmpty.toList $ NonEmpty.zip vars varKinds
+  let vars' = NonEmpty.map unqualified vars
+  let extraCtx = Map.fromList $ NonEmpty.toList $ NonEmpty.zip vars' varKinds
   type'' <- local (Map.union extraCtx) (infer type')
   unifyType type'' klit
   pure $ Forall (KLit r) r (NonEmpty.zip vars varKinds) type''
@@ -144,7 +148,7 @@ infer (DataT _ tag types) = do
     pure type''
   pure $ DataT (KLit $ range tag) tag types'
 infer (TVar _ var) = do
-  kind <- asks (fromEnv var)
+  kind <- asks (find var)
   pure $ TVar kind var
 infer t@(TApp _ tf ta) = do
   tf' <- infer tf
@@ -154,7 +158,7 @@ infer t@(TApp _ tf ta) = do
   pure $ TApp kind tf' ta'
 infer (TFun _ tp tb) = do
   tpKind <- newSubVar (range tp)
-  tb' <- local (Map.insert tp tpKind) (infer tb)
+  tb' <- local (Map.insert (unqualified tp) tpKind) (infer tb)
   let kind = TFunK (typeof tb') tpKind
   pure $ TFun kind tp tb'
 
@@ -175,7 +179,7 @@ complete = \case
   go :: Kind PartiallyKinded -> Reader KindedSub (Kind Kinded)
   go (KLit r) = pure (KLit r)
   go (TFunK ak bk) = TFunK <$> go ak <*> go bk
-  go (SubKVar var) = asks (fromEnv var)
+  go (SubKVar var) = asks (find var)
 
 check :: Type Transformed -> RSE KindEnv SubCtx Error (Type Kinded)
 check type' = do
@@ -184,24 +188,24 @@ check type' = do
   ks <- resolveUndecidable <$> gets sub
   pure $ runReader (complete type'') ks
 
-runKindChecker :: Env (Kind Kinded) -> Type Transformed -> Errors Error (Type Kinded)
+runKindChecker :: Map Name (Kind Kinded) -> Type Transformed -> Errors Error (Type Kinded)
 runKindChecker kindEnv type' =
   runRS (check type') (Map.map asPartiallyKinded kindEnv) initialSubCtx
  where
   asPartiallyKinded :: Kind Kinded -> Kind PartiallyKinded
   asPartiallyKinded = unsafeCoerce
 
-inferMany :: Env (Type Transformed) -> RSE KindEnv SubCtx Error (Env (Type Kinded))
+inferMany :: Map Name (Type Transformed) -> RSE KindEnv SubCtx Error (Map Name (Type Kinded))
 inferMany types = do
   kindEnv <- fmap Map.fromList $ forM (Map.keys types) $ \binder -> do
     kind <- newSubVar (range binder)
     pure (binder, kind)
   types' <- local (const kindEnv) $ forM (Map.toList types) $ \(binder, type') -> do
     type'' <- infer type'
-    unifyType type'' (fromEnv binder kindEnv)
+    unifyType type'' (find binder kindEnv)
     pure (binder, type'')
   ks <- resolveUndecidable <$> gets sub
   pure $ Map.map (\t -> runReader (complete t) ks) (Map.fromList types')
 
-runKindInferrer :: Env (Type Transformed) -> Errors Error (Env (Type Kinded))
+runKindInferrer :: Map Name (Type Transformed) -> Errors Error (Map Name (Type Kinded))
 runKindInferrer types = runRS (inferMany types) Map.empty initialSubCtx

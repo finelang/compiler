@@ -13,6 +13,7 @@ import Fine.Syntax (
   Expr (..),
   Id (Id),
   Module (Module, moduleEntry, moduleExprs),
+  Name (Name),
   Pattern (..),
   Phase (Typed),
   Range (NoRange),
@@ -23,6 +24,10 @@ type Substts = Map Id Id
 
 substt :: Id -> Reader Substts Id
 substt name = asks (Map.findWithDefault name name)
+
+nameSubstt :: Name -> Reader Substts Name
+nameSubstt (Name optMQ optTQ name) =
+  Name <$> mapM substt optMQ <*> mapM substt optTQ <*> substt name
 
 renameBlock :: Block Typed -> Reader Substts (Block Typed)
 renameBlock (Return expr) = Return <$> renameExpr expr
@@ -56,10 +61,10 @@ renameExpr (Data ext tag exprs) = Data ext tag <$> mapM renameExpr exprs
 renameExpr (Record ext r props) = Record ext r <$> (mapM . mapM) renameExpr props
 renameExpr (Tuple ext r fst' snd' rest) =
   Tuple ext r <$> renameExpr fst' <*> renameExpr snd' <*> mapM renameExpr rest
-renameExpr (Var ext name) = Var ext <$> substt name
+renameExpr (Var ext name) = Var ext <$> nameSubstt name
 renameExpr (Bin ext op left right) = Bin ext op <$> renameExpr left <*> renameExpr right
 renameExpr (App ext f arg) = App ext <$> renameExpr f <*> renameExpr arg
-renameExpr (GenApp ext _ fname typeArgs) = GenApp ext () <$> substt fname <*> pure typeArgs
+renameExpr (GenApp ext _ fname typeArgs) = GenApp ext () <$> nameSubstt fname <*> pure typeArgs
 renameExpr (Access ext expr prop) = Access ext <$> renameExpr expr <*> pure prop
 renameExpr (Index ext r expr ix) = Index ext r <$> renameExpr expr <*> pure ix
 renameExpr (Cond ext r cond yes no) =
@@ -74,7 +79,7 @@ renameExpr (PatternMatching ext r _ expr matches) =
 
 renameBind :: Bind OfExpr Typed -> Reader Substts (Bind OfExpr Typed)
 renameBind (ExprBind binder' type' expr) = do
-  binder'' <- substt binder'
+  binder'' <- nameSubstt binder'
   expr' <- (if isCtor expr then pure else renameExpr) expr
   pure (ExprBind binder'' type' expr')
 renameBind (ForeignBind binder' type' code) = do
@@ -82,7 +87,7 @@ renameBind (ForeignBind binder' type' code) = do
   pure (ForeignBind binder'' type' code)
 
 renameModule :: Module Typed -> Reader Substts (Module Typed)
-renameModule mdule@(Module exprs _ entry) = do
+renameModule mdule@(Module exprs _ entry _) = do
   exprs' <- mapM renameBind exprs
   entry' <- mapM renameExpr entry
   pure (mdule{moduleExprs = exprs', moduleEntry = entry'})

@@ -16,10 +16,10 @@ import Fine.Syntax (
   Pattern (..),
   Phase (Ready, Typed),
   Range (NoRange),
-  idText,
+  nameText,
  )
 import Fine.Syntax.Name (matchedVar, tagProp)
-import Fine.Syntax.Utils (patternBoundVars)
+import Fine.Syntax.Utils (patternBoundVars, unqualified)
 
 data PathEnd
   = EqualsTo (Expr Ready)
@@ -44,7 +44,7 @@ indexedPaths patts =
 extractPaths :: Pattern -> [PatternPath]
 extractPaths (LiteralP _ lit) = [End $ EqualsTo (Literal () NoRange lit)]
 extractPaths (DataP _ tag patts) =
-  let lit = Str (idText tag)
+  let lit = Str (nameText tag)
       fromTag =
         Continue
           (PropTo $ tagProp)
@@ -81,7 +81,7 @@ matchedVar' :: Id
 matchedVar' = matchedVar NoRange
 
 matchedExpr :: Expr Ready
-matchedExpr = Var () matchedVar'
+matchedExpr = Var () (unqualified matchedVar')
 
 transformMatches :: Expr Ready -> (NonEmpty (Pattern, Expr Ready)) -> Block Ready
 transformMatches matched matches =
@@ -150,5 +150,5 @@ readyBind (ExprBind binder _ expr) = ExprBind binder () (readyExpr expr)
 readyBind (ForeignBind binder _ code) = ForeignBind binder () code
 
 readyModule :: Module Typed -> Module Ready
-readyModule (Module values _ entry) =
-  Module (map readyBind values) () (fmap readyExpr entry)
+readyModule (Module values _ entry typeCtors) =
+  Module (map readyBind values) () (fmap readyExpr entry) typeCtors

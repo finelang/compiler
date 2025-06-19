@@ -4,7 +4,9 @@ module Fine.Syntax (
   Range (..),
   HasRange (..),
   Id (..),
-  idText,
+  Name (..),
+  nameText,
+  qualifiedText,
   Phase (..),
   Kind (..),
   typeof,
@@ -17,17 +19,17 @@ module Fine.Syntax (
   Pattern (..),
   BindType (..),
   Bind (..),
-  binder,
   Defn (..),
   ParsedModule (..),
   Module (..),
 )
 where
 
-import Data.Function (on)
 import Data.Kind qualified as HsKind
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Maybe (maybeToList)
+import Data.Set (Set)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -73,7 +75,7 @@ instance Eq Id where
 
 instance Ord Id where
   compare :: Id -> Id -> Ordering
-  compare = compare `on` idText
+  compare (Id _ text) (Id _ text') = compare text text'
 
 instance HasRange Id where
   range :: Id -> Range
@@ -82,6 +84,26 @@ instance HasRange Id where
 instance Show Id where
   show :: Id -> String
   show (Id _ text) = Text.unpack text
+
+data Name = Name {moduleQualifier :: Maybe Id, typeQualifier :: Maybe Id, nameId :: Id}
+  deriving (Eq, Ord)
+
+nameText :: Name -> Text
+nameText = idText . nameId
+
+qualifiedText :: Name -> Text
+qualifiedText (Name optMQ optTQ name) =
+  Text.intercalate "." $ map idText $ maybeToList optMQ ++ maybeToList optTQ ++ [name]
+
+instance Show Name where
+  show :: Name -> String
+  show = Text.unpack . qualifiedText
+
+instance HasRange Name where
+  range :: Name -> Range
+  range (Name Nothing Nothing name) = range name
+  range (Name (Just mQ) _ name) = range mQ <> range name
+  range (Name _ (Just tQ) name) = range tQ <> range name
 
 -- PASS
 
@@ -124,7 +146,7 @@ instance Show (Kind p) where
      in case argK of
           TFunK _ _ -> [i|(#{arg}) -> #{body}|]
           _ -> [i|#{arg} -> #{body}|]
-  show (SubKVar var) = Text.unpack (idText var)
+  show (SubKVar var) = show var
 
 instance HasRange (Kind p) where
   range :: Kind p -> Range
@@ -160,7 +182,7 @@ data Type :: Phase -> HsKind.Type where
   FunT :: KindX p -> Type p -> Type p -> Type p
   Forall :: KindX p -> Range -> NonEmpty (UniVar p) -> Type p -> Type p
   DataT :: KindX p -> Id -> [Type p] -> Type p
-  TVar :: KindX p -> Id -> Type p
+  TVar :: KindX p -> Name -> Type p
   TApp :: KindX p -> Type p -> Type p -> Type p
   TFun :: KindX p -> Id -> Type p -> Type p
   --
@@ -221,13 +243,7 @@ data Op
   | And
   | Or
   | Concat
-  deriving
-    ( -- | Pipe
-      -- | RPipe
-      -- | Comp
-      -- | RComp
-      Show
-    )
+  deriving (Show)
 
 data Lit
   = Int Int
@@ -261,10 +277,10 @@ data Expr (p :: Phase)
   | Data (TypeX p) Id [Expr p]
   | Record (TypeX p) Range [(Id, Expr p)]
   | Tuple (TypeX p) Range (Expr p) (Expr p) [Expr p]
-  | Var (TypeX p) Id
+  | Var (TypeX p) Name
   | Bin (TypeX p) Op (Expr p) (Expr p)
   | App (TypeX p) (Expr p) (Expr p)
-  | GenApp (TypeX p) (NotReady p) Id (NonEmpty (Type p))
+  | GenApp (TypeX p) (NotReady p) Name (NonEmpty (Type p))
   | Access (TypeX p) (Expr p) Id
   | Index (TypeX p) Range (Expr p) Int
   | Cond (TypeX p) Range (Expr p) (Expr p) (Expr p)
@@ -329,7 +345,7 @@ instance HasType (Expr PartiallyTyped) (Type PartiallyTyped) where
 
 data Pattern
   = LiteralP Range Lit
-  | DataP Range Id [Pattern]
+  | DataP Range Name [Pattern]
   | RecordP Range [(Id, Pattern)]
   | TupleP Range Pattern Pattern [Pattern]
   | Capture Id
@@ -355,17 +371,12 @@ type family BoundType (p :: Phase) where
   BoundType p = Type p
 
 data Bind :: BindType -> Phase -> HsKind.Type where
-  ExprBind :: Id -> BoundType p -> Expr p -> Bind OfExpr p
+  ExprBind :: Name -> BoundType p -> Expr p -> Bind OfExpr p
   TypeBind :: Id -> BoundType p -> Bind OfType p
   -- binding for external code
   ForeignBind :: Id -> BoundType p -> Text -> Bind OfExpr p
 
 deriving instance (Show (Expr p), Show (Type p), Show (BoundType p)) => Show (Bind t p)
-
-binder :: Bind t p -> Id
-binder (ExprBind idn _ _) = idn
-binder (TypeBind idn _) = idn
-binder (ForeignBind idn _ _) = idn
 
 data Defn
   = ValueDefn Id (Expr Parsed)
@@ -385,7 +396,8 @@ data Module (p :: Phase)
   = Module
   { moduleExprs :: [Bind OfExpr p],
     moduleTypes :: ModuleTypes p,
-    moduleEntry :: Maybe (Expr p)
+    moduleEntry :: Maybe (Expr p),
+    typeCtors :: Set Id
   }
 
 deriving instance

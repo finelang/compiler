@@ -11,7 +11,7 @@ import Fine.Lexer (Token (..))
 import qualified Fine.Lexer as Lex
 import Fine.Syntax
 import Fine.Syntax.Name (irrelevant, matchedParam)
-import Fine.Syntax.Utils (mkDataDefn)
+import Fine.Syntax.Utils (mkDataDefn, unqualified, typeQualified)
 }
 
 %name parseTokens
@@ -106,10 +106,10 @@ OptParams : Params      { $1 }
 
 -- PATTERN
 
-Pattern : '.' Id PAtoms { DataP (range $1 <> range (head $3)) $2 (reverse $3) }
-        | PAtom         { $1 }
+Pattern : TyId '.' Id PAtoms  { DataP (range $1 <> range (head $4)) (typeQualified $1 $3) (reverse $4) }
+        | PAtom               { $1 }
 
-PAtom : '.' Id                { DataP (range $1 <> range $2) $2 [] }
+PAtom : TyId '.' Id           { DataP (range $1 <> range $3) (typeQualified $1 $3) [] }
       | '(' CommaPatterns ')' { mkTupleP (range $1 <> range $3) (reverse $2) }
       | '{' PropPatterns '}'  { RecordP (range $1 <> range $3) (reverse $2) }
       | IntPatt               { $1 }
@@ -161,8 +161,8 @@ Expr : Equation                     { $1 }
 
 Equation : Equation '|>' Equation { App () $3 $1 }
          | Equation '<|' Equation { App () $1 $3 }
-         | Equation '<.' Equation { let x = Id NoRange "x" in Fun () x (App () $1 (App () $3 (Var () x))) }
-         | Equation '.>' Equation { let x = Id NoRange "x" in Fun () x (App () $3 (App () $1 (Var () x))) }
+         | Equation '<.' Equation { let x = Id NoRange "x" in Fun () x (App () $1 (App () $3 (Var () (unqualified x)))) }
+         | Equation '.>' Equation { let x = Id NoRange "x" in Fun () x (App () $3 (App () $1 (Var () (unqualified x)))) }
          | Equation '&&' Equation { Bin () And $1 $3 }
          | Equation '||' Equation { Bin () Or $1 $3 }
          | Equation '<=' Equation { Bin () Le $1 $3 }
@@ -196,8 +196,9 @@ Atom : '(' OptExprs ')'             { mkTuple (range $1 <> range $3) (reverse $2
      | true                         { Literal () (range $1) (Bool True) }
      | false                        { Literal () (range $1) (Bool False) }
      | strlit                       { Literal () (range $1) (Str $ extractStr $1) }
-     | Id                           { Var () $1 }
-     | Id TArgs                     { GenApp () () $1 $2 }
+     | Id                           { Var () (unqualified $1) }
+     | TyId '.' Id                  { Var () (typeQualified $1 $3) }
+     | Id TArgs                     { GenApp () () (unqualified $1) $2 }
      | match Access '{' Matches '}' { PatternMatching () (range $1 <> range $5) () $2 $4 }
      | '\\' match '{' Matches '}'   { mkMatchFun (range $1 <> range $5) (matchedParam (range $2)) $4 }
 
@@ -221,7 +222,7 @@ Props : Props ',' Prop  { $3 : $1 }
       | Prop            { [$1] }
 
 Prop : Id '=' Expr  { ($1, $3) }
-     | '=' Id       { ($2, Var () $2) }
+     | '=' Id       { ($2, Var () (unqualified $2)) }
 
 OptProps : Props        { $1 }
          | {- empty -}  { [] }
@@ -257,8 +258,8 @@ TAtom : '(' Types ')'     { mkTupleT (range $1 <> range $3) $2 }
       | str               { LiteralT () (range $1) StrT }
       | float             { LiteralT () (range $1) FloatT }
       | void              { VoidT () (range $1) }
-      | Id                { TVar () $1 }
-      | TyId              { TVar () $1 }
+      | Id                { TVar () (unqualified $1) }
+      | TyId              { TVar () (unqualified $1) }
 
 TAtoms : TAtoms TAtom { $2 : $1 }
        | TAtom        { [$1] }
@@ -312,7 +313,7 @@ mkTupleP r (p1 : p2 : ps) = TupleP r p1 p2 ps
 mkTupleT r (t :| []) = t
 mkTupleT r (t1 :| (t2 : ts)) = TupleT () r t1 t2 ts
 
-mkMatchFun r p ms = Fun () p (PatternMatching () r () (Var () p) ms)
+mkMatchFun r p ms = Fun () p (PatternMatching () r () (Var () (unqualified p)) ms)
 
 parseError tokens = error . show . head $ tokens
 }

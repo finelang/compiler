@@ -6,7 +6,9 @@ import Control.Monad.Trans.Reader (ReaderT, ask, local, runReaderT, withReaderT)
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Map.Strict.Extra (find)
 import Fine.Error (Error, Warning)
 import Fine.Syntax (
   Bind (..),
@@ -15,16 +17,17 @@ import Fine.Syntax (
   Expr (..),
   Kind,
   Module (Module),
+  Name,
   Phase (Kinded, Transformed),
   Type (..),
   typeof,
  )
-import Fine.Typer.Common (Env, fromEnv)
+import Fine.Syntax.Utils (unqualified)
 import Fine.Typer.Kinder.J (runKindChecker, runKindInferrer)
 
 type RE r e a = ReaderT r (Errors e) a
 
-type KindEnv = Env (Kind Kinded)
+type KindEnv = Map Name (Kind Kinded)
 
 kindedBlock :: Block Transformed -> RE KindEnv Error (Block Kinded)
 kindedBlock (Return expr) = Return <$> kindedExpr expr
@@ -69,7 +72,9 @@ kindedExprBind (ExprBind binder type' expr) = do
   type'' <- lift $ runKindChecker kindEnv type'
   expr' <- case (type'', expr) of
     (Forall _ _ univars _, GenFun ext _ _ tparams body) -> do
-      let localKindEnv = Map.fromList $ NonEmpty.toList $ NonEmpty.zip tparams (NonEmpty.map snd univars)
+      let tparams' = NonEmpty.map unqualified tparams
+      let kinds = NonEmpty.map snd univars
+      let localKindEnv = Map.fromList $ NonEmpty.toList $ NonEmpty.zip tparams' kinds
       body' <- local (Map.union localKindEnv) (kindedExpr body)
       pure $ GenFun ext () () tparams body'
     _ -> kindedExpr expr
@@ -79,19 +84,19 @@ kindedExprBind (ForeignBind binder type' code) = do
   type'' <- lift $ runKindChecker kindEnv type'
   pure $ ForeignBind binder type'' code
 
-collectTypes :: [Bind OfType Transformed] -> Env (Type Transformed)
-collectTypes binds = Map.fromList $ map (\(TypeBind binder type') -> (binder, type')) binds
+collectTypes :: [Bind OfType Transformed] -> Map Name (Type Transformed)
+collectTypes binds = Map.fromList $ map (\(TypeBind binder type') -> (unqualified binder, type')) binds
 
 kindedModule :: Module Transformed -> RE () Error (Module Kinded)
-kindedModule (Module exprBinds typeBinds entry) = do
+kindedModule (Module exprBinds typeBinds entry typeCtors) = do
   let types = collectTypes typeBinds
   typeEnv <- lift $ runKindInferrer types
   let typeBinds' = (flip map) typeBinds $
-        \(TypeBind binder _) -> TypeBind binder (fromEnv binder typeEnv)
+        \(TypeBind binder _) -> TypeBind binder (find (unqualified binder) typeEnv)
   withReaderT (const $ Map.map typeof typeEnv) $ do
     exprBinds' <- mapM kindedExprBind exprBinds
     entry' <- mapM kindedExpr entry
-    pure $ Module exprBinds' typeBinds' entry'
+    pure $ Module exprBinds' typeBinds' entry' typeCtors
 
 runKinder :: Module Transformed -> (Either (NonEmpty Error) (Module Kinded), [Warning])
 runKinder mdule = (runErrors $ runReaderT (kindedModule mdule) (), [])

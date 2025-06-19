@@ -31,6 +31,7 @@ library
     Control.Monad.Trans.Errors
     Data.List.Extra
     Data.List.NonEmpty.Extra
+    Data.Map.Strict.Extra
     Data.Tuple.Extra
     Fine.Codegen.Js
     Fine.Codegen.Ready
@@ -46,7 +47,6 @@ library
     Fine.Transform
     Fine.Transform.Check
     Fine.Typer
-    Fine.Typer.Common
     Fine.Typer.Eval
     Fine.Typer.J
     Fine.Typer.Kinder
